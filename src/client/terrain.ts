@@ -3,6 +3,7 @@ import type {
   ElevationSample, TerrainGrid, ContourLine, SlopeAspect, ElevationProfile,
 } from '../types/terrain.js';
 import { batchElevation } from './sources/usgs.js';
+import { METERS_PER_DEGREE_LAT } from '../constants.js';
 
 let map: L.Map | null = null;
 let contourLayer: L.LayerGroup = L.layerGroup();
@@ -113,7 +114,7 @@ export async function buildTerrainGrid(bounds: L.LatLngBounds, density: number =
   const max = validElevations.length > 0 ? Math.max(...validElevations) : 0;
   const mean = validElevations.length > 0 ? validElevations.reduce((a, b) => a + b, 0) / validElevations.length : 0;
 
-  const latDistM = (ne.lat - sw.lat) * 111139;
+  const latDistM = (ne.lat - sw.lat) * METERS_PER_DEGREE_LAT;
   const resolution = density > 1 ? latDistM / (density - 1) : latDistM;
 
   const grid: TerrainGrid = {

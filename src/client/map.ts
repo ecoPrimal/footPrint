@@ -1,8 +1,6 @@
 import * as L from 'leaflet';
 import type { NominatimResult } from '../types/nominatim.js';
-
-const DEFAULT_CENTER: L.LatLngTuple = [42.7085, -84.5537];
-const DEFAULT_ZOOM = 18;
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL, USER_AGENT } from '../constants.js';
 
 let map: L.Map;
 
@@ -23,8 +21,8 @@ const tileLayers = {
 
 export function initMap(): L.Map {
   map = L.map('map', {
-    center: DEFAULT_CENTER,
-    zoom: DEFAULT_ZOOM,
+    center: [...DEFAULT_MAP_CENTER] as L.LatLngTuple,
+    zoom: DEFAULT_MAP_ZOOM,
     zoomControl: true,
     layers: [tileLayers.satellite],
   });
@@ -54,8 +52,8 @@ function initGeocoder(): void {
 
     try {
       const resp = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
-        { headers: { 'User-Agent': 'FootPrint-HomePlanner/1.0' } },
+        `${NOMINATIM_SEARCH_URL}?format=json&q=${encodeURIComponent(q)}&limit=1`,
+        { headers: { 'User-Agent': USER_AGENT } },
       );
       const results = (await resp.json()) as ReadonlyArray<NominatimResult>;
       if (results.length > 0) {
@@ -79,6 +77,3 @@ function initGeocoder(): void {
   });
 }
 
-export function getMap(): L.Map {
-  return map;
-}

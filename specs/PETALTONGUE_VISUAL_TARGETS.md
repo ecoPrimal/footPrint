@@ -24,7 +24,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 | footPrint | petalTongue Target |
 |-----------|-------------------|
-| Leaflet 1.9.4 (JS, CDN) | Leaflet served from petalTongue static assets |
+| Leaflet 1.9.4 (npm + Vite bundle) | Leaflet served from petalTongue static assets |
 | Satellite + Street base layers | Same (ESRI World Imagery, OSM tiles) |
 | Road label overlay | Same |
 | Layer control (Leaflet.control.layers) | Same |
@@ -79,7 +79,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 | footPrint | petalTongue Target |
 |-----------|-------------------|
 | Gauss-Newton iterative solver | Same algorithm, Rust port (nalgebra) |
-| Constraint types: fixed-distance, parallel, perpendicular, horizontal, vertical, coincident | Same + point-on-line, tangent, symmetric, setback |
+| Constraint types: fixed-distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line (7 active) | Same + tangent, symmetric, setback |
 | Damped step (λ=1e-4) | Same |
 | Batch command updates | Same (via nestGate transactions) |
 
@@ -177,8 +177,8 @@ Send/Sync, zero-cost abstractions), and 9 require runtime wrappers (degraded
 enforcement). This validates the architectural decision that primals are pure Rust.
 
 RustScript stays as a blueprint for anyone who wants safer TypeScript — and they
-should use it. For ecoPrimals, it's the control experiment. See
-`CONSTRAINED_EVOLUTION_FORMAL.md` §5.5 for the full analysis.
+should use it. For ecoPrimals, it's the control experiment. See the gen3 thesis
+§5.5 (via wateringHole) for the full analysis.
 
 ---
 

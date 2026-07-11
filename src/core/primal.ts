@@ -3,23 +3,22 @@
  *
  * A Primal is a self-contained module that:
  * - Owns one domain
- * - Exposes capabilities as typed Primitives (atomic operations)
+ * - Exposes capabilities as typed operations
  * - Has zero compile-time coupling to other Primals
- * - Discovers other capabilities at runtime
+ * - Discovers other capabilities at runtime via the registry
  *
- * This is the gen3 primal pattern expressed in TypeScript:
  * "A primal knows only itself: what capabilities it has, how to advertise
  *  them, and how to respond to requests."
  */
 
 import type { Result } from '../rustscript/result.js';
-import { Err } from '../rustscript/result.js';
+import { Ok, Err } from '../rustscript/result.js';
 import type { Option } from '../rustscript/option.js';
 import { Some, None } from '../rustscript/option.js';
 import { Iter } from '../rustscript/iter.js';
 import { RustVec } from '../rustscript/vec.js';
 
-// -- Capability types --
+// ── Capability types ─────────────────────────────────
 
 export interface Capability<TInput = unknown, TOutput = unknown> {
   readonly name: string;
@@ -29,7 +28,7 @@ export interface Capability<TInput = unknown, TOutput = unknown> {
 }
 
 export interface PrimalError {
-  readonly kind: 'NotFound' | 'InvalidInput' | 'InternalError';
+  readonly kind: 'NotFound' | 'InvalidInput' | 'InternalError' | 'Unavailable';
   readonly message: string;
   readonly primalId?: string;
 }
@@ -41,7 +40,15 @@ export interface PrimalManifest {
   readonly capabilities: readonly string[];
 }
 
-// -- Primal definition --
+// ── Discovery event bus ──────────────────────────────
+
+type RegistryEvent =
+  | { type: 'registered'; manifest: PrimalManifest }
+  | { type: 'unregistered'; id: string };
+
+type RegistryListener = (event: RegistryEvent) => void;
+
+// ── Primal definition ────────────────────────────────
 
 export class Primal {
   readonly id: string;
@@ -55,12 +62,10 @@ export class Primal {
     this.version = version;
   }
 
-  /** Register a capability this primal provides. */
   expose<TIn, TOut>(capability: Capability<TIn, TOut>): void {
     this.capabilities.set(capability.name, capability as Capability);
   }
 
-  /** Invoke a capability by name. */
   invoke(capabilityName: string, input: unknown): Result<unknown, PrimalError> {
     const cap = this.capabilities.get(capabilityName);
     if (!cap) {
@@ -73,12 +78,14 @@ export class Primal {
     return cap.handle(input);
   }
 
-  /** List all capabilities this primal exposes. */
+  hasCapability(name: string): boolean {
+    return this.capabilities.has(name);
+  }
+
   listCapabilities(): Iter<string> {
     return Iter.fromArray([...this.capabilities.keys()]);
   }
 
-  /** Get the primal's manifest for discovery. */
   manifest(): PrimalManifest {
     return {
       id: this.id,
@@ -89,45 +96,59 @@ export class Primal {
   }
 }
 
-// -- Registry (runtime discovery) --
+// ── Registry (runtime discovery) ─────────────────────
 
 const registry = new Map<string, Primal>();
+const listeners = RustVec.empty<RegistryListener>();
 
-/** Register a primal in the global registry. */
 export function registerPrimal(primal: Primal): void {
   registry.set(primal.id, primal);
+  const event: RegistryEvent = { type: 'registered', manifest: primal.manifest() };
+  for (const listener of listeners) {
+    listener(event);
+  }
 }
 
-/** Unregister a primal. */
 export function unregisterPrimal(id: string): void {
+  if (!registry.has(id)) return;
   registry.delete(id);
+  const event: RegistryEvent = { type: 'unregistered', id };
+  for (const listener of listeners) {
+    listener(event);
+  }
 }
 
-/** Discover a primal by ID. */
+/** Subscribe to registry changes for runtime discovery. */
+export function onRegistryChange(listener: RegistryListener): () => void {
+  listeners.push(listener);
+  return () => {
+    const found = listeners.iter().enumerate().find(([, l]) => l === listener);
+    if (found.some) listeners.removeAt(found.value[0]);
+  };
+}
+
 export function getPrimal(id: string): Option<Primal> {
   const primal = registry.get(id);
   return primal ? Some(primal) : None();
 }
 
-/** Find all primals that expose a given capability. */
 export function findByCapability(capabilityName: string): Iter<Primal> {
   const matches = RustVec.empty<Primal>();
   for (const primal of registry.values()) {
-    if (primal.listCapabilities().any((c) => c === capabilityName)) {
+    if (primal.hasCapability(capabilityName)) {
       matches.push(primal);
     }
   }
   return matches.iter();
 }
 
-/** List all registered primal manifests. */
 export function listPrimals(): Iter<PrimalManifest> {
   return Iter.fromArray([...registry.values()]).map((p) => p.manifest());
 }
 
 /**
  * Invoke a capability on any primal that provides it.
- * Returns the first successful result, or the last error.
+ * Pure runtime discovery — the caller does not know which primal will handle it.
  */
 export function invokeCapability(
   capabilityName: string,
@@ -139,6 +160,7 @@ export function invokeCapability(
   };
 
   for (const primal of registry.values()) {
+    if (!primal.hasCapability(capabilityName)) continue;
     const result = primal.invoke(capabilityName, input);
     if (result.ok) return result;
     lastError = result.error;
@@ -147,7 +169,20 @@ export function invokeCapability(
   return Err(lastError);
 }
 
-/** Reset the registry (for testing). */
+/**
+ * Require a capability, returning Ok if found or Err if unavailable.
+ * Used for declaring runtime dependencies without compile-time coupling.
+ */
+export function requireCapability(capabilityName: string): Result<Primal, PrimalError> {
+  for (const primal of registry.values()) {
+    if (primal.hasCapability(capabilityName)) return Ok(primal);
+  }
+  return Err({
+    kind: 'Unavailable',
+    message: `Required capability "${capabilityName}" not provided by any registered primal`,
+  });
+}
+
 export function clearPrimals(): void {
   registry.clear();
 }

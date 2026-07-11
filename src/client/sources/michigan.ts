@@ -2,9 +2,7 @@ import * as L from 'leaflet';
 import type { ArcGISFeatureResponse } from '../../types/arcgis.js';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-
-const MI_FRAMEWORK_BASE =
-  'https://gisagocss.state.mi.us/arcgis/rest/services/OpenData/michigan_geographic_framework/MapServer';
+import { MI_FRAMEWORK_BASE, PROXY_PATH } from '../../constants.js';
 const ROADS_LAYER = 14;
 
 export function registerMichiganSources(): void {
@@ -31,7 +29,7 @@ export function registerMichiganSources(): void {
       });
 
       const url = `${MI_FRAMEWORK_BASE}/${String(ROADS_LAYER)}/query?${params.toString()}`;
-      const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+      const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(url)}`);
       if (!resp.ok) throw new Error(`MI Roads: ${String(resp.status)}`);
       const data = (await resp.json()) as ArcGISFeatureResponse;
       return data.features ?? [];

@@ -2,15 +2,14 @@ import * as L from 'leaflet';
 import type { OverpassResponse, OverpassNode, OverpassWay, OverpassRelation } from '../../types/overpass.js';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+import { OVERPASS_URL, PROXY_PATH } from '../../constants.js';
 
 async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> {
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const query = overpassQL.replace(/\{bbox\}/g, bbox);
   const body = `data=${encodeURIComponent(query)}`;
 
-  const resp = await fetch(`/api/proxy?url=${encodeURIComponent(OVERPASS_URL)}`, {
+  const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(OVERPASS_URL)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body,

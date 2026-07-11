@@ -4,7 +4,7 @@ import { readdir, readFile, writeFile, unlink, mkdir, stat } from 'node:fs/promi
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import type { CacheTTLConfig, CacheClearResponse } from './types/api.js';
+import type { CacheClearResponse } from './types/api.js';
 import type { ProjectFile, SaveResponse, DeleteResponse, ErrorResponse } from './types/project.js';
 import type { CommandPayload } from './agent/protocol.js';
 import {
@@ -16,6 +16,7 @@ import {
   sendAgentAction,
   getUserMessages,
 } from './agent/server-bridge.js';
+import { ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT } from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -24,17 +25,10 @@ const PORT = Number(process.env['PORT']) || 3000;
 const PROJECTS_DIR = join(ROOT, 'projects');
 const CACHE_DIR = join(ROOT, 'cache');
 
-const CACHE_TTL: CacheTTLConfig = {
-  default: 7 * 24 * 60 * 60 * 1000,
-  fema: 24 * 60 * 60 * 1000,
-  overpass: 3 * 24 * 60 * 60 * 1000,
-  elevation: 30 * 24 * 60 * 60 * 1000,
-  soils: 90 * 24 * 60 * 60 * 1000,
-};
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.text({ limit: '10mb', type: 'text/plain' }));
 app.use(express.static(join(ROOT, 'public')));
+app.use(express.static(join(ROOT, 'dist', 'client')));
 
 await mkdir(PROJECTS_DIR, { recursive: true });
 await mkdir(CACHE_DIR, { recursive: true });
@@ -92,29 +86,17 @@ app.delete('/api/projects/:name', async (req: Request<{ name: string }>, res: Re
 
 // ── Proxy with disk cache ────────────────────────
 
-const ALLOWED_HOSTS: readonly string[] = [
-  'overpass-api.de',
-  'hazards.fema.gov',
-  'services1.arcgis.com',
-  'services2.arcgis.com',
-  'nominatim.openstreetmap.org',
-  'epqs.nationalmap.gov',
-  'sdmdataaccess.sc.egov.usda.gov',
-  'gisagocss.state.mi.us',
-  'gisp.mcgi.state.mi.us',
-  'gis2.cityofeastlansing.com',
-];
 
 function cacheKey(url: string, body: string): string {
   return createHash('sha256').update(url + body).digest('hex').slice(0, 16);
 }
 
 function ttlForUrl(url: string): number {
-  if (url.includes('overpass')) return CACHE_TTL.overpass;
-  if (url.includes('fema.gov')) return CACHE_TTL.fema;
-  if (url.includes('epqs.nationalmap.gov')) return CACHE_TTL.elevation;
-  if (url.includes('sdmdataaccess')) return CACHE_TTL.soils;
-  return CACHE_TTL.default;
+  if (url.includes('overpass')) return CACHE_TTLS.overpass;
+  if (url.includes('fema.gov')) return CACHE_TTLS.fema;
+  if (url.includes('epqs.nationalmap.gov')) return CACHE_TTLS.elevation;
+  if (url.includes('sdmdataaccess')) return CACHE_TTLS.soils;
+  return CACHE_TTLS.default;
 }
 
 async function getCached(key: string, ttl: number): Promise<unknown | null> {
@@ -165,7 +147,7 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
     }
 
     const resp = await fetch(targetUrl, {
-      headers: { 'User-Agent': 'FootPrint-HomePlanner/1.0' },
+      headers: { 'User-Agent': USER_AGENT },
     });
     const data: unknown = await resp.json();
     await setCache(key, data);
@@ -202,7 +184,7 @@ app.post('/api/proxy', async (req: Request, res: Response) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'FootPrint-HomePlanner/1.0',
+        'User-Agent': USER_AGENT,
       },
       body,
     });

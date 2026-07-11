@@ -28,15 +28,6 @@ export interface DiscoveryReport {
   readonly timestamp: string;
 }
 
-export interface MLInferenceResult {
-  readonly modelId: string;
-  readonly predictions: ReadonlyArray<{
-    readonly feature: GeoJSON.Feature;
-    readonly label: string;
-    readonly confidence: number;
-  }>;
-}
-
 export type CategoryBoost = Record<string, number>;
 
 export const DEFAULT_CATEGORY_BOOSTS: Readonly<CategoryBoost> = {

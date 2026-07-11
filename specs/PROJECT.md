@@ -53,7 +53,7 @@ Built as a single-page web application with a Node.js backend. The frontend uses
 
 **Discriminated Entity Types**: `TypedEntity` is a union of `ShapeEntity | LayerEntity | DimensionEntity | ConstraintEntity | AnnotationEntity`. Narrowing on `entity.kind` guarantees component presence at the type level.
 
-**Parametric Constraint Solver**: Damped Gauss-Newton iterative relaxation for geometric constraints. Active constraint types: fixed-distance, perpendicular, parallel, horizontal, vertical, coincident. Stubbed for future: point-on-line, tangent, symmetric, setback. Constraints drive geometry -- dimensions are not labels, they are parameters.
+**Parametric Constraint Solver**: Damped Gauss-Newton iterative relaxation for geometric constraints. Active constraint types: fixed-distance, perpendicular, parallel, horizontal, vertical, coincident, point-on-line (7 active). Stubbed for future: tangent, symmetric, setback. Constraints drive geometry -- dimensions are not labels, they are parameters.
 
 **RustScript Foundation**: The type system is built on Rust safety primitives (see [RUSTSCRIPT.md](RUSTSCRIPT.md)). This is not incidental -- it is the project's thesis that Rust's constraints improve code quality in any language.
 

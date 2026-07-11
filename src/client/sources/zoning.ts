@@ -2,8 +2,7 @@ import * as L from 'leaflet';
 import type { ArcGISFeatureResponse, ZoningProperties } from '../../types/arcgis.js';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-
-const ZONING_URL = 'https://services1.arcgis.com/pNPbgWy7hpfFGWoZ/arcgis/rest/services/Zoning/FeatureServer/0';
+import { ZONING_URL, PROXY_PATH } from '../../constants.js';
 
 const ZONE_CATEGORY_COLORS: Readonly<Record<string, string>> = {
   'R': '#66bb6a',
@@ -51,7 +50,7 @@ export function registerZoningSource(): void {
       });
 
       const url = `${ZONING_URL}/query?${params.toString()}`;
-      const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+      const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(url)}`);
       if (!resp.ok) throw new Error(`Zoning: ${String(resp.status)}`);
       const data = (await resp.json()) as ArcGISFeatureResponse;
       return data.features ?? [];

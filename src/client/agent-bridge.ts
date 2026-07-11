@@ -51,7 +51,7 @@ export function initAgentBridge(
 
 function getWsUrl(): string {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${location.hostname}:3000/ws`;
+  return `${proto}//${location.host}/ws`;
 }
 
 function connect(): void {
@@ -225,6 +225,3 @@ export function sendUserMessage(text: string): void {
   send({ type: 'user-message', text, timestamp: Date.now() });
 }
 
-export function isAgentConnected(): boolean {
-  return ws !== null && ws.readyState === WebSocket.OPEN;
-}

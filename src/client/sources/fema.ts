@@ -2,8 +2,7 @@ import * as L from 'leaflet';
 import type { ArcGISFeatureResponse, FemaFloodProperties } from '../../types/arcgis.js';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-
-const NFHL_BASE = 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer';
+import { NFHL_BASE_URL, PROXY_PATH } from '../../constants.js';
 const FLOOD_ZONE_LAYER = 28;
 
 const ZONE_COLORS: Readonly<Record<string, string>> = {
@@ -40,8 +39,8 @@ export function registerFemaSource(): void {
         returnGeometry: 'true',
       });
 
-      const url = `${NFHL_BASE}/${String(FLOOD_ZONE_LAYER)}/query?${params.toString()}`;
-      const resp = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+      const url = `${NFHL_BASE_URL}/${String(FLOOD_ZONE_LAYER)}/query?${params.toString()}`;
+      const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(url)}`);
       if (!resp.ok) throw new Error(`FEMA: ${String(resp.status)}`);
       const data = (await resp.json()) as ArcGISFeatureResponse;
       return data.features ?? [];

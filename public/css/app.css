@@ -473,12 +473,8 @@ input:focus, select:focus, textarea:focus {
   background: #c0392b;
 }
 
-.modal-input-row {
-  display: flex;
-  gap: 8px;
-}
-.modal-input-row input {
-  flex: 1;
+@keyframes fadeout {
+  to { opacity: 0; }
 }
 
 /* ── Measure Tooltip ──────────────────────────── */

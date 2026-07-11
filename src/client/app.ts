@@ -32,6 +32,7 @@ import { initIntelligence, computeProximityForEntity, renderConflictsForEntity, 
 import { initAgentBridge } from './agent-bridge.js';
 import { initAgentPanel, onAgentMessage, setAgentConnectionStatus } from './agent-panel.js';
 import { registerAgentPrimal } from '../core/agent-primal.js';
+import { FEET_PER_DEGREE_LAT } from '../constants.js';
 import type { SourceRegistry } from '../types/source.js';
 
 const map = initMap();
@@ -115,8 +116,7 @@ setDimensionClickHandler((dimEntityId) => {
   const newDist = parseFloat(input);
   if (isNaN(newDist) || newDist <= 0) return;
 
-  // Convert feet to degrees (approximate) for the solver
-  const distDeg = newDist / 364567.2;
+  const distDeg = newDist / FEET_PER_DEGREE_LAT;
 
   addFixedDistanceConstraint(
     dim.targetEntityId, dim.fromVertex,

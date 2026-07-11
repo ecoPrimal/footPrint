@@ -1,8 +1,7 @@
 import * as L from 'leaflet';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+import { OVERPASS_URL, PROXY_PATH } from '../../constants.js';
 
 async function queryOverpassNodes(
   overpassQL: string,
@@ -12,7 +11,7 @@ async function queryOverpassNodes(
   const query = overpassQL.replace(/\{bbox\}/g, bbox);
   const body = `data=${encodeURIComponent(query)}`;
 
-  const resp = await fetch(`/api/proxy?url=${encodeURIComponent(OVERPASS_URL)}`, {
+  const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(OVERPASS_URL)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body,

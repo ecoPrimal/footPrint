@@ -1,5 +1,11 @@
 import * as L from 'leaflet';
 import * as turf from '@turf/turf';
+import {
+  FEET_PER_METER,
+  SQ_FEET_PER_SQ_METER,
+  FEET_PER_MILE,
+  SQ_FEET_PER_ACRE,
+} from '../constants.js';
 
 let map: L.Map | null = null;
 let measureMode = false;
@@ -106,7 +112,7 @@ function finishMeasure(e: L.LeafletEvent): void {
     const closed: Array<[number, number]> = [...measurePoints, measurePoints[0]!];
     const poly = turf.polygon([closed]);
     const area = turf.area(poly);
-    const areaSqFt = area * 10.7639;
+    const areaSqFt = area * SQ_FEET_PER_SQ_METER;
     const centroid = turf.centroid(poly);
 
     const areaLabel = L.marker(
@@ -147,7 +153,7 @@ export function computeMeasurement(shape: L.Layer): string | null {
   try {
     if (shape instanceof L.Circle && shape.getRadius) {
       const r = shape.getRadius();
-      const rFt = r * 3.28084;
+      const rFt = r * FEET_PER_METER;
       const areaSqFt = Math.PI * rFt * rFt;
       const circumFt = 2 * Math.PI * rFt;
       return `Radius: <span>${formatLength(rFt)}</span> · Area: <span>${formatArea(areaSqFt)}</span> · Circumference: <span>${formatLength(circumFt)}</span>`;
@@ -165,7 +171,7 @@ export function computeMeasurement(shape: L.Layer): string | null {
     if (gtype === 'Polygon' || gtype === 'MultiPolygon') {
       const polyFeature = geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
       const area = turf.area(polyFeature);
-      const areaSqFt = area * 10.7639;
+      const areaSqFt = area * SQ_FEET_PER_SQ_METER;
       const lineFeature = turf.polygonToLine(polyFeature as GeoJSON.Feature<GeoJSON.Polygon>);
       const perimeter = turf.length(lineFeature, { units: 'feet' });
       return `Area: <span>${formatArea(areaSqFt)}</span> · Perimeter: <span>${formatLength(perimeter)}</span>`;
@@ -186,12 +192,12 @@ export function computeMeasurement(shape: L.Layer): string | null {
 }
 
 function formatLength(feet: number): string {
-  if (feet >= 5280) return `${(feet / 5280).toFixed(2)} mi`;
+  if (feet >= FEET_PER_MILE) return `${(feet / FEET_PER_MILE).toFixed(2)} mi`;
   if (feet >= 100) return `${Math.round(feet)} ft`;
   return `${feet.toFixed(1)} ft`;
 }
 
 function formatArea(sqFt: number): string {
-  if (sqFt >= 43560) return `${(sqFt / 43560).toFixed(2)} acres`;
+  if (sqFt >= SQ_FEET_PER_ACRE) return `${(sqFt / SQ_FEET_PER_ACRE).toFixed(2)} acres`;
   return `${Math.round(sqFt).toLocaleString()} sq ft`;
 }

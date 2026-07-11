@@ -13,7 +13,7 @@ export type {
 
 export type { ProjectFile, SaveResponse, DeleteResponse, ErrorResponse } from './project.js';
 
-export type { ProxyGetQuery, CacheTTLConfig, CacheClearResponse } from './api.js';
+export type { ProxyGetQuery, CacheClearResponse } from './api.js';
 
 export type { NominatimResult } from './nominatim.js';
 
@@ -33,9 +33,9 @@ export type {
 
 export type {
   ProximityResult, ScoredSource, DiscoveryReport,
-  MLInferenceResult, CategoryBoost,
+  CategoryBoost,
 } from './spatial.js';
 export { DEFAULT_CATEGORY_BOOSTS } from './spatial.js';
 
 export type { SnapConfig } from './snap.js';
-export { DEFAULT_SNAP_CONFIG, GRID_SPACINGS_FT, ftToMeters } from './snap.js';
+export { DEFAULT_SNAP_CONFIG, ftToMeters } from './snap.js';

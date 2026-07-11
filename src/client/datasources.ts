@@ -185,10 +185,6 @@ export async function fetchAllEnabled(forceBounds?: L.LatLngBounds): Promise<voi
   await Promise.allSettled(tasks);
 }
 
-export function getMap(): L.Map | null {
-  return map;
-}
-
 function notify(): void {
   if (onSourceUpdate) onSourceUpdate(sources);
 }

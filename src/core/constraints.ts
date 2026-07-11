@@ -7,10 +7,12 @@ import { execute } from './history.js';
 import { extractCoords, rebuildGeometry } from './geometry.js';
 import { exhaustive } from '../rustscript/exhaustive.js';
 import { isSome } from '../rustscript/option.js';
-
-const MAX_ITERATIONS = 50;
-const TOLERANCE = 1e-8;
-const STEP_SIZE = 0.5;
+import {
+  SOLVER_MAX_ITERATIONS,
+  SOLVER_TOLERANCE,
+  SOLVER_STEP_SIZE,
+  SOLVER_DAMPING,
+} from '../constants.js';
 
 interface ConstraintError {
   error: number;
@@ -122,21 +124,52 @@ function coincidentError(coords: number[], i1: number, i2: number): ConstraintEr
   ];
 }
 
-// ── Gauss-Newton solver ──────────────
+function pointOnLineError(
+  coords: number[],
+  point: number,
+  lineStart: number,
+  lineEnd: number | undefined,
+): ConstraintError[] {
+  if (lineEnd == null) return [];
+  const px = coords[point * 2] ?? 0;
+  const py = coords[point * 2 + 1] ?? 0;
+  const ax = coords[lineStart * 2] ?? 0;
+  const ay = coords[lineStart * 2 + 1] ?? 0;
+  const bx = coords[lineEnd * 2] ?? 0;
+  const by = coords[lineEnd * 2 + 1] ?? 0;
 
-export interface SolverResult {
-  converged: boolean;
-  iterations: number;
-  residual: number;
+  const abx = bx - ax;
+  const aby = by - ay;
+  const apx = px - ax;
+  const apy = py - ay;
+
+  // Cross product (AP x AB) = 0 means point lies on the line
+  const err = apx * aby - apy * abx;
+  const jac = new Array<number>(coords.length).fill(0);
+
+  jac[point * 2] = aby;
+  jac[point * 2 + 1] = -abx;
+  jac[lineStart * 2] = -(aby - apy) + (py - by);
+  jac[lineStart * 2 + 1] = (abx - apx) + (bx - px);
+  jac[lineEnd * 2] = -apy;
+  jac[lineEnd * 2 + 1] = apx;
+
+  return [{ error: err, jacobian: jac, variableIndices: [] }];
 }
 
-export function solveConstraints(): SolverResult {
-  const constraintEntities = [...store.byKind('constraint')];
-  if (constraintEntities.length === 0) {
-    return { converged: true, iterations: 0, residual: 0 };
-  }
+// ── Coordinate linearization ─────────────────────────
 
-  // Collect all shape entity IDs involved in constraints
+interface SolverState {
+  readonly constraintEntities: readonly EntityId[];
+  readonly entityOrder: EntityId[];
+  readonly entityVertexOffsets: Map<EntityId, number>;
+  readonly x: number[];
+}
+
+function buildSolverState(): SolverState | null {
+  const constraintEntities = [...store.byKind('constraint')];
+  if (constraintEntities.length === 0) return null;
+
   const shapeEntityIds = new Set<EntityId>();
   for (const cId of constraintEntities) {
     const cOpt = store.getEntity(cId);
@@ -148,7 +181,6 @@ export function solveConstraints(): SolverResult {
     }
   }
 
-  // Build flat coordinate vector from all involved shapes
   const entityOrder: EntityId[] = [...shapeEntityIds];
   const entityVertexOffsets = new Map<EntityId, number>();
   let totalVars = 0;
@@ -157,11 +189,9 @@ export function solveConstraints(): SolverResult {
     const eOpt = store.getEntity(eId);
     if (!isSome(eOpt) || !eOpt.value.components.geometry) continue;
     entityVertexOffsets.set(eId, totalVars / 2);
-    const coords = extractCoords(eOpt.value.components.geometry);
-    totalVars += coords.length * 2;
+    totalVars += extractCoords(eOpt.value.components.geometry).length * 2;
   }
 
-  // Fill coordinate vector
   const x = new Array<number>(totalVars).fill(0);
   for (const eId of entityOrder) {
     const eOpt = store.getEntity(eId);
@@ -177,136 +207,137 @@ export function solveConstraints(): SolverResult {
     }
   }
 
-  // Iterative solve
-  let residual = Infinity;
-  let iter = 0;
+  return { constraintEntities, entityOrder, entityVertexOffsets, x };
+}
 
-  for (iter = 0; iter < MAX_ITERATIONS; iter++) {
-    const errors: ConstraintError[] = [];
+// ── Error evaluation per constraint ──────────────────
 
-    for (const cId of constraintEntities) {
-      const cOpt = store.getEntity(cId);
-      if (!isSome(cOpt)) continue;
-      const comp = cOpt.value.components.constraint;
-      if (!comp) continue;
+function evaluateConstraintErrors(
+  constraintEntities: readonly EntityId[],
+  entityVertexOffsets: ReadonlyMap<EntityId, number>,
+  x: number[],
+): ConstraintError[] {
+  const errors: ConstraintError[] = [];
 
-      const vi = comp.params.vertexIndices ?? [0, 1];
-      const e0 = comp.entityIds[0];
-      const e1 = comp.entityIds[1] ?? e0;
-      if (!e0) continue;
-      const off0 = entityVertexOffsets.get(e0) ?? 0;
-      const off1 = e1 ? (entityVertexOffsets.get(e1) ?? 0) : off0;
+  for (const cId of constraintEntities) {
+    const cOpt = store.getEntity(cId);
+    if (!isSome(cOpt)) continue;
+    const comp = cOpt.value.components.constraint;
+    if (!comp) continue;
 
-      const v0 = (vi[0] ?? 0) + off0;
-      const v1 = (vi[1] ?? 1) + (comp.entityIds.length > 1 ? off1 : off0);
-      const v2 = vi[2] != null ? vi[2] + off0 : undefined;
-      const v3 = vi[3] != null ? vi[3] + (comp.entityIds.length > 1 ? off1 : off0) : undefined;
+    const vi = comp.params.vertexIndices ?? [0, 1];
+    const e0 = comp.entityIds[0];
+    const e1 = comp.entityIds[1] ?? e0;
+    if (!e0) continue;
+    const off0 = entityVertexOffsets.get(e0) ?? 0;
+    const off1 = e1 ? (entityVertexOffsets.get(e1) ?? 0) : off0;
 
-      switch (comp.type) {
-        case 'fixed-distance':
-          errors.push(fixedDistanceError(x, v0, v1, comp.params.distance ?? 0));
-          break;
-        case 'parallel':
-          if (v2 != null && v3 != null) {
-            errors.push(parallelError(x, v0, v1, v2, v3));
-          }
-          break;
-        case 'perpendicular':
-          if (v2 != null && v3 != null) {
-            errors.push(perpendicularError(x, v0, v1, v2, v3));
-          }
-          break;
-        case 'horizontal':
-          errors.push(horizontalError(x, v0, v1));
-          break;
-        case 'vertical':
-          errors.push(verticalError(x, v0, v1));
-          break;
-        case 'coincident':
-          errors.push(...coincidentError(x, v0, v1));
-          break;
-        case 'point-on-line':
-        case 'tangent':
-        case 'symmetric':
-        case 'setback':
-          break;
-        default: exhaustive(comp.type);
-      }
-    }
+    const v0 = (vi[0] ?? 0) + off0;
+    const v1 = (vi[1] ?? 1) + (comp.entityIds.length > 1 ? off1 : off0);
+    const v2 = vi[2] != null ? vi[2] + off0 : undefined;
+    const v3 = vi[3] != null ? vi[3] + (comp.entityIds.length > 1 ? off1 : off0) : undefined;
 
-    if (errors.length === 0) break;
-
-    // Compute residual
-    residual = 0;
-    for (const e of errors) {
-      residual += e.error * e.error;
-    }
-    residual = Math.sqrt(residual);
-
-    if (residual < TOLERANCE) break;
-
-    // Gauss-Newton step: J^T * J * dx = -J^T * e
-    // For small systems, direct dense computation
-    const n = x.length;
-    const jtj = new Array<number>(n * n).fill(0);
-    const jte = new Array<number>(n).fill(0);
-
-    for (const err of errors) {
-      const j = err.jacobian;
-      for (let r = 0; r < n; r++) {
-        const jr = j[r] ?? 0;
-        if (jr === 0) continue;
-        for (let c = 0; c < n; c++) {
-          const jc = j[c] ?? 0;
-          if (jc === 0) continue;
-          const idx = r * n + c;
-          jtj[idx] = (jtj[idx] ?? 0) + jr * jc;
-        }
-        jte[r] = (jte[r] ?? 0) + jr * err.error;
-      }
-    }
-
-    // Damped solve: (J^T*J + lambda*I) dx = -J^T*e
-    const lambda = 1e-4;
-    for (let i = 0; i < n; i++) {
-      const diagIdx = i * n + i;
-      jtj[diagIdx] = (jtj[diagIdx] ?? 0) + lambda;
-    }
-
-    // Simple Gauss elimination for dx
-    const dx = solveLinearSystem(jtj, jte.map((v) => -v), n);
-    if (!dx) break;
-
-    // Apply step
-    for (let i = 0; i < n; i++) {
-      const step = dx[i] ?? 0;
-      x[i] = (x[i] ?? 0) + STEP_SIZE * step;
+    switch (comp.type) {
+      case 'fixed-distance':
+        errors.push(fixedDistanceError(x, v0, v1, comp.params.distance ?? 0));
+        break;
+      case 'parallel':
+        if (v2 != null && v3 != null) errors.push(parallelError(x, v0, v1, v2, v3));
+        break;
+      case 'perpendicular':
+        if (v2 != null && v3 != null) errors.push(perpendicularError(x, v0, v1, v2, v3));
+        break;
+      case 'horizontal':
+        errors.push(horizontalError(x, v0, v1));
+        break;
+      case 'vertical':
+        errors.push(verticalError(x, v0, v1));
+        break;
+      case 'coincident':
+        errors.push(...coincidentError(x, v0, v1));
+        break;
+      case 'point-on-line':
+        errors.push(...pointOnLineError(x, v0, v1, v2));
+        break;
+      case 'tangent':
+      case 'symmetric':
+      case 'setback':
+        break;
+      default: exhaustive(comp.type);
     }
   }
 
-  // Build commands for all geometry and constraint updates
+  return errors;
+}
+
+// ── Damped Gauss-Newton step ─────────────────────────
+
+function gaussNewtonStep(
+  x: number[],
+  errors: readonly ConstraintError[],
+): boolean {
+  const n = x.length;
+  const jtj = new Array<number>(n * n).fill(0);
+  const jte = new Array<number>(n).fill(0);
+
+  for (const err of errors) {
+    const j = err.jacobian;
+    for (let r = 0; r < n; r++) {
+      const jr = j[r] ?? 0;
+      if (jr === 0) continue;
+      for (let c = 0; c < n; c++) {
+        const jc = j[c] ?? 0;
+        if (jc === 0) continue;
+        const idx = r * n + c;
+        jtj[idx] = (jtj[idx] ?? 0) + jr * jc;
+      }
+      jte[r] = (jte[r] ?? 0) + jr * err.error;
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    const diagIdx = i * n + i;
+    jtj[diagIdx] = (jtj[diagIdx] ?? 0) + SOLVER_DAMPING;
+  }
+
+  const dx = solveLinearSystem(jtj, jte.map((v) => -v), n);
+  if (!dx) return false;
+
+  for (let i = 0; i < n; i++) {
+    x[i] = (x[i] ?? 0) + SOLVER_STEP_SIZE * (dx[i] ?? 0);
+  }
+  return true;
+}
+
+// ── Apply solved coordinates back to ECS ─────────────
+
+function applySolverResult(
+  state: SolverState,
+  residual: number,
+): void {
   const solverCommands: Command[] = [];
 
-  for (const eId of entityOrder) {
+  for (const eId of state.entityOrder) {
     const eOpt = store.getEntity(eId);
     if (!isSome(eOpt) || !eOpt.value.components.geometry) continue;
-    const offset = entityVertexOffsets.get(eId) ?? 0;
+    const offset = state.entityVertexOffsets.get(eId) ?? 0;
     const coords = extractCoords(eOpt.value.components.geometry);
     const newCoords: Array<[number, number]> = [];
 
     for (let i = 0; i < coords.length; i++) {
       newCoords.push([
-        x[(offset + i) * 2] ?? 0,
-        x[(offset + i) * 2 + 1] ?? 0,
+        state.x[(offset + i) * 2] ?? 0,
+        state.x[(offset + i) * 2 + 1] ?? 0,
       ]);
     }
 
-    const updatedGeo = rebuildGeometry(eOpt.value.components.geometry, newCoords);
-    solverCommands.push(new UpdateComponentCommand(eId, 'geometry', updatedGeo));
+    solverCommands.push(new UpdateComponentCommand(
+      eId, 'geometry', rebuildGeometry(eOpt.value.components.geometry, newCoords),
+    ));
   }
 
-  const satisfied = residual < TOLERANCE * 100;
-  for (const cId of constraintEntities) {
+  const satisfied = residual < SOLVER_TOLERANCE * 100;
+  for (const cId of state.constraintEntities) {
     const cOpt = store.getEntity(cId);
     if (!isSome(cOpt)) continue;
     const comp = cOpt.value.components.constraint;
@@ -318,8 +349,37 @@ export function solveConstraints(): SolverResult {
   if (solverCommands.length > 0) {
     execute(new BatchCommand(solverCommands));
   }
+}
 
-  return { converged: residual < TOLERANCE, iterations: iter, residual };
+// ── Public solver entry point ────────────────────────
+
+export interface SolverResult {
+  converged: boolean;
+  iterations: number;
+  residual: number;
+}
+
+export function solveConstraints(): SolverResult {
+  const state = buildSolverState();
+  if (!state) return { converged: true, iterations: 0, residual: 0 };
+
+  let residual = Infinity;
+  let iter = 0;
+
+  for (iter = 0; iter < SOLVER_MAX_ITERATIONS; iter++) {
+    const errors = evaluateConstraintErrors(
+      state.constraintEntities, state.entityVertexOffsets, state.x,
+    );
+    if (errors.length === 0) break;
+
+    residual = Math.sqrt(errors.reduce((sum, e) => sum + e.error * e.error, 0));
+    if (residual < SOLVER_TOLERANCE) break;
+
+    if (!gaussNewtonStep(state.x, errors)) break;
+  }
+
+  applySolverResult(state, residual);
+  return { converged: residual < SOLVER_TOLERANCE, iterations: iter, residual };
 }
 
 function solveLinearSystem(A: number[], b: number[], n: number): number[] | null {

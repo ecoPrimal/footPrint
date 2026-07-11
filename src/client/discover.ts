@@ -7,8 +7,8 @@ import { getAllSources, fetchSource, enableSource, fetchAllEnabled } from './dat
 import { buildTerrainGrid, renderContours, renderSlopeArrows } from './terrain.js';
 import { boundedChannel } from '../rustscript/channel.js';
 import { Owned, take } from '../rustscript/owned.js';
-import { isSome } from '../rustscript/option.js';
 import { isOk } from '../rustscript/result.js';
+import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT } from '../constants.js';
 
 let map: L.Map | null = null;
 let onDiscovery: ((report: DiscoveryReport) => void) | null = null;
@@ -88,7 +88,7 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
     }
   }
 
-  const buffered = shapeBounds.pad(BUFFER_RADIUS_M / 111139 / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001));
+  const buffered = shapeBounds.pad(BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001));
   const sources = getAllSources();
 
   const sourceEntries = Object.entries(sources).filter(([, src]) => src.type === 'vector' && src.fetch);
@@ -175,9 +175,7 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
 
   const scored: ScoredSource[] = [];
   for (const owned of rx) {
-    if (isSome({ some: true, value: owned })) {
-      scored.push(take(owned));
-    }
+    scored.push(take(owned));
   }
   using _rxDone = rx;
 
@@ -193,7 +191,7 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
   }
 
   const report: DiscoveryReport = {
-    propertyArea: Math.round(propertyArea * 10.7639),
+    propertyArea: Math.round(propertyArea * SQ_FEET_PER_SQ_METER),
     bufferRadius: BUFFER_RADIUS_M,
     sources: scored,
     terrain: terrainGrid,
@@ -227,7 +225,7 @@ function renderDiscoveryPanel(report: DiscoveryReport): void {
     if (src.featureCount === 0) continue;
     const li = document.createElement('li');
     const distStr = src.nearestDistance < Infinity
-      ? `${String(Math.round(src.nearestDistance * 3.28084))}ft`
+      ? `${String(Math.round(src.nearestDistance * FEET_PER_METER))}ft`
       : '--';
     const scoreBar = Math.round(src.relevanceScore * 100);
 
