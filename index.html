@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FootPrint — Home Planner</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+
+  <!-- Top Toolbar -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <span class="logo">FootPrint</span>
+    </div>
+    <div class="toolbar-center">
+      <input type="text" id="geocoder-input" placeholder="Search address…" autocomplete="off" />
+      <button id="geocoder-btn" title="Search">&#128269;</button>
+    </div>
+    <div class="toolbar-right">
+      <button id="btn-new" title="New Project">New</button>
+      <button id="btn-save" title="Save Project">Save</button>
+      <button id="btn-load" title="Load Project">Load</button>
+      <span class="separator"></span>
+      <button id="btn-grid" title="Toggle engineering grid">Grid</button>
+      <button id="btn-snap" title="Toggle snap">Snap</button>
+      <span class="separator"></span>
+      <button id="btn-measure" title="Measure distance/area">Measure</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div id="app">
+
+    <!-- Left Sidebar: Layers + Data Sources -->
+    <aside id="layer-panel">
+      <div class="panel-header">
+        <h3>Layers</h3>
+        <button id="btn-add-layer" title="Add custom layer">+</button>
+      </div>
+      <ul id="layer-list"></ul>
+
+      <div class="panel-header data-header">
+        <h3>Data Sources</h3>
+      </div>
+      <ul id="data-source-list"></ul>
+
+      <div id="discovery-panel" class="hidden">
+        <div class="panel-header">
+          <h3>Discovery</h3>
+          <button id="btn-dismiss-discover" title="Dismiss">&times;</button>
+        </div>
+        <ul id="discovery-list"></ul>
+      </div>
+    </aside>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Right Sidebar: Properties -->
+    <aside id="props-panel" class="collapsed">
+      <div class="panel-header">
+        <h3>Properties</h3>
+        <button id="btn-close-props" title="Close">&times;</button>
+      </div>
+      <div id="props-content">
+        <p class="hint">Select a shape to view properties.</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Load Modal (hidden) -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Load Project</h3>
+        <button id="modal-close">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Agent Panel -->
+  <div id="agent-panel" class="agent-collapsed">
+    <div id="agent-panel-header">
+      <span id="agent-status-dot" class="agent-dot-disconnected"></span>
+      <span class="agent-title">Agent</span>
+      <span id="agent-badge" class="agent-badge hidden">0</span>
+      <button id="btn-toggle-agent" title="Toggle agent panel">&#9650;</button>
+    </div>
+    <div id="agent-panel-body">
+      <ul id="agent-log"></ul>
+      <div id="agent-input-row">
+        <input type="text" id="agent-input" placeholder="Message the AI..." autocomplete="off" />
+        <button id="agent-send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <footer id="status-bar">
+    <span id="status-coords">Lat: --  Lng: --</span>
+    <span class="status-sep">|</span>
+    <span id="status-zoom">Zoom: --</span>
+    <span class="status-sep">|</span>
+    <span id="status-scale">1:--</span>
+    <span class="status-sep">|</span>
+    <span id="status-snap">Snap: ON</span>
+    <span class="status-sep">|</span>
+    <span id="status-grid">Grid: OFF</span>
+    <span class="status-sep">|</span>
+    <span id="status-elev">Elev: --</span>
+  </footer>
+
+  <!-- Measurement tooltip container -->
+  <div id="measure-tooltip" class="hidden"></div>
+
+  <script type="module" src="/src/client/app.ts"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "footprint",
+  "version": "2.0.0",
+  "description": "Home improvement planning tool with satellite map overlays and CAD-like drawing tools",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "concurrently \"tsx watch src/server.ts\" \"vite\"",
+    "dev:server": "tsx watch src/server.ts",
+    "dev:client": "vite",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "home-improvement",
+    "map",
+    "planning",
+    "cad",
+    "leaflet",
+    "typescript"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@geoman-io/leaflet-geoman-free": "^2.19.2",
+    "@turf/turf": "^7.3.4",
+    "express": "^5.2.1",
+    "leaflet": "^1.9.4",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.2",
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.17",
+    "@types/node": "^22.13.14",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.3"
+  }
+}
