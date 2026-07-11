@@ -144,31 +144,41 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 ---
 
-## Primal Evolution Path
+## Composition Evolution Path
 
-### Phase 1: Visual Parity (footPrint → petalTongue)
+footPrint is NOT a primal and will NOT become one. It is a **primal composition** —
+a product assembled from primals. The primals are the organisms; footPrint is what
+they compose into. The Express server disappears; primals absorb its responsibilities.
+The browser frontend (TypeScript/Leaflet/Turf.js) is the product.
+
+### Phase 1: Visual Parity (footPrint frontend → petalTongue serving)
 petalTongue serves the same UI (Leaflet + Geoman + Turf.js) from its Axum
 static file server. The HTML/CSS/JS is the same — petalTongue replaces Express,
 not the frontend. Data persistence moves from JSON files to nestGate CAS.
 
-### Phase 2: Backend Sovereignty (petalTongue + nestGate + songBird)
-- Project data stored in nestGate CAS with rootPulse provenance
-- Data source proxying through songBird drawbridge (rate-limited, cached)
-- Mesh federation: share project data across gates
-- bearDog TLS termination (no Caddy dependency)
+### Phase 2: Backend Sovereignty (primals absorb Express)
+- Project CRUD → nestGate CAS (content-addressed, rootPulse provenance)
+- Data source proxy → songBird drawbridge (rate-limited, cached, allowlisted)
+- Auth → bearDog TLS termination (no Caddy dependency for internal)
+- The Express server is deleted — its responsibilities now live in primals
 
-### Phase 3: Compute Integration (barraCuda + coralReef)
+### Phase 3: Compute Integration (mesh dispatch to LAN HPC)
 - DEM processing on HPC (southGate/strandGate) via mesh dispatch
 - Terrain analysis via coralReef GPU shaders
 - Batch elevation queries via LAN compute, not USGS rate-limited API
 - Soil analysis acceleration
 
-### Phase 4: Full Primal Composition
-- footPrint server logic → Rust primal (Axum, typed IPC, health.liveness)
-- RustScript modules → native Rust (compile-time enforcement replaces runtime)
-- ECS store → Rust ECS with compile-time component safety
-- Constraint solver → nalgebra (f64, sparse matrices)
-- GeoJSON processing → geo crate (zero-copy, SIMD where available)
+### RustScript: Evidence, Not Evolution Target
+
+RustScript is NOT a stepping stone toward Rust. It is evidence FOR pure Rust.
+The 12-module library proves that Rust's constraints improve TypeScript code, but
+also reveals the limits: 3 constraints can't be expressed at all (lifetimes,
+Send/Sync, zero-cost abstractions), and 9 require runtime wrappers (degraded
+enforcement). This validates the architectural decision that primals are pure Rust.
+
+RustScript stays as a blueprint for anyone who wants safer TypeScript — and they
+should use it. For ecoPrimals, it's the control experiment. See
+`CONSTRAINED_EVOLUTION_FORMAL.md` §5.5 for the full analysis.
 
 ---
 
