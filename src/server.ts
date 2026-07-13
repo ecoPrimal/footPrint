@@ -125,7 +125,7 @@ function isHostAllowed(targetUrl: string): boolean {
   }
 }
 
-app.get('/api/proxy', async (req: Request, res: Response) => {
+async function handleProxyGet(req: Request, res: Response): Promise<void> {
   const targetUrl = req.query['url'];
   if (typeof targetUrl !== 'string' || targetUrl === '') {
     res.status(400).json({ error: 'Missing url parameter' } satisfies ErrorResponse);
@@ -156,9 +156,9 @@ app.get('/api/proxy', async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(502).json({ error: 'Proxy request failed', detail: message } satisfies ErrorResponse);
   }
-});
+}
 
-app.post('/api/proxy', async (req: Request, res: Response) => {
+async function handleProxyPost(req: Request, res: Response): Promise<void> {
   const targetUrl = req.query['url'];
   if (typeof targetUrl !== 'string' || targetUrl === '') {
     res.status(400).json({ error: 'Missing url parameter' } satisfies ErrorResponse);
@@ -195,7 +195,12 @@ app.post('/api/proxy', async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(502).json({ error: 'Proxy request failed', detail: message } satisfies ErrorResponse);
   }
-});
+}
+
+app.get('/api/proxy', handleProxyGet);
+app.post('/api/proxy', handleProxyPost);
+app.get('/ext', handleProxyGet);
+app.post('/ext', handleProxyPost);
 
 app.delete('/api/cache', async (_req: Request, res: Response) => {
   try {

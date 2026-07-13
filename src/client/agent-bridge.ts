@@ -27,6 +27,7 @@ import type {
   StateDeltaMessage,
   DeltaEvent,
 } from '../agent/protocol.js';
+import { agentWsUrl } from './api.js';
 
 type AgentPanelCallback = (msg: AgentTextMessage | AgentActionMessage) => void;
 
@@ -49,17 +50,12 @@ export function initAgentBridge(
   connect();
 }
 
-function getWsUrl(): string {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${location.host}/ws`;
-}
-
 function connect(): void {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
     return;
   }
 
-  ws = new WebSocket(getWsUrl());
+  ws = new WebSocket(agentWsUrl());
 
   ws.addEventListener('open', () => {
     reconnectDelay = 1000;

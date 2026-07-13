@@ -2,7 +2,8 @@ import * as L from 'leaflet';
 import type { USGSElevationResponse } from '../../types/terrain.js';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { EPQS_BASE_URL, PROXY_PATH } from '../../constants.js';
+import { EPQS_BASE_URL } from '../../constants.js';
+import { proxyUrl } from '../api.js';
 const MAX_CONCURRENT = 6;
 const THROTTLE_MS = 50;
 
@@ -35,9 +36,9 @@ async function batchElevation(
     const batch = queue.splice(0, MAX_CONCURRENT);
     const batchResults = await Promise.allSettled(
       batch.map(async (pt) => {
-        const url = `${PROXY_PATH}?url=${encodeURIComponent(
+        const url = proxyUrl(
           `${EPQS_BASE_URL}?x=${pt.lng}&y=${pt.lat}&wkid=4326&units=Feet&includeDate=false`
-        )}`;
+        );
         const elev = await throttledFetch(url);
         return { lat: pt.lat, lng: pt.lng, elevation: elev };
       }),

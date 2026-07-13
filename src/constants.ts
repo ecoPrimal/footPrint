@@ -24,7 +24,7 @@ export const NFHL_BASE_URL = 'https://hazards.fema.gov/gis/nfhl/rest/services/pu
 export const NRCS_WMS_URL = 'https://sdmdataaccess.sc.egov.usda.gov/Spatial/SDM.wms';
 
 export const MI_FRAMEWORK_BASE = 'https://gisagocss.state.mi.us/arcgis/rest/services/OpenData/michigan_geographic_framework/MapServer';
-export const ZONING_URL = 'https://gis2.cityofeastlansing.com/arcgis/rest/services/ZoningDistricts/FeatureServer/0/query';
+export const ZONING_URL = 'https://gis2.cityofeastlansing.com/arcgis/rest/services/ZoningDistricts/FeatureServer/0';
 
 // ── Application defaults ─────────────────────────────
 
@@ -32,9 +32,15 @@ export const DEFAULT_MAP_CENTER: readonly [number, number] = [42.7085, -84.5537]
 export const DEFAULT_MAP_ZOOM = 18;
 export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
-// ── Proxy configuration ──────────────────────────────
+// ── API paths ────────────────────────────────────────
+// Deployment teams rewire these when primals absorb the Express server:
+//   PROXY_PATH   → songBird drawbridge
+//   PROJECTS_PATH → nestGate CAS
+//   WS_PATH       → agent bridge (songBird or dedicated)
 
 export const PROXY_PATH = '/ext';
+export const PROJECTS_PATH = '/api/projects';
+export const WS_PATH = '/ws';
 
 export const ALLOWED_HOSTS: readonly string[] = [
   'overpass-api.de',

@@ -1,7 +1,8 @@
-import type { ProjectFile, SaveResponse } from '../types/project.js';
+import type { ProjectFile } from '../types/project.js';
 import { serializeLayers, deserializeLayers } from './layers.js';
 import { deselectShape } from './drawing.js';
 import { clearHistory } from '../core/history.js';
+import { listProjects as apiListProjects, loadProject as apiLoadProject, saveProject as apiSaveProject, deleteProject as apiDeleteProject } from './api.js';
 
 let currentProject: string | null = null;
 
@@ -38,12 +39,7 @@ async function saveProject(): Promise<void> {
   };
 
   try {
-    const resp = await fetch(`/api/projects/${encodeURIComponent(currentProject)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const result = (await resp.json()) as SaveResponse;
+    const result = await apiSaveProject(currentProject, data);
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Saved: ${result.saved}`);
   } catch {
@@ -59,8 +55,7 @@ async function showLoadModal(): Promise<void> {
   title.textContent = 'Load Project';
 
   try {
-    const resp = await fetch('/api/projects');
-    const projects = (await resp.json()) as ReadonlyArray<string>;
+    const projects = await apiListProjects();
 
     if (projects.length === 0) {
       body.innerHTML = '<p class="hint">No saved projects yet.</p>';
@@ -84,8 +79,7 @@ async function showLoadModal(): Promise<void> {
           e.stopPropagation();
           const name = (btn as HTMLElement).dataset['name'];
           if (!name || !confirm(`Delete project "${name}"?`)) return;
-          void fetch(`/api/projects/${encodeURIComponent(name)}`, { method: 'DELETE' })
-            .then(() => { void showLoadModal(); });
+          void apiDeleteProject(name).then(() => { void showLoadModal(); });
         });
       });
     }
@@ -98,9 +92,7 @@ async function showLoadModal(): Promise<void> {
 
 async function loadProject(name: string): Promise<void> {
   try {
-    const resp = await fetch(`/api/projects/${encodeURIComponent(name)}`);
-    if (!resp.ok) throw new Error('Not found');
-    const data = (await resp.json()) as ProjectFile;
+    const data = await apiLoadProject(name);
 
     deselectShape();
     clearHistory();

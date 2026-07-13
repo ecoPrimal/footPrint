@@ -1,7 +1,18 @@
 import * as L from 'leaflet';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { OVERPASS_URL, PROXY_PATH } from '../../constants.js';
+import { OVERPASS_URL } from '../../constants.js';
+import { proxyPost } from '../api.js';
+
+interface OverpassNodeResult {
+  elements?: ReadonlyArray<{
+    type: string;
+    id: number;
+    lat: number;
+    lon: number;
+    tags?: Record<string, string>;
+  }>;
+}
 
 async function queryOverpassNodes(
   overpassQL: string,
@@ -11,23 +22,7 @@ async function queryOverpassNodes(
   const query = overpassQL.replace(/\{bbox\}/g, bbox);
   const body = `data=${encodeURIComponent(query)}`;
 
-  const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(OVERPASS_URL)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body,
-  });
-
-  if (!resp.ok) throw new Error(`Overpass: ${String(resp.status)}`);
-  interface OverpassNodeResult {
-    elements?: ReadonlyArray<{
-      type: string;
-      id: number;
-      lat: number;
-      lon: number;
-      tags?: Record<string, string>;
-    }>;
-  }
-  const data = (await resp.json()) as OverpassNodeResult;
+  const data = await proxyPost<OverpassNodeResult>(OVERPASS_URL, body);
   const features: GeoJSON.Feature[] = [];
   for (const el of data.elements ?? []) {
     if (el.type === 'node' && el.lat != null && el.lon != null) {

@@ -1,6 +1,7 @@
 import * as L from 'leaflet';
 import type { NominatimResult } from '../types/nominatim.js';
-import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL, USER_AGENT } from '../constants.js';
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL } from '../constants.js';
+import { proxyGet } from './api.js';
 
 let map: L.Map;
 
@@ -51,11 +52,9 @@ function initGeocoder(): void {
     if (!q) return;
 
     try {
-      const resp = await fetch(
+      const results = await proxyGet<ReadonlyArray<NominatimResult>>(
         `${NOMINATIM_SEARCH_URL}?format=json&q=${encodeURIComponent(q)}&limit=1`,
-        { headers: { 'User-Agent': USER_AGENT } },
       );
-      const results = (await resp.json()) as ReadonlyArray<NominatimResult>;
       if (results.length > 0) {
         const first = results[0];
         if (first) {
