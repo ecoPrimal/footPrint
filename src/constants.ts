@@ -34,7 +34,7 @@ export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
 // ── Proxy configuration ──────────────────────────────
 
-export const PROXY_PATH = '/api/proxy';
+export const PROXY_PATH = '/ext';
 
 export const ALLOWED_HOSTS: readonly string[] = [
   'overpass-api.de',
