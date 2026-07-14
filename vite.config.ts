@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: '.',
   publicDir: 'public',
+  base: '/footprint/',
   server: {
     port: 5173,
     proxy: {
