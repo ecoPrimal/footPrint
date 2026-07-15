@@ -1,9 +1,8 @@
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import type { EntityId, GeometryComponent } from '../core/entity.js';
-import { store } from '../core/store.js';
 import { execute } from '../core/history.js';
-import { createShapeEntity, RemoveEntityCommand, UpdateComponentCommand } from '../core/commands.js';
+import { createShapeEntity, RemoveEntityCommand } from '../core/commands.js';
 import { getLeafletLayer, getEntityIdForLayer } from '../core/renderer.js';
 import type { HexColor } from '../types/brands.js';
 
@@ -146,17 +145,3 @@ export function deleteSelectedShape(): void {
   execute(new RemoveEntityCommand(id));
 }
 
-export function getSelectedEntityId(): EntityId | null {
-  return selectedEntityId;
-}
-
-export function applyLayerStyle(entityId: EntityId, color: HexColor): void {
-  const res = store.get(entityId);
-  if (!res.ok) return;
-  execute(new UpdateComponentCommand(entityId, 'style', {
-    color,
-    weight: 3,
-    opacity: 0.9,
-    fillOpacity: 0.25,
-  }));
-}

@@ -1,6 +1,7 @@
 import type { EntityId, ComponentKey } from './entity.js';
 import type { StoreEvent } from './store.js';
 import { store } from './store.js';
+import { REACTIVE_DEBOUNCE_MS } from '../constants.js';
 
 export interface DerivedComputation<T = unknown> {
   readonly id: string;
@@ -17,7 +18,6 @@ interface ScheduledComputation {
 
 const registry = new Map<string, ScheduledComputation>();
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-const DEBOUNCE_MS = 16;
 let initialized = false;
 
 export function initReactive(): void {
@@ -37,22 +37,6 @@ export function registerComputation<T>(computation: DerivedComputation<T>): () =
   return () => {
     registry.delete(computation.id);
   };
-}
-
-export function unregisterComputation(id: string): void {
-  registry.delete(id);
-}
-
-export function runComputation(id: string): void {
-  const entry = registry.get(id);
-  if (!entry) return;
-  try {
-    const value = entry.computation.compute();
-    entry.computation.apply(value);
-    entry.dirty = false;
-  } catch (err) {
-    console.warn(`[Reactive] computation "${id}" failed:`, err);
-  }
 }
 
 function markDirty(event: StoreEvent): void {
@@ -77,7 +61,7 @@ function scheduleFlush(): void {
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
     flush();
-  }, DEBOUNCE_MS);
+  }, REACTIVE_DEBOUNCE_MS);
 }
 
 function flush(): void {
@@ -93,10 +77,3 @@ function flush(): void {
   }
 }
 
-export function forceFlush(): void {
-  if (debounceTimer !== null) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
-  flush();
-}

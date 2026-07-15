@@ -21,6 +21,7 @@ import type {
   AgentActionMessage,
 } from './protocol.js';
 import type { SerializedEntity } from '../core/entity.js';
+import { AGENT_COMMAND_TIMEOUT_MS } from '../constants.js';
 
 // ── Shadow state ────────────────────────────────────────────────
 
@@ -49,10 +50,6 @@ export function getUserMessages(flush: boolean): readonly QueuedMessage[] {
   const copy = [...userMessages];
   if (flush) userMessages.length = 0;
   return copy;
-}
-
-export function getAgentMessageHistory(): readonly QueuedMessage[] {
-  return [...agentMessages];
 }
 
 // ── Command forwarding ─────────────────────────────────────────
@@ -158,8 +155,6 @@ function handleUserMessage(msg: UserMessage): void {
 
 // ── Public API for REST layer ───────────────────────────────────
 
-const COMMAND_TIMEOUT_MS = 10_000;
-
 export async function sendCommand(payload: CommandPayload): Promise<CommandResultMessage> {
   if (!activeClient || activeClient.readyState !== WebSocket.OPEN) {
     return { type: 'command-result', id: '', ok: false, error: 'No browser connected' };
@@ -171,7 +166,7 @@ export async function sendCommand(payload: CommandPayload): Promise<CommandResul
     const timer = setTimeout(() => {
       pendingCommands.delete(id);
       resolve({ type: 'command-result', id, ok: false, error: 'Command timed out' });
-    }, COMMAND_TIMEOUT_MS);
+    }, AGENT_COMMAND_TIMEOUT_MS);
 
     pendingCommands.set(id, (result) => {
       clearTimeout(timer);

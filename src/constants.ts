@@ -33,10 +33,8 @@ export const DEFAULT_MAP_ZOOM = 18;
 export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
 // ── API paths ────────────────────────────────────────
-// Deployment teams rewire these when primals absorb the Express server:
-//   PROXY_PATH   → songBird drawbridge
-//   PROJECTS_PATH → nestGate CAS
-//   WS_PATH       → agent bridge (songBird or dedicated)
+// Deployment teams rewire these when backend services absorb the Express server.
+// Each path is a single point of configuration for the entire client.
 
 export const PROXY_PATH = '/ext';
 export const PROJECTS_PATH = '/api/projects';
@@ -65,6 +63,26 @@ export const CACHE_TTLS = {
   elevation: 30 * DAY,
   soils: 90 * DAY,
 } as const;
+
+// ── Timing & limits ──────────────────────────────────
+
+export const DISCOVERY_DEBOUNCE_MS = 800;
+export const REACTIVE_DEBOUNCE_MS = 16;
+export const AGENT_RECONNECT_MS = 1000;
+export const AGENT_RECONNECT_MAX_MS = 16_000;
+export const AGENT_COMMAND_TIMEOUT_MS = 10_000;
+export const UNDO_HISTORY_LIMIT = 200;
+export const AGENT_LOG_LIMIT = 200;
+export const TOAST_DURATION_MS = 2000;
+export const JSON_BODY_LIMIT = '10mb';
+export const SHUTDOWN_GRACE_MS = 5000;
+
+// ── Terrain defaults ─────────────────────────────────
+
+export const DEFAULT_CONTOUR_INTERVAL_FT = 5;
+export const MAX_ELEVATION_CONCURRENT = 6;
+export const ELEVATION_THROTTLE_MS = 50;
+export const OVERPASS_TIMEOUT_S = 25;
 
 // ── Solver tuning ────────────────────────────────────
 

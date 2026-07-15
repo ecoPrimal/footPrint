@@ -3,12 +3,12 @@ import type {
   ElevationSample, TerrainGrid, ContourLine, SlopeAspect, ElevationProfile,
 } from '../types/terrain.js';
 import { batchElevation } from './sources/usgs.js';
-import { METERS_PER_DEGREE_LAT } from '../constants.js';
+import { METERS_PER_DEGREE_LAT, FEET_PER_METER, DEFAULT_CONTOUR_INTERVAL_FT } from '../constants.js';
 
 let map: L.Map | null = null;
 let contourLayer: L.LayerGroup = L.layerGroup();
 let slopeLayer: L.LayerGroup = L.layerGroup();
-let contourInterval = 5;
+let contourInterval = DEFAULT_CONTOUR_INTERVAL_FT;
 let cachedGrid: TerrainGrid | null = null;
 
 export function initTerrain(leafletMap: L.Map): void {
@@ -22,14 +22,6 @@ export function setContourInterval(interval: number): void {
   if (cachedGrid) {
     renderContours(cachedGrid);
   }
-}
-
-export function getContourInterval(): number {
-  return contourInterval;
-}
-
-export function getCachedGrid(): TerrainGrid | null {
-  return cachedGrid;
 }
 
 export function getElevationAt(lat: number, lng: number): number | null {
@@ -325,7 +317,7 @@ export function computeSlopeAspect(grid: TerrainGrid): SlopeAspect[] {
 
   const results: SlopeAspect[] = [];
   // Convert cell size to feet so rise/run are both in feet
-  const cellSizeFt = resolution * 3.28084;
+  const cellSizeFt = resolution * FEET_PER_METER;
 
   for (let r = 1; r < rows - 1; r++) {
     for (let c = 1; c < cols - 1; c++) {
@@ -460,8 +452,3 @@ export async function computeElevationProfile(
   };
 }
 
-export function clearTerrain(): void {
-  contourLayer.clearLayers();
-  slopeLayer.clearLayers();
-  cachedGrid = null;
-}

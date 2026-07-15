@@ -1,5 +1,10 @@
 import * as L from 'leaflet';
-import * as turf from '@turf/turf';
+import { area } from '@turf/area';
+import { centroid } from '@turf/centroid';
+import { length as turfLength } from '@turf/length';
+import { midpoint } from '@turf/midpoint';
+import { polygonToLine } from '@turf/polygon-to-line';
+import { lineString, point, polygon } from '@turf/helpers';
 import {
   FEET_PER_METER,
   SQ_FEET_PER_SQ_METER,
@@ -65,8 +70,8 @@ function onMeasureMove(e: L.LeafletMouseEvent): void {
   if (!tooltip) return;
 
   const currentPts: Array<[number, number]> = [...measurePoints, [e.latlng.lng, e.latlng.lat]];
-  const line = turf.lineString(currentPts);
-  const length = turf.length(line, { units: 'feet' });
+  const line = lineString(currentPts);
+  const length = turfLength(line, { units: 'feet' });
 
   tooltip.classList.remove('hidden');
   tooltip.style.left = e.originalEvent.clientX + 14 + 'px';
@@ -89,9 +94,9 @@ function updateMeasureLine(): void {
   measureLayers.addLayer(line);
 
   const lastTwo = measurePoints.slice(-2) as [[number, number], [number, number]];
-  const seg = turf.lineString(lastTwo);
-  const segLen = turf.length(seg, { units: 'feet' });
-  const mid = turf.midpoint(turf.point(lastTwo[0]), turf.point(lastTwo[1]));
+  const seg = lineString(lastTwo);
+  const segLen = turfLength(seg, { units: 'feet' });
+  const mid = midpoint(point(lastTwo[0]), point(lastTwo[1]));
 
   const label = L.marker(
     [mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple,
@@ -110,13 +115,13 @@ function finishMeasure(e: L.LeafletEvent): void {
 
   if (measurePoints.length >= 3) {
     const closed: Array<[number, number]> = [...measurePoints, measurePoints[0]!];
-    const poly = turf.polygon([closed]);
-    const area = turf.area(poly);
-    const areaSqFt = area * SQ_FEET_PER_SQ_METER;
-    const centroid = turf.centroid(poly);
+    const poly = polygon([closed]);
+    const polyArea = area(poly);
+    const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+    const center = centroid(poly);
 
     const areaLabel = L.marker(
-      [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]] as L.LatLngTuple,
+      [center.geometry.coordinates[1], center.geometry.coordinates[0]] as L.LatLngTuple,
       {
         icon: L.divIcon({ className: 'measure-label', html: `Area: ${formatArea(areaSqFt)}` }),
         interactive: false,
@@ -126,8 +131,8 @@ function finishMeasure(e: L.LeafletEvent): void {
   }
 
   if (measurePoints.length >= 2) {
-    const line = turf.lineString(measurePoints);
-    const totalLen = turf.length(line, { units: 'feet' });
+    const line = lineString(measurePoints);
+    const totalLen = turfLength(line, { units: 'feet' });
     const last = measurePoints[measurePoints.length - 1];
     if (last) {
       const totalLabel = L.marker([last[1], last[0]] as L.LatLngTuple, {
@@ -164,16 +169,16 @@ export function computeMeasurement(shape: L.Layer): string | null {
     const gtype = geo.geometry.type;
 
     if (gtype === 'LineString' || gtype === 'MultiLineString') {
-      const len = turf.length(geo as GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString>, { units: 'feet' });
+      const len = turfLength(geo as GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString>, { units: 'feet' });
       return `Length: <span>${formatLength(len)}</span>`;
     }
 
     if (gtype === 'Polygon' || gtype === 'MultiPolygon') {
       const polyFeature = geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
-      const area = turf.area(polyFeature);
-      const areaSqFt = area * SQ_FEET_PER_SQ_METER;
-      const lineFeature = turf.polygonToLine(polyFeature as GeoJSON.Feature<GeoJSON.Polygon>);
-      const perimeter = turf.length(lineFeature, { units: 'feet' });
+      const polyArea = area(polyFeature);
+      const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+      const lineFeature = polygonToLine(polyFeature as GeoJSON.Feature<GeoJSON.Polygon>);
+      const perimeter = turfLength(lineFeature, { units: 'feet' });
       return `Area: <span>${formatArea(areaSqFt)}</span> · Perimeter: <span>${formatLength(perimeter)}</span>`;
     }
 

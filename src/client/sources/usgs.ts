@@ -2,10 +2,8 @@ import * as L from 'leaflet';
 import type { USGSElevationResponse } from '../../types/terrain.js';
 import { dataSourceId, hexColor } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { EPQS_BASE_URL } from '../../constants.js';
+import { EPQS_BASE_URL, MAX_ELEVATION_CONCURRENT, ELEVATION_THROTTLE_MS } from '../../constants.js';
 import { proxyUrl } from '../api.js';
-const MAX_CONCURRENT = 6;
-const THROTTLE_MS = 50;
 
 function gridDensityForZoom(zoom: number): number {
   if (zoom >= 19) return 8;
@@ -33,7 +31,7 @@ async function batchElevation(
   const queue = [...points];
 
   while (queue.length > 0) {
-    const batch = queue.splice(0, MAX_CONCURRENT);
+    const batch = queue.splice(0, MAX_ELEVATION_CONCURRENT);
     const batchResults = await Promise.allSettled(
       batch.map(async (pt) => {
         const url = proxyUrl(
@@ -47,7 +45,7 @@ async function batchElevation(
       results.push(r.status === 'fulfilled' ? r.value : { lat: 0, lng: 0, elevation: null });
     }
     if (queue.length > 0) {
-      await new Promise((resolve) => { setTimeout(resolve, THROTTLE_MS); });
+      await new Promise((resolve) => { setTimeout(resolve, ELEVATION_THROTTLE_MS); });
     }
   }
   return results;

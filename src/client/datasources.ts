@@ -1,5 +1,6 @@
 import * as L from 'leaflet';
 import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback, VectorSourceDef, TileSourceDef } from '../types/source.js';
+import { escHtml } from './html.js';
 
 let map: L.Map | null = null;
 const sources: SourceRegistry = {};
@@ -51,7 +52,7 @@ export function registerSource(def: DataSourceDef): DataSourceState {
           const rows = Object.entries(props as Record<string, unknown>)
             .filter(([k]) => !k.startsWith('_'))
             .slice(0, 12)
-            .map(([k, v]) => `<tr><td>${k}</td><td>${String(v ?? '')}</td></tr>`)
+            .map(([k, v]) => `<tr><td>${escHtml(k)}</td><td>${escHtml(String(v ?? ''))}</td></tr>`)
             .join('');
           if (rows) {
             (featureLayer as L.Path).bindPopup(

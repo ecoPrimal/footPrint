@@ -1,6 +1,8 @@
 import * as L from 'leaflet';
-import * as turf from '@turf/turf';
 import '@geoman-io/leaflet-geoman-free';
+import { area } from '@turf/area';
+import { distance } from '@turf/distance';
+import { centroid } from '@turf/centroid';
 import type { ScoredSource, DiscoveryReport } from '../types/spatial.js';
 import { DEFAULT_CATEGORY_BOOSTS } from '../types/spatial.js';
 import { getAllSources, fetchSource, enableSource, fetchAllEnabled } from './datasources.js';
@@ -9,6 +11,8 @@ import { boundedChannel } from '../rustscript/channel.js';
 import { Owned, take } from '../rustscript/owned.js';
 import { isOk } from '../rustscript/result.js';
 import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT } from '../constants.js';
+import { store } from '../core/store.js';
+import { escHtml } from './html.js';
 
 let map: L.Map | null = null;
 let onDiscovery: ((report: DiscoveryReport) => void) | null = null;
@@ -16,11 +20,21 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const BUFFER_RADIUS_M = 100;
 const DEBOUNCE_MS = 800;
+const MAX_FEATURE_SAMPLE = 50;
+const PROXIMITY_RADIUS_M = 500;
 
 const AUTO_ENABLE_IDS: readonly string[] = [
   'osm-buildings', 'osm-power', 'parcels', 'osm-fences',
   'osm-poles', 'osm-manholes', 'osm-hydrants',
 ];
+
+function isPropertyLayerEntity(entityId: string): boolean {
+  const res = store.get(entityId as import('../types/brands.js').EntityId);
+  if (!res.ok) return false;
+  const entity = res.value;
+  if (entity.kind !== 'layer') return false;
+  return entity.components.layer.layerName === 'Property Boundary';
+}
 
 export function initDiscover(
   leafletMap: L.Map,
@@ -29,33 +43,35 @@ export function initDiscover(
   map = leafletMap;
   onDiscovery = discoveryCallback ?? null;
 
-  map.on('pm:create', (e: { layer: L.Layer }) => {
-    const shape = e.layer;
-    setTimeout(() => {
-      if (!shape._fpMeta || !map) return;
+  store.on((event) => {
+    if (event.type !== 'add') return;
+    if (!map) return;
 
-      let isPropertyLayer = false;
-      map.eachLayer((layer: L.Layer) => {
-        if (layer instanceof L.FeatureGroup && layer.hasLayer(shape)) {
-          if (shape._fpMeta?.color === '#e74c3c') {
-            isPropertyLayer = true;
-          }
-        }
-      });
+    const res = store.get(event.entityId);
+    if (!res.ok) return;
+    const entity = res.value;
 
-      if (!isPropertyLayer) return;
+    if (entity.kind !== 'shape') return;
+    if (!entity.parentId || !isPropertyLayerEntity(entity.parentId)) return;
 
-      let shapeBounds: L.LatLngBounds | null = null;
-      if ('getBounds' in shape) {
-        shapeBounds = (shape as L.Polyline).getBounds();
-      } else if ('getLatLng' in shape) {
-        const ll = (shape as L.Marker).getLatLng();
-        shapeBounds = L.latLngBounds(ll, ll);
-      }
+    const geo = entity.components.geometry;
+    if (!geo) return;
 
-      if (!shapeBounds) return;
-      void runDiscovery(shape, shapeBounds);
-    }, 200);
+    const geojson = geo.geojson;
+    const coords = 'coordinates' in geojson
+      ? (geojson.coordinates as number[][])
+      : null;
+    if (!coords || coords.length < 2) return;
+
+    const bounds = L.latLngBounds(
+      coords.map(c => L.latLng(c[1]!, c[0]!)),
+    );
+
+    void runDiscovery(bounds, {
+      type: 'Feature',
+      properties: {},
+      geometry: geojson as unknown as GeoJSON.Geometry,
+    });
   });
 
   map.on('moveend', () => {
@@ -66,10 +82,12 @@ export function initDiscover(
   });
 }
 
-async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promise<void> {
+async function runDiscovery(
+  shapeBounds: L.LatLngBounds,
+  propertyGeom: GeoJSON.Feature | null,
+): Promise<void> {
   if (!map) return;
 
-  // Auto-enable priority sources on property draw (from former autofetch.ts)
   const allSrc = getAllSources();
   for (const id of AUTO_ENABLE_IDS) {
     const src = allSrc[id];
@@ -79,16 +97,15 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
   }
 
   let propertyArea = 0;
-  let propertyGeom: GeoJSON.Feature | null = null;
-  if ('toGeoJSON' in shape) {
-    const geo = (shape as L.Polyline).toGeoJSON() as GeoJSON.Feature;
-    propertyGeom = geo;
-    if (geo.geometry.type === 'Polygon' || geo.geometry.type === 'MultiPolygon') {
-      propertyArea = turf.area(geo);
+  if (propertyGeom) {
+    const geomType = propertyGeom.geometry.type;
+    if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+      propertyArea = area(propertyGeom);
     }
   }
 
-  const buffered = shapeBounds.pad(BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001));
+  const padRatio = BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001);
+  const buffered = shapeBounds.pad(padRatio);
   const sources = getAllSources();
 
   const sourceEntries = Object.entries(sources).filter(([, src]) => src.type === 'vector' && src.fetch);
@@ -118,23 +135,13 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
         let nearestDist = Infinity;
 
         if (propertyGeom && propertyGeom.geometry.type !== 'Point') {
-          for (const f of features.slice(0, 50)) {
+          for (const f of features.slice(0, MAX_FEATURE_SAMPLE)) {
             try {
-              let dist: number;
-              if (f.geometry.type === 'Point') {
-                const pt = f.geometry.coordinates as [number, number];
-                dist = turf.distance(
-                  turf.point(pt),
-                  turf.centroid(propertyGeom),
-                  { units: 'meters' },
-                );
-              } else {
-                dist = turf.distance(
-                  turf.centroid(f),
-                  turf.centroid(propertyGeom),
-                  { units: 'meters' },
-                );
-              }
+              const dist = distance(
+                centroid(f),
+                centroid(propertyGeom),
+                { units: 'meters' },
+              );
               totalDist += dist;
               if (dist < nearestDist) nearestDist = dist;
             } catch {
@@ -143,10 +150,10 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
           }
         }
 
-        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, 50) : 999;
+        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, MAX_FEATURE_SAMPLE) : 999;
         const categoryBoost = DEFAULT_CATEGORY_BOOSTS[src.category] ?? 0.5;
         const countScore = Math.min(features.length / 20, 1.0);
-        const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / 500) : 0;
+        const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / PROXIMITY_RADIUS_M) : 0;
         const relevance = 0.3 * countScore + 0.4 * proximityScore + 0.3 * categoryBoost;
 
         const result: ScoredSource = {
@@ -230,8 +237,8 @@ function renderDiscoveryPanel(report: DiscoveryReport): void {
     const scoreBar = Math.round(src.relevanceScore * 100);
 
     li.innerHTML = `
-      <span class="ds-color" style="background:${getSourceColor(src.sourceId)}"></span>
-      <span class="ds-name">${src.sourceName}</span>
+      <span class="ds-color" style="background:${escHtml(getSourceColor(src.sourceId))}"></span>
+      <span class="ds-name">${escHtml(src.sourceName)}</span>
       <span class="discovery-count">${String(src.featureCount)}</span>
       <span class="discovery-dist">${distStr}</span>
       <span class="discovery-score" title="Relevance: ${String(scoreBar)}%">

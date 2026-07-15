@@ -28,6 +28,7 @@ import type {
   DeltaEvent,
 } from '../agent/protocol.js';
 import { agentWsUrl } from './api.js';
+import { AGENT_RECONNECT_MS, AGENT_RECONNECT_MAX_MS } from '../constants.js';
 
 type AgentPanelCallback = (msg: AgentTextMessage | AgentActionMessage) => void;
 
@@ -35,8 +36,8 @@ let ws: WebSocket | null = null;
 let panelCallback: AgentPanelCallback | null = null;
 let statusCallback: ((connected: boolean) => void) | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let reconnectDelay = 1000;
-const MAX_RECONNECT_DELAY = 16000;
+let reconnectDelay = AGENT_RECONNECT_MS;
+const MAX_RECONNECT_DELAY = AGENT_RECONNECT_MAX_MS;
 let suppressSync = false;
 
 export function initAgentBridge(

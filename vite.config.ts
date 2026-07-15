@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/ext': 'http://localhost:7780',
+      '/ext': 'http://localhost:3000',
       '/api': 'http://localhost:3000',
       '/ws': { target: 'ws://localhost:3000', ws: true },
     },
@@ -19,7 +19,12 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-leaflet': ['leaflet', '@geoman-io/leaflet-geoman-free'],
-          'vendor-turf': ['@turf/turf'],
+          'vendor-turf': [
+            '@turf/area', '@turf/distance', '@turf/centroid', '@turf/midpoint',
+            '@turf/nearest-point-on-line', '@turf/buffer', '@turf/boolean-intersects',
+            '@turf/line-intersect', '@turf/bearing', '@turf/polygon-to-line',
+            '@turf/length', '@turf/helpers',
+          ],
         },
       },
     },

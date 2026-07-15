@@ -3,10 +3,10 @@ import { store } from './store.js';
 import { Owned, take } from '../rustscript/owned.js';
 import { RustVec } from '../rustscript/vec.js';
 import { isSome } from '../rustscript/option.js';
+import { UNDO_HISTORY_LIMIT } from '../constants.js';
 
 const undoStack = RustVec.empty<Owned<Command>>();
 const redoStack = RustVec.empty<Owned<Command>>();
-const MAX_HISTORY = 200;
 
 let onHistoryChange: (() => void) | null = null;
 
@@ -17,7 +17,7 @@ export function initHistory(changeCallback?: () => void): void {
 export function execute(cmd: Command): void {
   cmd.execute(store);
   undoStack.push(Owned.of(cmd));
-  if (undoStack.len() > MAX_HISTORY) {
+  if (undoStack.len() > UNDO_HISTORY_LIMIT) {
     const discarded = undoStack.removeAt(0);
     if (isSome(discarded)) {
       using _drop = discarded.value;

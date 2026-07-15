@@ -1,6 +1,9 @@
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
-import * as turf from '@turf/turf';
+import { distance as turfDistance } from '@turf/distance';
+import { midpoint } from '@turf/midpoint';
+import { bearing as turfBearing } from '@turf/bearing';
+import { point } from '@turf/helpers';
 import type { EntityId } from '../core/entity.js';
 import { createEntity } from '../core/entity.js';
 import { store } from '../core/store.js';
@@ -73,8 +76,8 @@ function createDimensionEntities(shapeEntityId: EntityId): void {
     const to = coords[i + 1];
     if (!from || !to) continue;
 
-    const dist = turf.distance(
-      turf.point(from), turf.point(to), { units: 'feet' },
+    const dist = turfDistance(
+      point(from), point(to), { units: 'feet' },
     );
 
     const dimEntity = createEntity('dimension', shapeEntityId);
@@ -118,8 +121,8 @@ const dimensionReactiveComputation: DerivedComputation<Command[]> = {
       const to = coords[dim.toVertex];
       if (!from || !to) continue;
 
-      const dist = turf.distance(
-        turf.point(from), turf.point(to), { units: 'feet' },
+      const dist = turfDistance(
+        point(from), point(to), { units: 'feet' },
       );
 
       if (Math.abs(dist - dim.value) > 0.01) {
@@ -159,10 +162,10 @@ function onVertexAdded(latlng: L.LatLng): void {
 }
 
 function addSegmentLabel(from: L.LatLng, to: L.LatLng): void {
-  const p1 = turf.point([from.lng, from.lat]);
-  const p2 = turf.point([to.lng, to.lat]);
-  const mid = turf.midpoint(p1, p2);
-  const dist = turf.distance(p1, p2, { units: 'feet' });
+  const p1 = point([from.lng, from.lat]);
+  const p2 = point([to.lng, to.lat]);
+  const mid = midpoint(p1, p2);
+  const dist = turfDistance(p1, p2, { units: 'feet' });
 
   const label = L.marker(
     [mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple,
@@ -180,13 +183,13 @@ function addSegmentLabel(from: L.LatLng, to: L.LatLng): void {
 }
 
 function addAngleLabel(a: L.LatLng, vertex: L.LatLng, b: L.LatLng): void {
-  const bearing1 = turf.bearing(
-    turf.point([vertex.lng, vertex.lat]),
-    turf.point([a.lng, a.lat]),
+  const bearing1 = turfBearing(
+    point([vertex.lng, vertex.lat]),
+    point([a.lng, a.lat]),
   );
-  const bearing2 = turf.bearing(
-    turf.point([vertex.lng, vertex.lat]),
-    turf.point([b.lng, b.lat]),
+  const bearing2 = turfBearing(
+    point([vertex.lng, vertex.lat]),
+    point([b.lng, b.lat]),
   );
   let angle = Math.abs(bearing2 - bearing1);
   if (angle > 180) angle = 360 - angle;
@@ -207,18 +210,18 @@ function updateLiveLabel(cursor: L.LatLng): void {
   const last = vertices[vertices.length - 1];
   if (!last) return;
 
-  const p1 = turf.point([last.lng, last.lat]);
-  const p2 = turf.point([cursor.lng, cursor.lat]);
-  const dist = turf.distance(p1, p2, { units: 'feet' });
+  const p1 = point([last.lng, last.lat]);
+  const p2 = point([cursor.lng, cursor.lat]);
+  const dist = turfDistance(p1, p2, { units: 'feet' });
 
   let totalDist = 0;
   for (let i = 1; i < vertices.length; i++) {
     const va = vertices[i - 1];
     const vb = vertices[i];
     if (va && vb) {
-      totalDist += turf.distance(
-        turf.point([va.lng, va.lat]),
-        turf.point([vb.lng, vb.lat]),
+      totalDist += turfDistance(
+        point([va.lng, va.lat]),
+        point([vb.lng, vb.lat]),
         { units: 'feet' },
       );
     }

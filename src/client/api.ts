@@ -3,11 +3,7 @@
  *
  * All HTTP and WebSocket calls from the browser client go through
  * this module. Deployment teams rewire by changing the path constants
- * in `src/constants.ts`:
- *
- *   PROXY_PATH    → songBird drawbridge  (external data proxy)
- *   PROJECTS_PATH → nestGate CAS         (project persistence)
- *   WS_PATH       → agent bridge
+ * in `src/constants.ts` (PROXY_PATH, PROJECTS_PATH, WS_PATH).
  */
 
 import type { ProjectFile, SaveResponse, DeleteResponse } from '../types/project.js';

@@ -3,6 +3,8 @@ import { serializeLayers, deserializeLayers } from './layers.js';
 import { deselectShape } from './drawing.js';
 import { clearHistory } from '../core/history.js';
 import { listProjects as apiListProjects, loadProject as apiLoadProject, saveProject as apiSaveProject, deleteProject as apiDeleteProject } from './api.js';
+import { escHtml } from './html.js';
+import { TOAST_DURATION_MS } from '../constants.js';
 
 let currentProject: string | null = null;
 
@@ -119,11 +121,6 @@ function showToast(msg: string): void {
   `;
   toast.textContent = msg;
   document.body.appendChild(toast);
-  setTimeout(() => { toast.remove(); }, 2000);
+  setTimeout(() => { toast.remove(); }, TOAST_DURATION_MS);
 }
 
-function escHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}

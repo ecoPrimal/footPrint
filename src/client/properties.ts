@@ -7,6 +7,7 @@ import { computeMeasurement } from './measurement.js';
 import { getLeafletLayer } from '../core/renderer.js';
 import type { ShapeStatus } from '../types/shape.js';
 import { parseHexColor, hexColorUnchecked } from '../types/brands.js';
+import { escHtml } from './html.js';
 import { unwrapOr } from '../rustscript/result.js';
 
 const panel = document.getElementById('props-panel');
@@ -114,8 +115,3 @@ function hidePanel(): void {
   }
 }
 
-function escHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}

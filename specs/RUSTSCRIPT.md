@@ -27,20 +27,25 @@ The thesis: Rust's constraints (ownership, borrowing, explicit error handling, e
 ## Module Map
 
 ```
-src/rustscript/
+src/rustscript/               <-- generic, zero-dep, portable
   mod.ts            Prelude -- re-exports everything
   types.ts          DeepReadonly<T>, DeepMutable<T>, Brand<T,B>
   result.ts         Result<T,E>, Ok, Err, unwrap, map, andThen, match, ...
   option.ts         Option<T>, Some, None, isSome, matchOption, fromNullable, ...
   refcell.ts        RefCell<T>, Ref<T>, RefMut<T>, BorrowError
   exhaustive.ts     exhaustive(never): never
-  newtype.ts        Validated branded constructors (EntityId, HexColor, ...)
   owned.ts          Owned<T>, transfer, consume, take, UseAfterMoveError
   iter.ts           Iter<T>, PeekableIter<T> -- lazy iterator protocol
   vec.ts            RustVec<T> -- bounds-checked collection
   cow.ts            Cow<T> -- clone-on-write
   channel.ts        channel<T>(), Sender<T>, Receiver<T> -- message passing
+
+src/types/brands.ts           <-- footPrint-specific branded types
+  EntityId, HexColor, LayerId, ProjectName, DataSourceId
+  (Validated constructors, parsers, unchecked casts)
 ```
+
+Domain-specific branded types were extracted from RustScript to the consuming application. RustScript provides only the generic `Brand<T,B>` primitive; the application builds its own validated newtypes on top.
 
 ## Current Integration
 
@@ -138,7 +143,9 @@ Note: `DeepReadonly` on `Ref.value` is compile-time only; if `T` contains nested
 
 Placed in `default` branches. For object values, the error message uses `JSON.stringify` for readable output.
 
-#### `newtype.ts` -- Validated Branded Types
+#### Application Branded Types (`src/types/brands.ts`)
+
+These live in the consuming application, not in RustScript. They use `Brand<T,B>` from `types.ts` and `Result` from `result.ts`.
 
 | Export | Kind | Description |
 |--------|------|-------------|
@@ -285,11 +292,10 @@ RustScript lives at `src/rustscript/` inside the FootPrint project. Zero externa
 
 ### Next: Standalone npm Package
 
-Extract `src/rustscript/` as `@ecoprimals/rustscript` (or similar). The module is already self-contained. Steps:
-1. Create package.json with `"type": "module"`, `"exports"` map
-2. Add tsconfig for library build (declaration files, source maps)
-3. Publish to npm
-4. Replace FootPrint's relative imports with package imports
+Package stub exists at `src/rustscript/package.json` as `@protoKarya/rustscript` with `"type": "module"` and `"exports"` map. Library tsconfig at `src/rustscript/tsconfig.json`. Remaining steps:
+1. Add README and LICENSE to `src/rustscript/`
+2. Publish to npm
+3. Replace FootPrint's relative imports with package imports
 
 ### Future: Cross-Language Ports
 

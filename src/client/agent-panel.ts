@@ -5,6 +5,8 @@
 
 import { sendUserMessage } from './agent-bridge.js';
 import type { AgentTextMessage, AgentActionMessage } from '../agent/protocol.js';
+import { escHtml } from './html.js';
+import { AGENT_LOG_LIMIT } from '../constants.js';
 
 let logEl: HTMLUListElement | null = null;
 let badgeEl: HTMLElement | null = null;
@@ -76,7 +78,7 @@ function appendEntry(kind: 'agent' | 'action' | 'user', text: string, entityId?:
   const timeStr = `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
 
   const prefix = kind === 'user' ? 'You' : kind === 'action' ? 'AI' : 'AI';
-  let content = `<span class="agent-time">${timeStr}</span><span class="agent-prefix">${prefix}</span> ${escapeHtml(text)}`;
+  let content = `<span class="agent-time">${timeStr}</span><span class="agent-prefix">${prefix}</span> ${escHtml(text)}`;
 
   if (entityId) {
     content += ` <span class="agent-entity-ref">[${entityId.slice(0, 8)}]</span>`;
@@ -85,8 +87,7 @@ function appendEntry(kind: 'agent' | 'action' | 'user', text: string, entityId?:
   li.innerHTML = content;
   logEl.appendChild(li);
 
-  const maxEntries = 200;
-  while (logEl.children.length > maxEntries) {
+  while (logEl.children.length > AGENT_LOG_LIMIT) {
     logEl.removeChild(logEl.firstChild!);
   }
 
@@ -98,9 +99,6 @@ function appendEntry(kind: 'agent' | 'action' | 'user', text: string, entityId?:
   }
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 // Called by agent-bridge when a message arrives from the server
 export function onAgentMessage(msg: AgentTextMessage | AgentActionMessage): void {

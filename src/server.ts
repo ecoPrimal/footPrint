@@ -16,7 +16,7 @@ import {
   sendAgentAction,
   getUserMessages,
 } from './agent/server-bridge.js';
-import { ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT } from './constants.js';
+import { ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT, SHUTDOWN_GRACE_MS } from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -25,8 +25,8 @@ const PORT = Number(process.env['PORT']) || 3000;
 const PROJECTS_DIR = join(ROOT, 'projects');
 const CACHE_DIR = join(ROOT, 'cache');
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.text({ limit: '10mb', type: 'text/plain' }));
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+app.use(express.text({ limit: JSON_BODY_LIMIT, type: 'text/plain' }));
 app.use(express.static(join(ROOT, 'public')));
 app.use(express.static(join(ROOT, 'dist', 'client')));
 
@@ -149,6 +149,10 @@ async function handleProxyGet(req: Request, res: Response): Promise<void> {
     const resp = await fetch(targetUrl, {
       headers: { 'User-Agent': USER_AGENT },
     });
+    if (!resp.ok) {
+      res.status(resp.status).json({ error: `Upstream ${String(resp.status)}: ${resp.statusText}` } satisfies ErrorResponse);
+      return;
+    }
     const data: unknown = await resp.json();
     await setCache(key, data);
     res.json(data);
@@ -188,6 +192,10 @@ async function handleProxyPost(req: Request, res: Response): Promise<void> {
       },
       body,
     });
+    if (!resp.ok) {
+      res.status(resp.status).json({ error: `Upstream ${String(resp.status)}: ${resp.statusText}` } satisfies ErrorResponse);
+      return;
+    }
     const data: unknown = await resp.json();
     await setCache(key, data);
     res.json(data);
@@ -197,8 +205,6 @@ async function handleProxyPost(req: Request, res: Response): Promise<void> {
   }
 }
 
-app.get('/api/proxy', handleProxyGet);
-app.post('/api/proxy', handleProxyPost);
 app.get('/ext', handleProxyGet);
 app.post('/ext', handleProxyPost);
 
@@ -286,7 +292,7 @@ console.log(`  Health check:    http://localhost:${String(PORT)}/api/health`);
 function shutdown(): void {
   console.log('Shutting down…');
   server.close(() => { process.exit(0); });
-  setTimeout(() => { process.exit(1); }, 5000);
+  setTimeout(() => { process.exit(1); }, SHUTDOWN_GRACE_MS);
 }
 
 process.on('SIGINT', shutdown);

@@ -9,6 +9,7 @@ import { parseHexColor } from '../types/brands.js';
 import { unwrapOr } from '../rustscript/result.js';
 import type { SerializedLayers, SerializedLayerData } from '../types/layer.js';
 import type { SerializedShapeProps } from '../types/shape.js';
+import { escHtml } from './html.js';
 
 interface DefaultLayerDef {
   readonly id: LayerId;
@@ -59,17 +60,6 @@ function createLayerEntity(id: LayerId, name: string, color: HexColor, throughHi
   }
   layerIdToEntityId.set(id, entity.id);
   return entity.id;
-}
-
-export function getActiveLayerEntityId(): EntityId | undefined {
-  return activeLayerId ?? undefined;
-}
-
-export function getActiveLayerColor(): HexColor | undefined {
-  if (!activeLayerId) return undefined;
-  const res = store.get(activeLayerId);
-  if (!res.ok || res.value.kind !== 'layer') return undefined;
-  return res.value.components.style.color;
 }
 
 export function setActiveLayer(entityId: EntityId): void {
@@ -135,8 +125,8 @@ export function renderLayerList(): void {
     if (entityId === activeLayerId) li.classList.add('active');
 
     li.innerHTML = `
-      <span class="layer-color" style="background:${style.color}"></span>
-      <span class="layer-name">${layerComp.layerName}</span>
+      <span class="layer-color" style="background:${escHtml(style.color)}"></span>
+      <span class="layer-name">${escHtml(layerComp.layerName)}</span>
       <button class="layer-visibility ${layerComp.visible ? '' : 'hidden-layer'}"
               title="Toggle visibility">${layerComp.visible ? '\u{1F441}' : '\u{1F441}\u200D\u{1F5E8}'}</button>
       <button class="layer-delete" title="Delete layer">&times;</button>

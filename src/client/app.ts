@@ -13,6 +13,7 @@ import { initDrawing, setActiveLayerEntity } from './drawing.js';
 import { initProperties, showShapeProperties } from './properties.js';
 import { initMeasurement } from './measurement.js';
 import { initStorage } from './storage.js';
+import { escHtml } from './html.js';
 import { initDataSources, getAllSources, toggleSource } from './datasources.js';
 import { registerOSMSources } from './sources/osm.js';
 import { registerParcelSource } from './sources/parcels.js';
@@ -188,15 +189,15 @@ function renderDataSourceList(sources: SourceRegistry): void {
       if (src.loading) {
         statusHtml = '<span class="ds-spinner"></span>';
       } else if (src.error) {
-        statusHtml = `<span class="ds-error" title="${src.error}">!</span>`;
+        statusHtml = `<span class="ds-error" title="${escHtml(src.error)}">!</span>`;
       } else if (src.enabled && src.type === 'vector' && src.featureCount > 0) {
         statusHtml = `<span class="ds-status">${String(src.featureCount)}</span>`;
       }
 
       li.innerHTML = `
         <input type="checkbox" class="ds-toggle" ${src.enabled ? 'checked' : ''} />
-        <span class="ds-color" style="background:${src.color}"></span>
-        <span class="ds-name" title="${src.name}">${src.name}</span>
+        <span class="ds-color" style="background:${escHtml(src.color)}"></span>
+        <span class="ds-name" title="${escHtml(src.name)}">${escHtml(src.name)}</span>
         ${statusHtml}
       `;
 
