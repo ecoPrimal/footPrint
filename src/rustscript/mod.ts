@@ -1,5 +1,5 @@
 /**
- * @protoKarya/rustscript -- Rust safety primitives for TypeScript.
+ * @protokarya/rustscript -- Rust safety primitives for TypeScript.
  *
  * Zero-dependency, framework-agnostic, portable.
  * Encodes Rust's ownership, borrowing, Result/Option, exhaustive matching,

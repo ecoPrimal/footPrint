@@ -1,5 +1,5 @@
 {
-  "name": "@protoKarya/rustscript",
+  "name": "@protokarya/rustscript",
   "version": "0.1.0",
   "description": "Rust safety primitives for TypeScript — Result, Option, RefCell, Owned, Iter, Vec, Cow, channels, exhaustive matching, and branded newtypes. Zero dependencies.",
   "type": "module",
@@ -8,24 +8,62 @@
     "node": ">=20"
   },
   "exports": {
-    ".": "./mod.ts",
-    "./types": "./types.ts",
-    "./result": "./result.ts",
-    "./option": "./option.ts",
-    "./refcell": "./refcell.ts",
-    "./exhaustive": "./exhaustive.ts",
-    "./owned": "./owned.ts",
-    "./iter": "./iter.ts",
-    "./vec": "./vec.ts",
-    "./cow": "./cow.ts",
-    "./channel": "./channel.ts"
+    ".": {
+      "types": "./dist/mod.d.ts",
+      "import": "./dist/mod.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./result": {
+      "types": "./dist/result.d.ts",
+      "import": "./dist/result.js"
+    },
+    "./option": {
+      "types": "./dist/option.d.ts",
+      "import": "./dist/option.js"
+    },
+    "./refcell": {
+      "types": "./dist/refcell.d.ts",
+      "import": "./dist/refcell.js"
+    },
+    "./exhaustive": {
+      "types": "./dist/exhaustive.d.ts",
+      "import": "./dist/exhaustive.js"
+    },
+    "./owned": {
+      "types": "./dist/owned.d.ts",
+      "import": "./dist/owned.js"
+    },
+    "./iter": {
+      "types": "./dist/iter.d.ts",
+      "import": "./dist/iter.js"
+    },
+    "./vec": {
+      "types": "./dist/vec.d.ts",
+      "import": "./dist/vec.js"
+    },
+    "./cow": {
+      "types": "./dist/cow.d.ts",
+      "import": "./dist/cow.js"
+    },
+    "./channel": {
+      "types": "./dist/channel.d.ts",
+      "import": "./dist/channel.js"
+    }
   },
+  "main": "./dist/mod.js",
+  "types": "./dist/mod.d.ts",
   "files": [
-    "*.ts",
-    "!*.test.ts",
+    "dist",
     "README.md",
     "LICENSE"
   ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
   "keywords": [
     "rust",
     "result",

@@ -292,7 +292,7 @@ RustScript lives at `src/rustscript/` inside the FootPrint project. Zero externa
 
 ### Next: Standalone npm Package
 
-Package stub exists at `src/rustscript/package.json` as `@protoKarya/rustscript` with `"type": "module"` and `"exports"` map. Library tsconfig at `src/rustscript/tsconfig.json`. Remaining steps:
+Package stub exists at `src/rustscript/package.json` as `@protokarya/rustscript` with `"type": "module"` and `"exports"` map. Library tsconfig at `src/rustscript/tsconfig.json`. Remaining steps:
 1. Add README and LICENSE to `src/rustscript/`
 2. Publish to npm
 3. Replace FootPrint's relative imports with package imports
