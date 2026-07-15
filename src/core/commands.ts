@@ -1,6 +1,6 @@
 import type { Entity, MutableEntity, EntityId, ComponentKey, ComponentMap } from './entity.js';
 import { createEntity } from './entity.js';
-import { hexColorUnchecked } from '../rustscript/newtype.js';
+import { hexColorUnchecked } from '../types/brands.js';
 import { exhaustive } from '../rustscript/exhaustive.js';
 import { isSome } from '../rustscript/option.js';
 import type { Option } from '../rustscript/option.js';

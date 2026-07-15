@@ -266,12 +266,28 @@ app.post('/api/agent/messages', (req: Request, res: Response) => {
 
 // ── Start server + WebSocket bridge ───────────────
 
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    version: '2.0.0',
+    uptime: Math.floor(process.uptime()),
+    agentConnected: isBrowserConnected(),
+    timestamp: Date.now(),
+  });
+});
+
 const server = await app.listen(PORT);
 initAgentBridge(server);
-console.log(`FootPrint server running at http://localhost:${PORT}`);
-console.log(`  Agent WebSocket: ws://localhost:${PORT}/ws`);
-console.log(`  Agent REST API:  http://localhost:${PORT}/api/agent/`);
+console.log(`FootPrint server running at http://localhost:${String(PORT)}`);
+console.log(`  Agent WebSocket: ws://localhost:${String(PORT)}/ws`);
+console.log(`  Agent REST API:  http://localhost:${String(PORT)}/api/agent/`);
+console.log(`  Health check:    http://localhost:${String(PORT)}/api/health`);
 
-process.on('SIGINT', () => {
+function shutdown(): void {
+  console.log('Shutting down…');
   server.close(() => { process.exit(0); });
-});
+  setTimeout(() => { process.exit(1); }, 5000);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

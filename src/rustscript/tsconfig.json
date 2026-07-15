@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "ESNext.Disposable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "skipLibCheck": true
+  },
+  "include": [
+    "types.ts",
+    "result.ts",
+    "option.ts",
+    "refcell.ts",
+    "exhaustive.ts",
+    "owned.ts",
+    "iter.ts",
+    "vec.ts",
+    "cow.ts",
+    "channel.ts",
+    "mod.ts"
+  ],
+  "exclude": ["*.test.ts"]
+}

@@ -1,0 +1,33 @@
+# footPrint Express server — systemd unit
+# Install: cp deploy/footprint.service /etc/systemd/system/
+#          systemctl daemon-reload && systemctl enable --now footprint
+#
+# Expects: npm ci && npm run build completed in WorkingDirectory
+
+[Unit]
+Description=footPrint Express server (project persistence + agent bridge)
+After=network.target
+Documentation=https://github.com/protoKarya/footPrint
+
+[Service]
+Type=simple
+User=membrane
+Group=membrane
+WorkingDirectory=/opt/ecoPrimals/protists/footPrint
+Environment=PORT=3000
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+ReadWritePaths=/opt/ecoPrimals/protists/footPrint/projects
+ReadWritePaths=/opt/ecoPrimals/protists/footPrint/cache
+
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

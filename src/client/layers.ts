@@ -5,7 +5,7 @@ import { execute } from '../core/history.js';
 import { AddEntityCommand, RemoveEntityCommand, UpdateComponentCommand } from '../core/commands.js';
 import type { LayerId, HexColor } from '../types/brands.js';
 import { layerId, hexColor } from '../types/brands.js';
-import { parseHexColor } from '../rustscript/newtype.js';
+import { parseHexColor } from '../types/brands.js';
 import { unwrapOr } from '../rustscript/result.js';
 import type { SerializedLayers, SerializedLayerData } from '../types/layer.js';
 import type { SerializedShapeProps } from '../types/shape.js';

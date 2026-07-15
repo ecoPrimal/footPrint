@@ -1,0 +1,45 @@
+{
+  "name": "@protoKarya/rustscript",
+  "version": "0.1.0",
+  "description": "Rust safety primitives for TypeScript — Result, Option, RefCell, Owned, Iter, Vec, Cow, channels, exhaustive matching, and branded newtypes. Zero dependencies.",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./mod.ts",
+    "./types": "./types.ts",
+    "./result": "./result.ts",
+    "./option": "./option.ts",
+    "./refcell": "./refcell.ts",
+    "./exhaustive": "./exhaustive.ts",
+    "./owned": "./owned.ts",
+    "./iter": "./iter.ts",
+    "./vec": "./vec.ts",
+    "./cow": "./cow.ts",
+    "./channel": "./channel.ts"
+  },
+  "files": [
+    "*.ts",
+    "!*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "rust",
+    "result",
+    "option",
+    "refcell",
+    "iterator",
+    "ownership",
+    "branded-types",
+    "typescript",
+    "safety",
+    "zero-dependency"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/protoKarya/rustscript"
+  }
+}

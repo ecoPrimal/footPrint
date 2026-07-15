@@ -1,16 +1,20 @@
 /**
- * RustScript -- Rust safety primitives for TypeScript.
+ * @protoKarya/rustscript -- Rust safety primitives for TypeScript.
  *
- * This module is zero-dependency, framework-agnostic, and portable.
- * It encodes Rust's ownership, borrowing, Result/Option, exhaustive matching,
+ * Zero-dependency, framework-agnostic, portable.
+ * Encodes Rust's ownership, borrowing, Result/Option, exhaustive matching,
  * RAII patterns, lazy iterators, bounds-checked collections, clone-on-write,
  * and message-passing channels as TypeScript types and runtime primitives.
  *
- * Phase 1 -- Safety:       Result, Option, RefCell, exhaustive, Brand/Newtype
+ * Phase 1 -- Safety:       Result, Option, RefCell, exhaustive, Brand
  * Phase 2 -- Composition:  Owned, Iter, RustVec, Cow, channel
  *
  * Each primitive encodes exactly ONE Rust constraint.
  * Composability emerges from their interaction.
+ *
+ * Domain-specific branded types (EntityId, HexColor, etc.) live in the
+ * consuming application, not here. Use Brand<T, B> from ./types to build
+ * your own validated newtypes.
  */
 
 // ── Phase 1: Safety Primitives ──────────────────────────────────────
@@ -31,10 +35,6 @@ export { RefCell, Ref, RefMut, BorrowError } from './refcell.js';
 
 // exhaustive(): Rust's exhaustive match
 export { exhaustive } from './exhaustive.js';
-
-// Validated newtypes: TryFrom pattern
-export type { EntityId, HexColor, LayerId, ProjectName, DataSourceId, InvalidId, InvalidColor } from './newtype.js';
-export { entityId, parseEntityId, entityIdUnchecked, parseHexColor, hexColorUnchecked, layerId, projectName, dataSourceId } from './newtype.js';
 
 // ── Phase 2: Ownership & Composition Primitives ─────────────────────
 

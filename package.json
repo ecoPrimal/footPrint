@@ -3,13 +3,17 @@
   "version": "2.0.0",
   "description": "Home improvement planning tool with satellite map overlays and CAD-like drawing tools",
   "type": "module",
-  "main": "src/server.ts",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently \"tsx watch src/server.ts\" \"vite\"",
     "dev:server": "tsx watch src/server.ts",
     "dev:client": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "start:dev": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
