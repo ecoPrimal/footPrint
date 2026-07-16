@@ -11,6 +11,7 @@ import {
   FEET_PER_MILE,
   SQ_FEET_PER_ACRE,
 } from '../constants.js';
+import { layerToFeature } from './geojson.js';
 
 let map: L.Map | null = null;
 let measureMode = false;
@@ -164,8 +165,8 @@ export function computeMeasurement(shape: L.Layer): string | null {
       return `Radius: <span>${formatLength(rFt)}</span> · Area: <span>${formatArea(areaSqFt)}</span> · Circumference: <span>${formatLength(circumFt)}</span>`;
     }
 
-    if (!('toGeoJSON' in shape)) return null;
-    const geo = (shape as L.Layer & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+    const geo = layerToFeature(shape);
+    if (!geo) return null;
     const gtype = geo.geometry.type;
 
     if (gtype === 'LineString' || gtype === 'MultiLineString') {

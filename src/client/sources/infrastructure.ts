@@ -1,42 +1,8 @@
 import * as L from 'leaflet';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { OVERPASS_URL, OVERPASS_TIMEOUT_S } from '../../constants.js';
-import { proxyPost } from '../api.js';
+import { queryOverpass } from './osm.js';
 import { escHtml } from '../html.js';
-
-interface OverpassNodeResult {
-  elements?: ReadonlyArray<{
-    type: string;
-    id: number;
-    lat: number;
-    lon: number;
-    tags?: Record<string, string>;
-  }>;
-}
-
-async function queryOverpassNodes(
-  overpassQL: string,
-  bounds: L.LatLngBounds,
-): Promise<ReadonlyArray<GeoJSON.Feature>> {
-  const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-  const normalized = overpassQL.replace(/\[timeout:\d+\]/, `[timeout:${String(OVERPASS_TIMEOUT_S)}]`);
-  const query = normalized.replace(/\{bbox\}/g, bbox);
-  const body = `data=${encodeURIComponent(query)}`;
-
-  const data = await proxyPost<OverpassNodeResult>(OVERPASS_URL, body);
-  const features: GeoJSON.Feature[] = [];
-  for (const el of data.elements ?? []) {
-    if (el.type === 'node' && el.lat != null && el.lon != null) {
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [el.lon, el.lat] },
-        properties: { _osmId: el.id, _osmType: 'node', ...el.tags },
-      });
-    }
-  }
-  return features;
-}
 
 function makePointIcon(symbol: string, color: string): L.DivIcon {
   return L.divIcon({
@@ -54,7 +20,7 @@ export function registerInfrastructureSources(): void {
     category: 'Infrastructure',
     color: hexColorUnchecked('#546E7A'),
     minZoom: 17,
-    fetch: (bounds) => queryOverpassNodes(
+    fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];node["man_made"="manhole"]({bbox});out body;`,
       bounds,
     ),
@@ -76,7 +42,7 @@ export function registerInfrastructureSources(): void {
     category: 'Infrastructure',
     color: hexColorUnchecked('#D32F2F'),
     minZoom: 17,
-    fetch: (bounds) => queryOverpassNodes(
+    fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];node["emergency"="fire_hydrant"]({bbox});out body;`,
       bounds,
     ),
@@ -98,7 +64,7 @@ export function registerInfrastructureSources(): void {
     category: 'Infrastructure',
     color: hexColorUnchecked('#FFC107'),
     minZoom: 17,
-    fetch: (bounds) => queryOverpassNodes(
+    fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];node["highway"="street_lamp"]({bbox});out body;`,
       bounds,
     ),
@@ -119,7 +85,7 @@ export function registerInfrastructureSources(): void {
     category: 'Infrastructure',
     color: hexColorUnchecked('#FF8F00'),
     minZoom: 16,
-    fetch: (bounds) => queryOverpassNodes(
+    fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];(node["power"="pole"]({bbox});node["power"="tower"]({bbox});node["utility"="pole"]({bbox}););out body;`,
       bounds,
     ),

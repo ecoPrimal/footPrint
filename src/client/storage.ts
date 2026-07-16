@@ -14,7 +14,7 @@ export function initStorage(): void {
   document.getElementById('btn-load')?.addEventListener('click', () => { void showLoadModal(); });
   document.getElementById('modal-close')?.addEventListener('click', hideModal);
   document.getElementById('modal-overlay')?.addEventListener('click', (e: MouseEvent) => {
-    if ((e.target as HTMLElement).id === 'modal-overlay') hideModal();
+    if (e.target instanceof HTMLElement && e.target.id === 'modal-overlay') hideModal();
   });
 }
 
@@ -70,16 +70,18 @@ async function showLoadModal(): Promise<void> {
       `).join('');
 
       body.querySelectorAll('.project-item').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
         el.addEventListener('click', (e: Event) => {
-          if ((e.target as HTMLElement).classList.contains('project-delete')) return;
-          void loadProject((el as HTMLElement).dataset['name'] ?? '').then(hideModal);
+          if (e.target instanceof HTMLElement && e.target.classList.contains('project-delete')) return;
+          void loadProject(el.dataset['name'] ?? '').then(hideModal);
         });
       });
 
       body.querySelectorAll('.project-delete').forEach((btn) => {
+        if (!(btn instanceof HTMLElement)) return;
         btn.addEventListener('click', (e: Event) => {
           e.stopPropagation();
-          const name = (btn as HTMLElement).dataset['name'];
+          const name = btn.dataset['name'];
           if (!name || !confirm(`Delete project "${name}"?`)) return;
           void apiDeleteProject(name).then(() => { void showLoadModal(); });
         });

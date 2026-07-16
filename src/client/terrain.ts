@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import type {
-  ElevationSample, TerrainGrid, ContourLine, SlopeAspect, ElevationProfile,
+  ElevationSample, TerrainGrid, ContourLine, SlopeAspect,
 } from '../types/terrain.js';
 import { batchElevation } from './sources/usgs.js';
 import { METERS_PER_DEGREE_LAT, FEET_PER_METER, DEFAULT_CONTOUR_INTERVAL_FT } from '../constants.js';
@@ -15,13 +15,6 @@ export function initTerrain(leafletMap: L.Map): void {
   map = leafletMap;
   contourLayer.addTo(map);
   slopeLayer.addTo(map);
-}
-
-export function setContourInterval(interval: number): void {
-  contourInterval = interval;
-  if (cachedGrid) {
-    renderContours(cachedGrid);
-  }
 }
 
 export function getElevationAt(lat: number, lng: number): number | null {
@@ -401,54 +394,4 @@ export function renderSlopeArrows(grid: TerrainGrid): void {
   }
 }
 
-export async function computeElevationProfile(
-  coords: ReadonlyArray<[number, number]>,
-  numSamples: number = 20,
-): Promise<ElevationProfile> {
-  const points: Array<{ lat: number; lng: number }> = [];
-  const totalDist = coords.length - 1;
-  if (totalDist < 1) {
-    return { points: [], minElevation: 0, maxElevation: 0, totalClimb: 0, totalDescent: 0 };
-  }
-
-  for (let i = 0; i <= numSamples; i++) {
-    const t = i / numSamples;
-    const segIdx = Math.min(Math.floor(t * totalDist), totalDist - 1);
-    const segT = (t * totalDist) - segIdx;
-    const from = coords[segIdx];
-    const to = coords[segIdx + 1] ?? from;
-    if (from && to) {
-      points.push({
-        lng: from[0] + segT * (to[0] - from[0]),
-        lat: from[1] + segT * (to[1] - from[1]),
-      });
-    }
-  }
-
-  const rawSamples = await batchElevation(points);
-  const samples: ElevationSample[] = rawSamples
-    .filter((s): s is { lat: number; lng: number; elevation: number } => s.elevation !== null)
-    .map((s) => ({ lat: s.lat, lng: s.lng, elevation: s.elevation }));
-
-  let totalClimb = 0;
-  let totalDescent = 0;
-  for (let i = 1; i < samples.length; i++) {
-    const prev = samples[i - 1];
-    const curr = samples[i];
-    if (prev && curr) {
-      const diff = curr.elevation - prev.elevation;
-      if (diff > 0) totalClimb += diff;
-      else totalDescent += Math.abs(diff);
-    }
-  }
-
-  const elevations = samples.map((s) => s.elevation);
-  return {
-    points: samples,
-    minElevation: elevations.length > 0 ? Math.min(...elevations) : 0,
-    maxElevation: elevations.length > 0 ? Math.max(...elevations) : 0,
-    totalClimb: Math.round(totalClimb * 10) / 10,
-    totalDescent: Math.round(totalDescent * 10) / 10,
-  };
-}
 

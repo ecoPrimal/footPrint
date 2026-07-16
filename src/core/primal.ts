@@ -1,5 +1,5 @@
 /**
- * Primal -- capability-based module system inspired by ecoPrimals gen3.
+ * Primal -- capability-based module system for footPrint.
  *
  * A Primal is a self-contained module that:
  * - Owns one domain

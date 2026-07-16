@@ -1,5 +1,6 @@
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
+import { PARCELS_TILE_URL } from '../../constants.js';
 
 export function registerParcelSource(): void {
   registerSource({
@@ -8,7 +9,7 @@ export function registerParcelSource(): void {
     category: 'Property',
     color: hexColorUnchecked('#e74c3c'),
     type: 'tiles',
-    tileUrl: 'https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}',
+    tileUrl: PARCELS_TILE_URL,
     opacity: 0.55,
     attribution: 'Parcels &copy; Regrid',
   });

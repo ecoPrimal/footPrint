@@ -1,73 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-
-/**
- * osmToGeoJSON is module-private, so we test its behavior through
- * a re-export of the pure parsing logic. We import the module to
- * verify it loads without crashing, and test the Overpass response
- * parsing patterns that all source modules depend on.
- */
-
-interface OverpassNode {
-  type: 'node';
-  id: number;
-  lat: number;
-  lon: number;
-  tags?: Record<string, string>;
-}
-
-interface OverpassWay {
-  type: 'way';
-  id: number;
-  tags?: Record<string, string>;
-  geometry?: ReadonlyArray<{ lat: number; lon: number }>;
-}
-
-interface OverpassResponse {
-  elements?: ReadonlyArray<OverpassNode | OverpassWay>;
-}
-
-function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
-  const features: GeoJSON.Feature[] = [];
-  if (!data.elements) return features;
-
-  for (const el of data.elements) {
-    if (el.type === 'node') {
-      const node = el;
-      if (node.tags) {
-        features.push({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [node.lon, node.lat] },
-          properties: { _osmId: node.id, _osmType: 'node', ...node.tags },
-        });
-      }
-    }
-
-    if (el.type === 'way') {
-      const way = el as OverpassWay;
-      if (way.geometry) {
-        const coords: Array<[number, number]> = way.geometry.map((n) => [n.lon, n.lat]);
-        if (coords.length < 2) continue;
-        const first = coords[0];
-        const last = coords[coords.length - 1];
-        const isClosed = coords.length > 3 && first && last &&
-          first[0] === last[0] && first[1] === last[1];
-        features.push({
-          type: 'Feature',
-          geometry: isClosed
-            ? { type: 'Polygon', coordinates: [coords] }
-            : { type: 'LineString', coordinates: coords },
-          properties: { _osmId: way.id, _osmType: 'way', ...way.tags },
-        });
-      }
-    }
-  }
-  return features;
-}
+import { osmToGeoJSON } from './osm.js';
+import type { OverpassResponse } from '../../types/overpass.js';
 
 describe('osmToGeoJSON', () => {
   it('returns empty for missing elements', () => {
-    expect(osmToGeoJSON({})).toEqual([]);
+    expect(osmToGeoJSON({} as OverpassResponse)).toEqual([]);
   });
 
   it('returns empty for empty elements', () => {
@@ -141,9 +79,29 @@ describe('osmToGeoJSON', () => {
 
   it('skips way without geometry', () => {
     const result = osmToGeoJSON({
-      elements: [{ type: 'way', id: 5, tags: { building: 'yes' } } as OverpassWay],
+      elements: [{ type: 'way', id: 5, tags: { building: 'yes' } }],
     });
     expect(result).toEqual([]);
+  });
+
+  it('handles relation with way members as MultiPolygon', () => {
+    const result = osmToGeoJSON({
+      elements: [{
+        type: 'relation', id: 10, tags: { type: 'multipolygon' },
+        members: [{
+          type: 'way', ref: 100, role: 'outer',
+          geometry: [
+            { lat: 42.0, lon: -84.0 },
+            { lat: 42.0, lon: -84.1 },
+            { lat: 42.1, lon: -84.0 },
+            { lat: 42.0, lon: -84.0 },
+          ],
+        }],
+      }],
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]!.geometry.type).toBe('MultiPolygon');
+    expect(result[0]!.properties!['_osmType']).toBe('relation');
   });
 
   it('handles mixed nodes and ways', () => {

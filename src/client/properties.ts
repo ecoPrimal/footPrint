@@ -74,22 +74,26 @@ export function showShapeProperties(entityId: EntityId | null): void {
   let currentMeta = { ...meta };
 
   content.querySelector('#prop-label')?.addEventListener('input', (e: Event) => {
-    currentMeta = { ...currentMeta, label: (e.target as HTMLInputElement).value };
+    if (!(e.target instanceof HTMLInputElement)) return;
+    currentMeta = { ...currentMeta, label: e.target.value };
     execute(new UpdateComponentCommand(entityId, 'meta', currentMeta));
   });
 
   content.querySelector('#prop-notes')?.addEventListener('input', (e: Event) => {
-    currentMeta = { ...currentMeta, notes: (e.target as HTMLTextAreaElement).value };
+    if (!(e.target instanceof HTMLTextAreaElement)) return;
+    currentMeta = { ...currentMeta, notes: e.target.value };
     execute(new UpdateComponentCommand(entityId, 'meta', currentMeta));
   });
 
   content.querySelector('#prop-status')?.addEventListener('change', (e: Event) => {
-    currentMeta = { ...currentMeta, status: (e.target as HTMLSelectElement).value as ShapeStatus };
+    if (!(e.target instanceof HTMLSelectElement)) return;
+    currentMeta = { ...currentMeta, status: e.target.value as ShapeStatus };
     execute(new UpdateComponentCommand(entityId, 'meta', currentMeta));
   });
 
   content.querySelector('#prop-color')?.addEventListener('input', (e: Event) => {
-    const rawColor = (e.target as HTMLInputElement).value;
+    if (!(e.target instanceof HTMLInputElement)) return;
+    const rawColor = e.target.value;
     const newColor = unwrapOr(parseHexColor(rawColor), hexColorUnchecked('#e94560'));
     const newStyle: StyleComponent = {
       color: newColor,

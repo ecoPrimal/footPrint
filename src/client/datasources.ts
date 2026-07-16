@@ -1,5 +1,6 @@
 import * as L from 'leaflet';
-import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback, VectorSourceDef, TileSourceDef } from '../types/source.js';
+import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback, VectorSourceDef } from '../types/source.js';
+import { isTileSource, isWmsSource } from '../types/source.js';
 import { escHtml } from './html.js';
 
 let map: L.Map | null = null;
@@ -16,12 +17,21 @@ export function registerSource(def: DataSourceDef): DataSourceState {
 
   let layer: L.TileLayer | L.GeoJSON;
 
-  if (sourceType === 'tiles') {
-    const tileDef = def as TileSourceDef;
-    layer = L.tileLayer(tileDef.tileUrl, {
+  if (isWmsSource(def)) {
+    layer = L.tileLayer.wms(def.wmsUrl, {
+      layers: def.wmsLayers,
+      format: def.wmsFormat ?? 'image/png',
+      transparent: true,
+      version: def.wmsVersion ?? '1.1.1',
       maxZoom: 20,
-      opacity: tileDef.opacity ?? 0.6,
-      attribution: tileDef.attribution ?? '',
+      opacity: def.opacity ?? 0.5,
+      attribution: def.attribution ?? '',
+    } as L.WMSOptions);
+  } else if (isTileSource(def)) {
+    layer = L.tileLayer(def.tileUrl, {
+      maxZoom: 20,
+      opacity: def.opacity ?? 0.6,
+      attribution: def.attribution ?? '',
     });
   } else {
     const vecDef = def as VectorSourceDef;
@@ -82,9 +92,9 @@ export function registerSource(def: DataSourceDef): DataSourceState {
     style: 'style' in def ? def.style : undefined,
     pointToLayer: 'pointToLayer' in def ? def.pointToLayer : undefined,
     popupContent: 'popupContent' in def ? def.popupContent : undefined,
-    tileUrl: 'tileUrl' in def ? (def as TileSourceDef).tileUrl : undefined,
-    opacity: 'opacity' in def ? (def as TileSourceDef).opacity : undefined,
-    attribution: 'attribution' in def ? (def as TileSourceDef).attribution : undefined,
+    tileUrl: isTileSource(def) ? def.tileUrl : isWmsSource(def) ? def.wmsUrl : undefined,
+    opacity: 'opacity' in def ? def.opacity : undefined,
+    attribution: 'attribution' in def ? def.attribution : undefined,
   };
 
   sources[state.id] = state;
@@ -124,7 +134,7 @@ export async function enableSource(id: string): Promise<void> {
   notify();
 }
 
-export function disableSource(id: string): void {
+function disableSource(id: string): void {
   const src = sources[id];
   if (!src || !src.enabled || !map) return;
 

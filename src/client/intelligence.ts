@@ -8,9 +8,10 @@ import { lineIntersect } from '@turf/line-intersect';
 import { bearing } from '@turf/bearing';
 import { polygonToLine } from '@turf/polygon-to-line';
 import { point } from '@turf/helpers';
-import { FEET_PER_METER } from '../constants.js';
+import { FEET_PER_METER, CONFLICT_BUFFER_M } from '../constants.js';
 import type { ProximityResult } from '../types/spatial.js';
 import { escHtml } from './html.js';
+import { layerToFeature } from './geojson.js';
 import type { EntityId } from '../core/entity.js';
 import { getAllSources } from './datasources.js';
 import { batchElevation } from './sources/usgs.js';
@@ -25,8 +26,8 @@ export function initIntelligence(leafletMap: L.Map): void {
 }
 
 export function computeProximity(shape: L.Layer): ProximityResult[] {
-  if (!('toGeoJSON' in shape)) return [];
-  const geo = (shape as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+  const geo = layerToFeature(shape);
+  if (!geo) return [];
   const shapeCenter = centroid(geo);
 
   // For polygon shapes, extract boundary for edge-to-edge distance
@@ -52,8 +53,8 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
     let nearestDist = Infinity;
 
     geoLayer.eachLayer((sub: L.Layer) => {
-      if (!('toGeoJSON' in sub)) return;
-      const feat = (sub as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+      const feat = layerToFeature(sub);
+      if (!feat) return;
 
       try {
         let dist: number;
@@ -156,7 +157,7 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
   return results;
 }
 
-export function formatProximityHtml(results: ProximityResult[]): string {
+function formatProximityHtml(results: ProximityResult[]): string {
   if (results.length === 0) return '';
 
   const rows = results.slice(0, 8).map((r) => {
@@ -185,14 +186,14 @@ const UTILITY_SOURCE_IDS: readonly string[] = [
   'osm-manholes', 'osm-hydrants', 'osm-poles',
 ];
 
-export function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
-  if (!('toGeoJSON' in shape)) return [];
-  const geo = (shape as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
+  const geo = layerToFeature(shape);
+  if (!geo) return [];
 
   // Buffer shape slightly for near-miss detection (2m ~ 6ft clearance)
   let buffered: GeoJSON.Feature;
   try {
-    buffered = buffer(geo, 2, { units: 'meters' }) as GeoJSON.Feature;
+    buffered = buffer(geo, CONFLICT_BUFFER_M, { units: 'meters' }) as GeoJSON.Feature;
   } catch {
     buffered = geo;
   }
@@ -206,8 +207,8 @@ export function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
 
     const geoLayer = src.layer as L.GeoJSON;
     geoLayer.eachLayer((sub: L.Layer) => {
-      if (!('toGeoJSON' in sub)) return;
-      const feat = (sub as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+      const feat = layerToFeature(sub);
+      if (!feat) return;
       try {
         if (booleanIntersects(buffered, feat)) {
           conflicts.push(feat);
@@ -225,8 +226,8 @@ export function renderConflicts(shape: L.Layer): void {
   alertLayer.clearLayers();
   const conflicts = detectConflicts(shape);
 
-  if (!('toGeoJSON' in shape)) return;
-  const geo = (shape as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+  const geo = layerToFeature(shape);
+  if (!geo) return;
 
   for (const conflict of conflicts) {
     try {
@@ -263,8 +264,8 @@ export function renderConflicts(shape: L.Layer): void {
 }
 
 export async function elevationAtVertices(shape: L.Layer): Promise<string> {
-  if (!('toGeoJSON' in shape)) return '';
-  const geo = (shape as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+  const geo = layerToFeature(shape);
+  if (!geo) return '';
 
   let coords: Array<[number, number]> = [];
   if (geo.geometry.type === 'Polygon') {

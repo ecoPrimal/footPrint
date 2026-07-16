@@ -49,7 +49,8 @@ All mutations go through the command pipeline with full undo/redo:
 
 Gauss-Newton iterative solver with Levenberg-Marquardt damping (7 active types):
 
-- Fixed distance, angle, coincident, point-on-line, tangent (stub), symmetric (stub), setback (stub)
+- Fixed distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line
+- Stubs: tangent, symmetric, setback
 - 50 max iterations, 1e-8 tolerance, 0.5 step size
 - Dense J^T·J linear system with partial-pivot Gauss elimination
 

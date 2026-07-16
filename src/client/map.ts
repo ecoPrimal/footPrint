@@ -1,23 +1,18 @@
 import * as L from 'leaflet';
 import type { NominatimResult } from '../types/nominatim.js';
-import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL } from '../constants.js';
+import {
+  DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL,
+  BASEMAP_SATELLITE_URL, BASEMAP_STREET_URL, BASEMAP_LABELS_URL,
+  GEOCODER_ZOOM,
+} from '../constants.js';
 import { proxyGet } from './api.js';
 
 let map: L.Map;
 
 const tileLayers = {
-  satellite: L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Tiles &copy; Esri', maxZoom: 20 },
-  ),
-  street: L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 },
-  ),
-  labels: L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Labels &copy; Esri', maxZoom: 20, opacity: 0.7 },
-  ),
+  satellite: L.tileLayer(BASEMAP_SATELLITE_URL, { attribution: 'Tiles &copy; Esri', maxZoom: 20 }),
+  street: L.tileLayer(BASEMAP_STREET_URL, { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }),
+  labels: L.tileLayer(BASEMAP_LABELS_URL, { attribution: 'Labels &copy; Esri', maxZoom: 20, opacity: 0.7 }),
 } as const;
 
 export function initMap(): L.Map {
@@ -42,9 +37,10 @@ export function initMap(): L.Map {
 }
 
 function initGeocoder(): void {
-  const input = document.getElementById('geocoder-input') as HTMLInputElement | null;
+  const inputEl = document.getElementById('geocoder-input');
   const btn = document.getElementById('geocoder-btn');
-  if (!input || !btn) return;
+  if (!(inputEl instanceof HTMLInputElement) || !btn) return;
+  const input = inputEl;
 
   async function doSearch(): Promise<void> {
     if (!input) return;
@@ -58,7 +54,7 @@ function initGeocoder(): void {
       if (results.length > 0) {
         const first = results[0];
         if (first) {
-          map.setView([parseFloat(first.lat), parseFloat(first.lon)], 18);
+          map.setView([parseFloat(first.lat), parseFloat(first.lon)], GEOCODER_ZOOM);
           input.value = first.display_name;
         }
       } else {

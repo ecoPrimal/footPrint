@@ -5,6 +5,7 @@ import { execute } from '../core/history.js';
 import { createShapeEntity, RemoveEntityCommand } from '../core/commands.js';
 import { getLeafletLayer, getEntityIdForLayer } from '../core/renderer.js';
 import type { HexColor } from '../types/brands.js';
+import { layerToFeature } from './geojson.js';
 
 let map: L.Map | null = null;
 let onShapeSelect: ((entityId: EntityId | null) => void) | null = null;
@@ -85,9 +86,8 @@ function handleCreate(layer: L.Layer, shapeType: string): void {
 }
 
 function extractGeometry(layer: L.Layer): GeoJSON.Geometry | null {
-  if (!('toGeoJSON' in layer)) return null;
-  const geo = (layer as L.Layer & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
-  return geo.geometry;
+  const feat = layerToFeature(layer);
+  return feat?.geometry ?? null;
 }
 
 function mapShapeType(pmShape: string): GeometryComponent['shapeType'] {
@@ -113,7 +113,7 @@ export function selectShape(entityId: EntityId): void {
   if (selectedEntityId && selectedEntityId !== entityId) {
     const prevLayer = getLeafletLayer(selectedEntityId);
     if (prevLayer && 'setStyle' in prevLayer) {
-      try { (prevLayer as L.Path).setStyle({ weight: 3 }); } catch { /* removed */ }
+      try { (prevLayer as L.Path).setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
     }
   }
 
@@ -131,7 +131,7 @@ export function deselectShape(): void {
   if (selectedEntityId) {
     const layer = getLeafletLayer(selectedEntityId);
     if (layer && 'setStyle' in layer) {
-      try { (layer as L.Path).setStyle({ weight: 3 }); } catch { /* removed */ }
+      try { (layer as L.Path).setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
     }
   }
   selectedEntityId = null;

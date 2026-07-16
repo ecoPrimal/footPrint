@@ -26,6 +26,26 @@ export const NRCS_WMS_URL = 'https://sdmdataaccess.sc.egov.usda.gov/Spatial/SDM.
 export const MI_FRAMEWORK_BASE = 'https://gisagocss.state.mi.us/arcgis/rest/services/OpenData/michigan_geographic_framework/MapServer';
 export const ZONING_URL = 'https://gis2.cityofeastlansing.com/arcgis/rest/services/ZoningDistricts/FeatureServer/0';
 
+// ── Basemap tile URLs ────────────────────────────────
+
+export const BASEMAP_SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+export const BASEMAP_STREET_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+export const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
+export const PARCELS_TILE_URL = 'https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}';
+
+// ── ArcGIS layer IDs ────────────────────────────────
+
+export const FEMA_FLOOD_ZONE_LAYER = 28;
+export const MI_ROADS_LAYER = 14;
+
+// ── Discovery tuning ─────────────────────────────────
+
+export const DISCOVERY_BUFFER_RADIUS_M = 100;
+export const DISCOVERY_MAX_FEATURE_SAMPLE = 50;
+export const DISCOVERY_PROXIMITY_RADIUS_M = 500;
+export const CONFLICT_BUFFER_M = 2;
+export const GEOCODER_ZOOM = 18;
+
 // ── Application defaults ─────────────────────────────
 
 export const DEFAULT_MAP_CENTER: readonly [number, number] = [42.7085, -84.5537];

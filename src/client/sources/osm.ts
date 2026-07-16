@@ -1,12 +1,13 @@
 import * as L from 'leaflet';
-import type { OverpassResponse, OverpassNode, OverpassWay, OverpassRelation } from '../../types/overpass.js';
+import type { OverpassResponse } from '../../types/overpass.js';
+import { isOverpassNode, isOverpassWay, isOverpassRelation } from '../../types/overpass.js';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { OVERPASS_URL, OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { proxyPost } from '../api.js';
 import { escHtml } from '../html.js';
 
-async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> {
+export async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> {
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const normalized = overpassQL.replace(/\[timeout:\d+\]/, `[timeout:${String(OVERPASS_TIMEOUT_S)}]`);
   const query = normalized.replace(/\{bbox\}/g, bbox);
@@ -16,27 +17,26 @@ async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promis
   return osmToGeoJSON(data);
 }
 
-function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
+export function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
   const features: GeoJSON.Feature[] = [];
 
   if (!data.elements) return features;
 
   for (const el of data.elements) {
-    if (el.type === 'node') {
-      const node = el as OverpassNode;
-      if (node.tags) {
+    if (isOverpassNode(el)) {
+      if (el.tags) {
         features.push({
           type: 'Feature',
-          geometry: { type: 'Point', coordinates: [node.lon, node.lat] },
-          properties: { _osmId: node.id, _osmType: 'node', ...node.tags },
+          geometry: { type: 'Point', coordinates: [el.lon, el.lat] },
+          properties: { _osmId: el.id, _osmType: 'node', ...el.tags },
         });
       }
+      continue;
     }
 
-    if (el.type === 'way') {
-      const way = el as OverpassWay;
-      if (way.geometry) {
-        const coords: Array<[number, number]> = way.geometry.map((n) => [n.lon, n.lat]);
+    if (isOverpassWay(el)) {
+      if (el.geometry) {
+        const coords: Array<[number, number]> = el.geometry.map((n) => [n.lon, n.lat]);
         if (coords.length < 2) continue;
 
         const first = coords[0];
@@ -49,16 +49,16 @@ function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
           geometry: isClosed
             ? { type: 'Polygon', coordinates: [coords] }
             : { type: 'LineString', coordinates: coords },
-          properties: { _osmId: way.id, _osmType: 'way', ...way.tags },
+          properties: { _osmId: el.id, _osmType: 'way', ...el.tags },
         });
       }
+      continue;
     }
 
-    if (el.type === 'relation') {
-      const rel = el as OverpassRelation;
-      if (rel.members) {
+    if (isOverpassRelation(el)) {
+      if (el.members) {
         const outerCoords: Array<Array<[number, number]>> = [];
-        for (const m of rel.members) {
+        for (const m of el.members) {
           if (m.type === 'way' && m.geometry) {
             outerCoords.push(m.geometry.map((n) => [n.lon, n.lat]));
           }
@@ -67,7 +67,7 @@ function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
           features.push({
             type: 'Feature',
             geometry: { type: 'MultiPolygon', coordinates: outerCoords.map((ring) => [ring]) },
-            properties: { _osmId: rel.id, _osmType: 'relation', ...rel.tags },
+            properties: { _osmId: el.id, _osmType: 'relation', ...el.tags },
           });
         }
       }

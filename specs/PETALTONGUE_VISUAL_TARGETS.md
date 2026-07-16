@@ -36,7 +36,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 |-----------|-------------------|
 | Leaflet-Geoman 2.19 (draw/edit) | Same library, served from NUCLEUS |
 | Shape types: polygon, polyline, rectangle, circle, marker, circlemarker | Same |
-| Shape metadata (_fpMeta → ECS components) | Entities stored in nestGate CAS |
+| Shape metadata (ECS MetaComponent + StyleComponent) | Entities stored in persistence CAS |
 | Color per-shape, per-layer | Same |
 
 ### VT-3: Layer System
@@ -51,9 +51,9 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 ### VT-4: Data Source Overlays
 
-| footPrint (8 sources) | petalTongue Target |
-|-----------------------|-------------------|
-| OSM/Overpass (buildings, power, pipes, fences, water) | Same via proxy → songBird drawbridge |
+| footPrint (8 source modules, 15 sources) | petalTongue Target |
+|------------------------------------------|-------------------|
+| OSM/Overpass (buildings, power, pipes, fences, water) | Same via proxy drawbridge |
 | Regrid parcel tiles | Same |
 | FEMA flood zones | Same |
 | Lansing zoning | Same |

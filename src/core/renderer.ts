@@ -34,10 +34,6 @@ export function getEntityIdForLayer(layer: L.Layer): EntityId | undefined {
   return undefined;
 }
 
-export function getLayerGroup(layerEntityId: EntityId): L.FeatureGroup | undefined {
-  return layerGroups.get(layerEntityId);
-}
-
 function onEntityAdded(id: EntityId): void {
   const res = store.get(id);
   if (!res.ok || !map) return;
@@ -289,6 +285,3 @@ function rebuildShapeLayer(id: EntityId, entity: DeepReadonly<ShapeEntity>): voi
     addToParentGroup(entity, newLayer);
   }
 }
-
-// Re-export for backward compatibility
-export { extractCoords } from './geometry.js';

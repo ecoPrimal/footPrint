@@ -10,17 +10,20 @@ import { buildTerrainGrid, renderContours, renderSlopeArrows } from './terrain.j
 import { boundedChannel } from '../rustscript/channel.js';
 import { Owned, take } from '../rustscript/owned.js';
 import { isOk } from '../rustscript/result.js';
-import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT, DISCOVERY_DEBOUNCE_MS } from '../constants.js';
+import {
+  SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT,
+  DISCOVERY_DEBOUNCE_MS, DISCOVERY_BUFFER_RADIUS_M,
+  DISCOVERY_MAX_FEATURE_SAMPLE, DISCOVERY_PROXIMITY_RADIUS_M,
+} from '../constants.js';
 import { store } from '../core/store.js';
+import { extractCoords } from '../core/geometry.js';
 import { escHtml } from './html.js';
+import { layerToFeature } from './geojson.js';
 
 let map: L.Map | null = null;
 let onDiscovery: ((report: DiscoveryReport) => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-const BUFFER_RADIUS_M = 100;
-const MAX_FEATURE_SAMPLE = 50;
-const PROXIMITY_RADIUS_M = 500;
 
 const AUTO_ENABLE_IDS: readonly string[] = [
   'osm-buildings', 'osm-power', 'parcels', 'osm-fences',
@@ -56,20 +59,17 @@ export function initDiscover(
     const geo = entity.components.geometry;
     if (!geo) return;
 
-    const geojson = geo.geojson;
-    const coords = 'coordinates' in geojson
-      ? (geojson.coordinates as number[][])
-      : null;
-    if (!coords || coords.length < 2) return;
+    const coords = extractCoords(geo);
+    if (coords.length < 2) return;
 
     const bounds = L.latLngBounds(
-      coords.map(c => L.latLng(c[1]!, c[0]!)),
+      coords.map(c => L.latLng(c[1], c[0])),
     );
 
     void runDiscovery(bounds, {
       type: 'Feature',
       properties: {},
-      geometry: geojson as unknown as GeoJSON.Geometry,
+      geometry: geo.geojson as unknown as GeoJSON.Geometry,
     });
   });
 
@@ -103,7 +103,7 @@ async function runDiscovery(
     }
   }
 
-  const padRatio = BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001);
+  const padRatio = DISCOVERY_BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001);
   const buffered = shapeBounds.pad(padRatio);
   const sources = getAllSources();
 
@@ -123,9 +123,8 @@ async function runDiscovery(
         const geoLayer = src.layer as L.GeoJSON;
         const features: GeoJSON.Feature[] = [];
         geoLayer.eachLayer((sub: L.Layer) => {
-          if ('toGeoJSON' in sub) {
-            features.push((sub as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON());
-          }
+          const feat = layerToFeature(sub);
+          if (feat) features.push(feat);
         });
 
         if (features.length === 0) return;
@@ -134,7 +133,7 @@ async function runDiscovery(
         let nearestDist = Infinity;
 
         if (propertyGeom && propertyGeom.geometry.type !== 'Point') {
-          for (const f of features.slice(0, MAX_FEATURE_SAMPLE)) {
+          for (const f of features.slice(0, DISCOVERY_MAX_FEATURE_SAMPLE)) {
             try {
               const dist = distance(
                 centroid(f),
@@ -149,10 +148,10 @@ async function runDiscovery(
           }
         }
 
-        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, MAX_FEATURE_SAMPLE) : 999;
+        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, DISCOVERY_MAX_FEATURE_SAMPLE) : 999;
         const categoryBoost = DEFAULT_CATEGORY_BOOSTS[src.category] ?? 0.5;
         const countScore = Math.min(features.length / 20, 1.0);
-        const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / PROXIMITY_RADIUS_M) : 0;
+        const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / DISCOVERY_PROXIMITY_RADIUS_M) : 0;
         const relevance = 0.3 * countScore + 0.4 * proximityScore + 0.3 * categoryBoost;
 
         const result: ScoredSource = {
@@ -198,7 +197,7 @@ async function runDiscovery(
 
   const report: DiscoveryReport = {
     propertyArea: Math.round(propertyArea * SQ_FEET_PER_SQ_METER),
-    bufferRadius: BUFFER_RADIUS_M,
+    bufferRadius: DISCOVERY_BUFFER_RADIUS_M,
     sources: scored,
     terrain: terrainGrid,
     timestamp: new Date().toISOString(),

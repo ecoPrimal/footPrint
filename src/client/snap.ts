@@ -3,6 +3,7 @@ import '@geoman-io/leaflet-geoman-free';
 import type { SnapConfig } from '../types/snap.js';
 import { DEFAULT_SNAP_CONFIG, ftToMeters } from '../types/snap.js';
 import { getAllSources } from './datasources.js';
+import { layerToFeature } from './geojson.js';
 
 let map: L.Map | null = null;
 let snapTargetGroup: L.LayerGroup = L.layerGroup();
@@ -72,10 +73,6 @@ export function setGridSnap(enabled: boolean, spacingFt?: number): void {
   rebuildSnapIndex();
 }
 
-export function getLastSnapInfo(): string | null {
-  return lastSnapInfo;
-}
-
 export function rebuildSnapIndex(): void {
   snapTargetGroup.clearLayers();
   if (!config.enabled || !map) return;
@@ -87,8 +84,8 @@ export function rebuildSnapIndex(): void {
         // Clone geometry into lightweight invisible polylines/markers for snap targets.
         // This avoids re-parenting the original layers out of their source GeoJSON.
         src.layer.eachLayer((sub: L.Layer) => {
-          if ('toGeoJSON' in sub) {
-            const geo = (sub as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
+          const geo = layerToFeature(sub);
+          if (geo) {
             const clone = L.geoJSON(geo, {
               style: () => ({ opacity: 0, fillOpacity: 0, weight: 0, interactive: false }),
               pointToLayer: (_f, latlng) => L.circleMarker(latlng, {

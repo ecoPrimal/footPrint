@@ -57,9 +57,6 @@ export function hexColorUnchecked(raw: string): HexColor {
   return raw as HexColor;
 }
 
-/** @deprecated Use `hexColorUnchecked` — alias kept for backward compat */
-export const hexColor = hexColorUnchecked;
-
 // ── LayerId ──────────────
 
 export type LayerId = Brand<string, 'LayerId'>;
