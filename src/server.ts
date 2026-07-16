@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import type { CacheClearResponse } from './types/api.js';
 import type { ProjectFile, SaveResponse, DeleteResponse, ErrorResponse } from './types/project.js';
-import type { CommandPayload } from './agent/protocol.js';
+import { parseCommandPayload } from './agent/protocol.js';
 import {
   initAgentBridge,
   getShadowState,
@@ -16,12 +16,12 @@ import {
   sendAgentAction,
   getUserMessages,
 } from './agent/server-bridge.js';
-import { ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT, SHUTDOWN_GRACE_MS } from './constants.js';
+import { ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT, SHUTDOWN_GRACE_MS, SERVER_PORT } from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const app = express();
-const PORT = Number(process.env['PORT']) || 3000;
+const PORT = Number(process.env['PORT']) || SERVER_PORT;
 const PROJECTS_DIR = join(ROOT, 'projects');
 const CACHE_DIR = join(ROOT, 'cache');
 
@@ -252,14 +252,14 @@ app.get('/api/agent/state', (_req: Request, res: Response) => {
 });
 
 app.post('/api/agent/command', async (req: Request, res: Response) => {
-  const payload = req.body as CommandPayload;
-  if (!payload || typeof payload !== 'object' || !('action' in payload)) {
-    res.status(400).json({ error: 'Invalid command payload -- must include "action" field' });
+  const payload = parseCommandPayload(req.body);
+  if (!payload) {
+    res.status(400).json({ error: 'Invalid command payload — must include a known "action" field' } satisfies ErrorResponse);
     return;
   }
 
   const result = await sendCommand(payload);
-  const eid = 'entityId' in payload ? String((payload as unknown as Record<string, unknown>)['entityId']) : undefined;
+  const eid = 'entityId' in payload ? String((payload as { entityId: string }).entityId) : undefined;
   sendAgentAction(`Executed ${payload.action}`, eid);
   if (result.ok) {
     res.json(result);

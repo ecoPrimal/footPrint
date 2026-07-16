@@ -8,7 +8,7 @@ import { lineIntersect } from '@turf/line-intersect';
 import { bearing } from '@turf/bearing';
 import { polygonToLine } from '@turf/polygon-to-line';
 import { point } from '@turf/helpers';
-import { FEET_PER_METER, CONFLICT_BUFFER_M } from '../constants.js';
+import { FEET_PER_METER, CONFLICT_BUFFER_M, PROXIMITY_UI_LIMIT } from '../constants.js';
 import type { ProximityResult } from '../types/spatial.js';
 import { escHtml } from './html.js';
 import { layerToFeature } from './geojson.js';
@@ -167,7 +167,7 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
 function formatProximityHtml(results: ProximityResult[]): string {
   if (results.length === 0) return '';
 
-  const rows = results.slice(0, 8).map((r) => {
+  const rows = results.slice(0, PROXIMITY_UI_LIMIT).map((r) => {
     const distFt = Math.round(r.distance * FEET_PER_METER);
     const dir = compassDir(r.bearing);
     return `<div class="proximity-row">
@@ -182,7 +182,7 @@ function formatProximityHtml(results: ProximityResult[]): string {
   </div>`;
 }
 
-function compassDir(bearing: number): string {
+export function compassDir(bearing: number): string {
   const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   const idx = Math.round(((bearing + 360) % 360) / 45) % 8;
   return dirs[idx] ?? 'N';

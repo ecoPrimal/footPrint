@@ -117,7 +117,7 @@ Each cell indicates how well a Rust constraint transfers to the target language:
 - No move semantics; variables cannot be invalidated after passing
 - No lifetimes; GC makes this unnecessary but also unenforceable
 
-**RustScript status**: This is the reference implementation. 12 modules, deployed and integrated into FootPrint's core. Of the 20 constraints in the matrix above, 17 are enforceable in TypeScript (type-level or runtime). The 3 that cannot be expressed: lifetimes (GC replaces them), Send/Sync (single-threaded JS), zero-cost abstractions (JIT, not ahead-of-time compiled). Eight are enforced at the type level (compile-time, zero runtime cost); nine require runtime wrappers.
+**RustScript status**: This is the reference implementation. 11 modules, deployed and integrated into FootPrint's core. Of the 20 constraints in the matrix above, 17 are enforceable in TypeScript (type-level or runtime). The 3 that cannot be expressed: lifetimes (GC replaces them), Send/Sync (single-threaded JS), zero-cost abstractions (JIT, not ahead-of-time compiled). Eight are enforced at the type level (compile-time, zero runtime cost); nine require runtime wrappers.
 
 **AI dev value**: TypeScript is the second most common AI development language after Python. RustScript in TS means AI agents can generate code that is structurally constrained -- the type checker rejects invalid states before runtime. This is the "constrained evolution" thesis applied: the TS compiler becomes selection pressure.
 

@@ -85,7 +85,7 @@ export function registerOSMSources(): void {
     color: hexColorUnchecked('#9b59b6'),
     minZoom: 15,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];(way["building"]({bbox});relation["building"]({bbox}););out body geom;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["building"]({bbox});relation["building"]({bbox}););out body geom;`,
       bounds,
     ),
     style: () => ({
@@ -111,7 +111,7 @@ export function registerOSMSources(): void {
     color: hexColorUnchecked('#e67e22'),
     minZoom: 14,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];(way["power"~"line|minor_line|cable"]({bbox});node["power"~"pole|tower|transformer"]({bbox}););out body geom;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["power"~"line|minor_line|cable"]({bbox});node["power"~"pole|tower|transformer"]({bbox}););out body geom;`,
       bounds,
     ),
     style: (feature) => {
@@ -140,7 +140,7 @@ export function registerOSMSources(): void {
     color: hexColorUnchecked('#c0392b'),
     minZoom: 14,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];(way["man_made"="pipeline"]({bbox});way["utility"="gas"]({bbox});way["utility"="water"]({bbox});way["utility"="sewer"]({bbox}););out body geom;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["man_made"="pipeline"]({bbox});way["utility"="gas"]({bbox});way["utility"="water"]({bbox});way["utility"="sewer"]({bbox}););out body geom;`,
       bounds,
     ),
     style: () => ({
@@ -167,7 +167,7 @@ export function registerOSMSources(): void {
     color: hexColorUnchecked('#8B6914'),
     minZoom: 16,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];(way["barrier"="fence"]({bbox});way["barrier"="wall"]({bbox});way["barrier"="hedge"]({bbox}););out body geom;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["barrier"="fence"]({bbox});way["barrier"="wall"]({bbox});way["barrier"="hedge"]({bbox}););out body geom;`,
       bounds,
     ),
     style: (feature) => {
@@ -197,7 +197,7 @@ export function registerOSMSources(): void {
     color: hexColorUnchecked('#2980b9'),
     minZoom: 14,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];(way["waterway"]({bbox});way["natural"="water"]({bbox});relation["natural"="water"]({bbox}););out body geom;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["waterway"]({bbox});way["natural"="water"]({bbox});relation["natural"="water"]({bbox}););out body geom;`,
       bounds,
     ),
     style: (feature) => {

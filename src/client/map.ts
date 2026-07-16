@@ -3,7 +3,7 @@ import type { NominatimResult } from '../types/nominatim.js';
 import {
   DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL,
   BASEMAP_SATELLITE_URL, BASEMAP_STREET_URL, BASEMAP_LABELS_URL,
-  GEOCODER_ZOOM,
+  GEOCODER_ZOOM, GEOCODER_ERROR_FLASH_MS,
 } from '../constants.js';
 import { proxyGet } from './api.js';
 
@@ -59,7 +59,7 @@ function initGeocoder(): void {
         }
       } else {
         input.style.borderColor = '#c0392b';
-        setTimeout(() => { input.style.borderColor = ''; }, 1500);
+        setTimeout(() => { input.style.borderColor = ''; }, GEOCODER_ERROR_FLASH_MS);
       }
     } catch {
       console.error('Geocoder request failed');

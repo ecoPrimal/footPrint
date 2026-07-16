@@ -2,6 +2,7 @@ import * as L from 'leaflet';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { queryOverpass } from './osm.js';
+import { OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { escHtml } from '../html.js';
 
 function makePointIcon(symbol: string, color: string): L.DivIcon {
@@ -21,7 +22,7 @@ export function registerInfrastructureSources(): void {
     color: hexColorUnchecked('#546E7A'),
     minZoom: 17,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];node["man_made"="manhole"]({bbox});out body;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];node["man_made"="manhole"]({bbox});out body;`,
       bounds,
     ),
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
@@ -43,7 +44,7 @@ export function registerInfrastructureSources(): void {
     color: hexColorUnchecked('#D32F2F'),
     minZoom: 17,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];node["emergency"="fire_hydrant"]({bbox});out body;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];node["emergency"="fire_hydrant"]({bbox});out body;`,
       bounds,
     ),
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
@@ -65,7 +66,7 @@ export function registerInfrastructureSources(): void {
     color: hexColorUnchecked('#FFC107'),
     minZoom: 17,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];node["highway"="street_lamp"]({bbox});out body;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];node["highway"="street_lamp"]({bbox});out body;`,
       bounds,
     ),
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
@@ -86,7 +87,7 @@ export function registerInfrastructureSources(): void {
     color: hexColorUnchecked('#FF8F00'),
     minZoom: 16,
     fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:25];(node["power"="pole"]({bbox});node["power"="tower"]({bbox});node["utility"="pole"]({bbox}););out body;`,
+      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(node["power"="pole"]({bbox});node["power"="tower"]({bbox});node["utility"="pole"]({bbox}););out body;`,
       bounds,
     ),
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>

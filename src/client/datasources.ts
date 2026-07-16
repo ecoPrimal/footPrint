@@ -102,9 +102,6 @@ export function registerSource(def: DataSourceDef): DataSourceState {
   return state;
 }
 
-export function getSource(id: string): DataSourceState | undefined {
-  return sources[id];
-}
 
 export function getAllSources(): SourceRegistry {
   return sources;

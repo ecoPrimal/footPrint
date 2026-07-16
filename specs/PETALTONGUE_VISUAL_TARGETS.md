@@ -171,7 +171,7 @@ not the frontend. Data persistence moves from JSON files to nestGate CAS.
 ### RustScript: Evidence, Not Evolution Target
 
 RustScript is NOT a stepping stone toward Rust. It is evidence FOR pure Rust.
-The 12-module library proves that Rust's constraints improve TypeScript code, but
+The 11-module library proves that Rust's constraints improve TypeScript code, but
 also reveals the limits: 3 constraints can't be expressed at all (lifetimes,
 Send/Sync, zero-cost abstractions), and 9 require runtime wrappers (degraded
 enforcement). This validates the architectural decision that primals are pure Rust.

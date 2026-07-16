@@ -14,6 +14,9 @@ import {
   SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT,
   DISCOVERY_DEBOUNCE_MS, DISCOVERY_BUFFER_RADIUS_M,
   DISCOVERY_MAX_FEATURE_SAMPLE, DISCOVERY_PROXIMITY_RADIUS_M,
+  DISCOVERY_COUNT_WEIGHT, DISCOVERY_PROXIMITY_WEIGHT,
+  DISCOVERY_CATEGORY_WEIGHT, DISCOVERY_DEFAULT_BOOST,
+  DISCOVERY_COUNT_DIVISOR, DISCOVERY_NO_DATA_DISTANCE,
 } from '../constants.js';
 import { store } from '../core/store.js';
 import { extractCoords } from '../core/geometry.js';
@@ -148,11 +151,11 @@ async function runDiscovery(
           }
         }
 
-        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, DISCOVERY_MAX_FEATURE_SAMPLE) : 999;
-        const categoryBoost = DEFAULT_CATEGORY_BOOSTS[src.category] ?? 0.5;
-        const countScore = Math.min(features.length / 20, 1.0);
+        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, DISCOVERY_MAX_FEATURE_SAMPLE) : DISCOVERY_NO_DATA_DISTANCE;
+        const categoryBoost = DEFAULT_CATEGORY_BOOSTS[src.category] ?? DISCOVERY_DEFAULT_BOOST;
+        const countScore = Math.min(features.length / DISCOVERY_COUNT_DIVISOR, 1.0);
         const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / DISCOVERY_PROXIMITY_RADIUS_M) : 0;
-        const relevance = 0.3 * countScore + 0.4 * proximityScore + 0.3 * categoryBoost;
+        const relevance = DISCOVERY_COUNT_WEIGHT * countScore + DISCOVERY_PROXIMITY_WEIGHT * proximityScore + DISCOVERY_CATEGORY_WEIGHT * categoryBoost;
 
         const result: ScoredSource = {
           sourceId: id,

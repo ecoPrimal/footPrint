@@ -1,13 +1,12 @@
 import * as L from 'leaflet';
 import { ftToMeters } from '../types/snap.js';
+import { DEFAULT_GRID_SPACING_FT, GRID_MIN_ZOOM, GRID_COLOR, GRID_MAX_LINES } from '../constants.js';
 
 let map: L.Map | null = null;
 let gridLayer: L.LayerGroup = L.layerGroup();
 let gridEnabled = false;
-let spacingFt = 10;
+let spacingFt = DEFAULT_GRID_SPACING_FT;
 let onGridChange: ((enabled: boolean, spacing: number) => void) | null = null;
-
-const MIN_ZOOM = 17;
 
 export function initGrid(
   leafletMap: L.Map,
@@ -45,18 +44,13 @@ export function toggleGrid(): boolean {
   return gridEnabled;
 }
 
-export function setGridSpacing(ft: number): void {
-  spacingFt = ft;
-  if (gridEnabled) renderGrid();
-  if (onGridChange) onGridChange(gridEnabled, spacingFt);
-}
 
 function renderGrid(): void {
   gridLayer.clearLayers();
   if (!map) return;
 
   const zoom = map.getZoom();
-  if (zoom < MIN_ZOOM) return;
+  if (zoom < GRID_MIN_ZOOM) return;
 
   const bounds = map.getBounds().pad(0.1);
   const sw = bounds.getSouthWest();
@@ -80,14 +74,14 @@ function renderGrid(): void {
     L.polyline(
       [[lat, sw.lng], [lat, ne.lng]],
       {
-        color: '#4FC3F7',
+        color: GRID_COLOR,
         weight: isMajor ? 1 : 0.5,
         opacity: isMajor ? 0.3 : 0.12,
         interactive: false,
       },
     ).addTo(gridLayer);
 
-    if (lineCount > 500) break;
+    if (lineCount > GRID_MAX_LINES) break;
   }
 
   lineCount = 0;
@@ -99,13 +93,13 @@ function renderGrid(): void {
     L.polyline(
       [[sw.lat, lng], [ne.lat, lng]],
       {
-        color: '#4FC3F7',
+        color: GRID_COLOR,
         weight: isMajor ? 1 : 0.5,
         opacity: isMajor ? 0.3 : 0.12,
         interactive: false,
       },
     ).addTo(gridLayer);
 
-    if (lineCount > 500) break;
+    if (lineCount > GRID_MAX_LINES) break;
   }
 }

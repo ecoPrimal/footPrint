@@ -32,9 +32,10 @@ Browser (Vite)
        └── Agent bridge (WebSocket state sync)
 
 Express (:3000) — src/server.ts [DISAPPEARS]
-  ├── Project CRUD    → absorbed by persistence primal
-  ├── Proxy + cache   → absorbed by proxy primal
-  └── Agent REST + WS → absorbed by agent bridge primal
+  ├── Project CRUD      → absorbed by persistence primal
+  ├── Proxy + cache     → absorbed by proxy primal
+  └── Agent REST + WS   → absorbed by agent bridge primal
+      (runtime-validated via parseCommandPayload/parseWireMessage)
 ```
 
 ### ECS (Entity-Component System)

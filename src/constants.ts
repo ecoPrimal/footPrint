@@ -46,6 +46,33 @@ export const DISCOVERY_PROXIMITY_RADIUS_M = 500;
 export const CONFLICT_BUFFER_M = 2;
 export const GEOCODER_ZOOM = 18;
 
+// ── Discovery scoring ────────────────────────────────
+
+export const DISCOVERY_COUNT_WEIGHT = 0.3;
+export const DISCOVERY_PROXIMITY_WEIGHT = 0.4;
+export const DISCOVERY_CATEGORY_WEIGHT = 0.3;
+export const DISCOVERY_DEFAULT_BOOST = 0.5;
+export const DISCOVERY_COUNT_DIVISOR = 20;
+export const DISCOVERY_NO_DATA_DISTANCE = 999;
+export const PROXIMITY_UI_LIMIT = 8;
+
+// ── Grid defaults ────────────────────────────────────
+
+export const DEFAULT_GRID_SPACING_FT = 10;
+export const GRID_MIN_ZOOM = 17;
+export const GRID_COLOR = '#4FC3F7';
+export const GRID_MAX_LINES = 500;
+
+// ── Snap defaults ────────────────────────────────────
+
+export const DEFAULT_SNAP_DISTANCE = 20;
+export const METERS_PER_FOOT = 0.3048;
+
+// ── UI timing ────────────────────────────────────────
+
+export const GEOCODER_ERROR_FLASH_MS = 1500;
+export const SERVER_PORT = 3000;
+
 // ── Application defaults ─────────────────────────────
 
 export const DEFAULT_MAP_CENTER: readonly [number, number] = [42.7085, -84.5537];

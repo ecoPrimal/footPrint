@@ -22,7 +22,7 @@ import type {
 } from './protocol.js';
 import { parseWireMessage } from './protocol.js';
 import type { SerializedEntity } from '../core/entity.js';
-import { AGENT_COMMAND_TIMEOUT_MS } from '../constants.js';
+import { AGENT_COMMAND_TIMEOUT_MS, WS_PATH } from '../constants.js';
 
 // ── Shadow state ────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ let wss: WebSocketServer | null = null;
 let activeClient: WebSocket | null = null;
 
 export function initAgentBridge(httpServer: HttpServer): void {
-  wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  wss = new WebSocketServer({ server: httpServer, path: WS_PATH });
 
   wss.on('connection', (ws: WebSocket) => {
     activeClient = ws;

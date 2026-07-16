@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import type { SnapConfig } from '../types/snap.js';
-import { DEFAULT_SNAP_CONFIG, ftToMeters } from '../types/snap.js';
+import { DEFAULT_SNAP_CONFIG } from '../types/snap.js';
 import { getAllSources } from './datasources.js';
 import { layerToFeature } from './geojson.js';
 
@@ -65,13 +65,6 @@ export function toggleSnap(): boolean {
   return config.enabled;
 }
 
-export function setGridSnap(enabled: boolean, spacingFt?: number): void {
-  config.snapToGrid = enabled;
-  if (spacingFt != null) {
-    config.gridSpacing = ftToMeters(spacingFt);
-  }
-  rebuildSnapIndex();
-}
 
 export function rebuildSnapIndex(): void {
   snapTargetGroup.clearLayers();
