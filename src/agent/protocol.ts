@@ -116,3 +116,45 @@ export type AgentWireMessage =
   | UserMessage
   | AgentTextMessage
   | AgentActionMessage;
+
+// ── Runtime validators ──────────────────────────────────────────
+
+const WIRE_MESSAGE_TYPES: ReadonlySet<string> = new Set([
+  'state-sync', 'state-delta', 'command', 'command-result',
+  'user-message', 'agent-message', 'agent-action',
+]);
+
+const COMMAND_ACTIONS: ReadonlySet<string> = new Set([
+  'add-entity', 'remove-entity', 'update-component',
+  'move-geometry', 'undo', 'redo',
+]);
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Validate a parsed JSON value as an AgentWireMessage.
+ * Returns null if the shape is invalid (missing `type` or unknown discriminant).
+ */
+export function parseWireMessage(raw: unknown): AgentWireMessage | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw['type'] !== 'string') return null;
+  if (!WIRE_MESSAGE_TYPES.has(raw['type'])) return null;
+  return raw as unknown as AgentWireMessage;
+}
+
+/**
+ * Validate a command payload has a known action.
+ * Returns null if `action` is missing or not one of the defined actions.
+ */
+export function parseCommandPayload(raw: unknown): CommandPayload | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw['action'] !== 'string') return null;
+  if (!COMMAND_ACTIONS.has(raw['action'])) return null;
+  return raw as unknown as CommandPayload;
+}
+
+export function isValidCommandAction(action: string): boolean {
+  return COMMAND_ACTIONS.has(action);
+}

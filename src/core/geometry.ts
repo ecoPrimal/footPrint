@@ -3,20 +3,32 @@ import type { DeepReadonly } from '../rustscript/types.js';
 import { exhaustive } from '../rustscript/exhaustive.js';
 
 /**
+ * Safely narrow a GeoJSON Position (number[]) to [lng, lat].
+ * GeoJSON positions are number[] but footPrint only uses 2D coordinates.
+ */
+function toLngLat(pos: readonly number[]): [number, number] {
+  return [pos[0] ?? 0, pos[1] ?? 0];
+}
+
+function positionsToLngLat(positions: ReadonlyArray<readonly number[]>): Array<[number, number]> {
+  return positions.map(toLngLat);
+}
+
+/**
  * Accept DeepReadonly<GeometryComponent> so both mutable and readonly callers work.
  * GeometryComponent (mutable) is assignable to DeepReadonly<GeometryComponent> (readonly).
  */
 export function extractCoords(geo: DeepReadonly<GeometryComponent>): Array<[number, number]> {
   const g = geo.geojson;
   switch (g.type) {
-    case 'Point': return [g.coordinates as unknown as [number, number]];
-    case 'LineString': return g.coordinates as unknown as Array<[number, number]>;
-    case 'Polygon': return (g.coordinates[0] ?? []) as unknown as Array<[number, number]>;
-    case 'MultiPoint': return g.coordinates as unknown as Array<[number, number]>;
+    case 'Point': return [toLngLat(g.coordinates)];
+    case 'LineString': return positionsToLngLat(g.coordinates);
+    case 'Polygon': return positionsToLngLat(g.coordinates[0] ?? []);
+    case 'MultiPoint': return positionsToLngLat(g.coordinates);
     case 'MultiLineString': {
       const result: Array<[number, number]> = [];
       for (const line of g.coordinates) {
-        for (const c of line) result.push(c as unknown as [number, number]);
+        for (const c of line) result.push(toLngLat(c));
       }
       return result;
     }
@@ -25,7 +37,7 @@ export function extractCoords(geo: DeepReadonly<GeometryComponent>): Array<[numb
       for (const poly of g.coordinates) {
         const ring = poly[0];
         if (ring) {
-          for (const c of ring) result.push(c as unknown as [number, number]);
+          for (const c of ring) result.push(toLngLat(c));
         }
       }
       return result;
@@ -39,8 +51,7 @@ export function rebuildGeometry(
   original: DeepReadonly<GeometryComponent>,
   newCoords: Array<[number, number]>,
 ): GeometryComponent {
-  // structuredClone produces a deep mutable copy; cast is safe
-  const geo = structuredClone(original) as unknown as GeometryComponent;
+  const geo = structuredClone(original) as GeometryComponent;
   const g = geo.geojson;
 
   switch (g.type) {
@@ -48,27 +59,27 @@ export function rebuildGeometry(
       if (newCoords[0]) g.coordinates = newCoords[0];
       break;
     case 'LineString':
-      (g as GeoJSON.LineString).coordinates = newCoords;
+      g.coordinates = newCoords;
       break;
     case 'Polygon':
-      if ((g as GeoJSON.Polygon).coordinates[0]) {
-        (g as GeoJSON.Polygon).coordinates[0] = newCoords;
+      if (g.coordinates[0]) {
+        g.coordinates[0] = newCoords;
       }
       break;
     case 'MultiLineString': {
       let idx = 0;
-      for (let li = 0; li < (g as GeoJSON.MultiLineString).coordinates.length; li++) {
-        const line = (g as GeoJSON.MultiLineString).coordinates[li];
+      for (let li = 0; li < g.coordinates.length; li++) {
+        const line = g.coordinates[li];
         if (!line) continue;
         const slice = newCoords.slice(idx, idx + line.length);
-        (g as GeoJSON.MultiLineString).coordinates[li] = slice;
+        g.coordinates[li] = slice;
         idx += line.length;
       }
       break;
     }
     case 'MultiPolygon': {
       let idx = 0;
-      for (const poly of (g as GeoJSON.MultiPolygon).coordinates) {
+      for (const poly of g.coordinates) {
         const ring = poly[0];
         if (!ring) continue;
         const slice = newCoords.slice(idx, idx + ring.length);
@@ -78,7 +89,7 @@ export function rebuildGeometry(
       break;
     }
     case 'MultiPoint':
-      (g as GeoJSON.MultiPoint).coordinates = newCoords;
+      g.coordinates = newCoords;
       break;
     case 'GeometryCollection':
       break;

@@ -8,8 +8,8 @@
 
 import { store } from '../core/store.js';
 import type { StoreEvent } from '../core/store.js';
-import type { Entity, EntityKind, ComponentKey, ComponentMap, SerializedEntity } from '../core/entity.js';
-import { createEntity, entityIdFrom } from '../core/entity.js';
+import type { Entity, ComponentMap, SerializedEntity } from '../core/entity.js';
+import { createEntity, entityIdFrom, ENTITY_KINDS } from '../core/entity.js';
 import { execute, undo, redo } from '../core/history.js';
 import {
   AddEntityCommand,
@@ -27,6 +27,7 @@ import type {
   StateDeltaMessage,
   DeltaEvent,
 } from '../agent/protocol.js';
+import { parseWireMessage } from '../agent/protocol.js';
 import { agentWsUrl } from './api.js';
 import { AGENT_RECONNECT_MS, AGENT_RECONNECT_MAX_MS } from '../constants.js';
 
@@ -66,7 +67,12 @@ function connect(): void {
 
   ws.addEventListener('message', (event: MessageEvent) => {
     try {
-      const msg = JSON.parse(event.data as string) as AgentWireMessage;
+      const raw: unknown = JSON.parse(String(event.data));
+      const msg = parseWireMessage(raw);
+      if (!msg) {
+        console.error('[agent-bridge] Invalid wire message from server');
+        return;
+      }
       handleServerMessage(msg);
     } catch {
       console.error('[agent-bridge] Failed to parse server message');
@@ -161,7 +167,10 @@ function handleCommand(msg: CommandMessage): void {
 
     switch (payload.action) {
       case 'add-entity': {
-        const kind = payload.kind as EntityKind;
+        if (!payload.kind || !ENTITY_KINDS.includes(payload.kind)) {
+          throw new Error(`Invalid entity kind: ${String(payload.kind)}`);
+        }
+        const kind = payload.kind;
         const parentId = payload.parentId ? entityIdFrom(payload.parentId) : null;
         const entity = createEntity(kind, parentId);
         if (payload.components) {
@@ -180,7 +189,7 @@ function handleCommand(msg: CommandMessage): void {
       }
       case 'update-component': {
         const eid = entityIdFrom(payload.entityId);
-        const key = payload.componentKey as ComponentKey;
+        const key = payload.componentKey;
         execute(new UpdateComponentCommand(eid, key, payload.value as ComponentMap[typeof key]));
         resultData = { updated: payload.entityId, component: key };
         break;
@@ -201,6 +210,8 @@ function handleCommand(msg: CommandMessage): void {
         resultData = { redone: true };
         break;
       }
+      default:
+        throw new Error(`Unknown command action: ${String((payload as { action: string }).action)}`);
     }
 
     suppressSync = false;

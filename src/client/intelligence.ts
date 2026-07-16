@@ -25,18 +25,28 @@ export function initIntelligence(leafletMap: L.Map): void {
   alertLayer.addTo(map);
 }
 
+/** Extract [lng, lat] pair from a GeoJSON Position or Turf point. */
+function coordPair(coords: GeoJSON.Position): [number, number] {
+  return [coords[0] ?? 0, coords[1] ?? 0];
+}
+
+/** Extract the `dist` property from a Turf nearest-point result. */
+function snapDist(feat: GeoJSON.Feature): number {
+  const d = feat.properties?.['dist'];
+  return typeof d === 'number' ? d : 0;
+}
+
 export function computeProximity(shape: L.Layer): ProximityResult[] {
   const geo = layerToFeature(shape);
   if (!geo) return [];
   const shapeCenter = centroid(geo);
 
-  // For polygon shapes, extract boundary for edge-to-edge distance
-  let shapeBoundary: GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString> | null = null;
+  let shapeBoundary: GeoJSON.Feature | null = null;
   if (geo.geometry.type === 'Polygon' || geo.geometry.type === 'MultiPolygon') {
     try {
       shapeBoundary = polygonToLine(
-        geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>,
-      ) as GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString>;
+        geo as GeoJSON.Feature<GeoJSON.Polygon>,
+      ) as GeoJSON.Feature;
     } catch {
       // fall back to centroid
     }
@@ -61,34 +71,32 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
         let nearPt: [number, number];
 
         if (feat.geometry.type === 'Point') {
-          const coords = feat.geometry.coordinates as [number, number];
+          const coords = coordPair(feat.geometry.coordinates);
           if (shapeBoundary) {
-            // Distance from point to shape boundary (edge), not centroid
             const snapped = nearestPointOnLine(
               shapeBoundary as GeoJSON.Feature<GeoJSON.LineString>,
               point(coords),
               { units: 'meters' },
             );
-            dist = snapped.properties['dist'] as number;
+            dist = snapDist(snapped);
           } else {
             dist = distance(shapeCenter, point(coords), { units: 'meters' });
           }
           nearPt = coords;
         } else if (feat.geometry.type === 'LineString') {
           if (shapeBoundary) {
-            // Find closest approach between two lines
             const snapped = nearestPointOnLine(
               feat as GeoJSON.Feature<GeoJSON.LineString>,
               shapeCenter,
               { units: 'meters' },
             );
-            const snapCoords = snapped.geometry.coordinates as [number, number];
+            const snapCoords = coordPair(snapped.geometry.coordinates);
             const toShape = nearestPointOnLine(
               shapeBoundary as GeoJSON.Feature<GeoJSON.LineString>,
               point(snapCoords),
               { units: 'meters' },
             );
-            dist = toShape.properties['dist'] as number;
+            dist = snapDist(toShape);
             nearPt = snapCoords;
           } else {
             const snapped = nearestPointOnLine(
@@ -96,39 +104,38 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
               shapeCenter,
               { units: 'meters' },
             );
-            dist = snapped.properties['dist'] as number;
-            nearPt = snapped.geometry.coordinates as [number, number];
+            dist = snapDist(snapped);
+            nearPt = coordPair(snapped.geometry.coordinates);
           }
         } else if (feat.geometry.type === 'Polygon' || feat.geometry.type === 'MultiPolygon') {
-          // Extract feature boundary, compute edge-to-edge or edge-to-centroid
           try {
             const featBoundary = polygonToLine(
-              feat as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>,
+              feat as GeoJSON.Feature<GeoJSON.Polygon>,
             ) as GeoJSON.Feature<GeoJSON.LineString>;
             if (shapeBoundary) {
               const snapped = nearestPointOnLine(featBoundary, shapeCenter, { units: 'meters' });
-              const snapCoords = snapped.geometry.coordinates as [number, number];
+              const snapCoords = coordPair(snapped.geometry.coordinates);
               const toShape = nearestPointOnLine(
                 shapeBoundary as GeoJSON.Feature<GeoJSON.LineString>,
                 point(snapCoords),
                 { units: 'meters' },
               );
-              dist = toShape.properties['dist'] as number;
+              dist = snapDist(toShape);
               nearPt = snapCoords;
             } else {
               const snapped = nearestPointOnLine(featBoundary, shapeCenter, { units: 'meters' });
-              dist = snapped.properties['dist'] as number;
-              nearPt = snapped.geometry.coordinates as [number, number];
+              dist = snapDist(snapped);
+              nearPt = coordPair(snapped.geometry.coordinates);
             }
           } catch {
             const fc = centroid(feat);
             dist = distance(shapeCenter, fc, { units: 'meters' });
-            nearPt = fc.geometry.coordinates as [number, number];
+            nearPt = coordPair(fc.geometry.coordinates);
           }
         } else {
           const fc = centroid(feat);
           dist = distance(shapeCenter, fc, { units: 'meters' });
-          nearPt = fc.geometry.coordinates as [number, number];
+          nearPt = coordPair(fc.geometry.coordinates);
         }
 
         if (dist < nearestDist) {
@@ -190,7 +197,6 @@ function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
   const geo = layerToFeature(shape);
   if (!geo) return [];
 
-  // Buffer shape slightly for near-miss detection (2m ~ 6ft clearance)
   let buffered: GeoJSON.Feature;
   try {
     buffered = buffer(geo, CONFLICT_BUFFER_M, { units: 'meters' }) as GeoJSON.Feature;
@@ -234,19 +240,19 @@ export function renderConflicts(shape: L.Layer): void {
       let intersectPt: [number, number] | null = null;
 
       if (conflict.geometry.type === 'LineString' && (geo.geometry.type === 'Polygon' || geo.geometry.type === 'LineString')) {
-        const line = conflict as GeoJSON.Feature<GeoJSON.LineString>;
-        const crossed = lineIntersect(geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.LineString>, line);
-        if (crossed.features.length > 0) {
-          const firstFeature = crossed.features[0];
-          if (firstFeature) {
-            intersectPt = firstFeature.geometry.coordinates as [number, number];
-          }
+        const crossed = lineIntersect(
+          geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.LineString>,
+          conflict as GeoJSON.Feature<GeoJSON.LineString>,
+        );
+        const firstFeature = crossed.features[0];
+        if (firstFeature) {
+          intersectPt = coordPair(firstFeature.geometry.coordinates);
         }
       }
 
       if (!intersectPt) {
         const c = centroid(conflict);
-        intersectPt = c.geometry.coordinates as [number, number];
+        intersectPt = coordPair(c.geometry.coordinates);
       }
 
       L.marker([intersectPt[1], intersectPt[0]], {
@@ -268,13 +274,21 @@ export async function elevationAtVertices(shape: L.Layer): Promise<string> {
   if (!geo) return '';
 
   let coords: Array<[number, number]> = [];
-  if (geo.geometry.type === 'Polygon') {
-    const ring = (geo.geometry as GeoJSON.Polygon).coordinates[0];
-    if (ring) coords = ring as Array<[number, number]>;
-  } else if (geo.geometry.type === 'LineString') {
-    coords = (geo.geometry as GeoJSON.LineString).coordinates as Array<[number, number]>;
-  } else if (geo.geometry.type === 'Point') {
-    coords = [(geo.geometry as GeoJSON.Point).coordinates as [number, number]];
+  const g = geo.geometry;
+  switch (g.type) {
+    case 'Polygon': {
+      const ring = g.coordinates[0];
+      if (ring) coords = ring.map(coordPair);
+      break;
+    }
+    case 'LineString':
+      coords = g.coordinates.map(coordPair);
+      break;
+    case 'Point':
+      coords = [coordPair(g.coordinates)];
+      break;
+    default:
+      break;
   }
 
   if (coords.length === 0) return '';

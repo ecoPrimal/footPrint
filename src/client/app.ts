@@ -32,7 +32,6 @@ import { initDiscover } from './discover.js';
 import { initIntelligence, computeProximityForEntity, renderConflictsForEntity, elevationAtVerticesForEntity } from './intelligence.js';
 import { initAgentBridge } from './agent-bridge.js';
 import { initAgentPanel, onAgentMessage, setAgentConnectionStatus } from './agent-panel.js';
-import { registerAgentPrimal } from '../core/agent-primal.js';
 import { FEET_PER_DEGREE_LAT } from '../constants.js';
 import type { SourceRegistry } from '../types/source.js';
 
@@ -135,7 +134,6 @@ initDiscover(map);
 initIntelligence(map);
 
 // Agent system
-registerAgentPrimal();
 initAgentPanel();
 initAgentBridge(onAgentMessage, setAgentConnectionStatus);
 

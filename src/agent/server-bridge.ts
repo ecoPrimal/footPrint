@@ -11,7 +11,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server as HttpServer } from 'node:http';
 import type {
-  AgentWireMessage,
   StateSyncMessage,
   StateDeltaMessage,
   CommandPayload,
@@ -19,7 +18,9 @@ import type {
   UserMessage,
   AgentTextMessage,
   AgentActionMessage,
+  AgentWireMessage,
 } from './protocol.js';
+import { parseWireMessage } from './protocol.js';
 import type { SerializedEntity } from '../core/entity.js';
 import { AGENT_COMMAND_TIMEOUT_MS } from '../constants.js';
 
@@ -77,7 +78,12 @@ export function initAgentBridge(httpServer: HttpServer): void {
 
     ws.on('message', (raw: Buffer | string) => {
       try {
-        const msg = JSON.parse(typeof raw === 'string' ? raw : raw.toString()) as AgentWireMessage;
+        const parsed: unknown = JSON.parse(typeof raw === 'string' ? raw : raw.toString());
+        const msg = parseWireMessage(parsed);
+        if (!msg) {
+          console.error('[agent-bridge] Invalid wire message from browser');
+          return;
+        }
         handleBrowserMessage(msg);
       } catch {
         console.error('[agent-bridge] Failed to parse message from browser');
