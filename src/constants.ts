@@ -90,3 +90,6 @@ export const SOLVER_MAX_ITERATIONS = 50;
 export const SOLVER_TOLERANCE = 1e-8;
 export const SOLVER_STEP_SIZE = 0.5;
 export const SOLVER_DAMPING = 1e-4;
+export const SOLVER_SATISFIED_THRESHOLD = SOLVER_TOLERANCE * 100;
+export const SOLVER_DIST_EPSILON = 1e-12;
+export const SOLVER_PIVOT_EPSILON = 1e-15;

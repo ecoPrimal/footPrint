@@ -1,9 +1,10 @@
 import * as L from 'leaflet';
 import type { OverpassResponse, OverpassNode, OverpassWay, OverpassRelation } from '../../types/overpass.js';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { OVERPASS_URL, OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { proxyPost } from '../api.js';
+import { escHtml } from '../html.js';
 
 async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> {
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
@@ -81,7 +82,7 @@ export function registerOSMSources(): void {
     id: dataSourceId('osm-buildings'),
     name: 'Buildings',
     category: 'OpenStreetMap',
-    color: hexColor('#9b59b6'),
+    color: hexColorUnchecked('#9b59b6'),
     minZoom: 15,
     fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];(way["building"]({bbox});relation["building"]({bbox}););out body geom;`,
@@ -99,7 +100,7 @@ export function registerOSMSources(): void {
       const parts = [p['addr:housenumber'], p['addr:street']].filter(Boolean);
       const addr = parts.join(' ');
       const buildingType = p['building'];
-      return `<b>${name}</b>${addr ? `<br>${addr}` : ''}${buildingType && buildingType !== 'yes' ? `<br>Type: ${buildingType}` : ''}`;
+      return `<b>${escHtml(name)}</b>${addr ? `<br>${escHtml(addr)}` : ''}${buildingType && buildingType !== 'yes' ? `<br>Type: ${escHtml(buildingType)}` : ''}`;
     },
   });
 
@@ -107,7 +108,7 @@ export function registerOSMSources(): void {
     id: dataSourceId('osm-power'),
     name: 'Power Lines',
     category: 'OpenStreetMap',
-    color: hexColor('#e67e22'),
+    color: hexColorUnchecked('#e67e22'),
     minZoom: 14,
     fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];(way["power"~"line|minor_line|cable"]({bbox});node["power"~"pole|tower|transformer"]({bbox}););out body geom;`,
@@ -124,10 +125,10 @@ export function registerOSMSources(): void {
     },
     popupContent: (f) => {
       const p = f.properties as Record<string, string | undefined>;
-      let html = `<b>Power: ${p['power'] ?? 'unknown'}</b>`;
-      if (p['voltage']) html += `<br>Voltage: ${p['voltage']}V`;
-      if (p['operator']) html += `<br>Operator: ${p['operator']}`;
-      if (p['cables']) html += `<br>Cables: ${p['cables']}`;
+      let html = `<b>Power: ${escHtml(p['power'] ?? 'unknown')}</b>`;
+      if (p['voltage']) html += `<br>Voltage: ${escHtml(p['voltage'])}V`;
+      if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
+      if (p['cables']) html += `<br>Cables: ${escHtml(p['cables'])}`;
       return html;
     },
   });
@@ -136,7 +137,7 @@ export function registerOSMSources(): void {
     id: dataSourceId('osm-pipelines'),
     name: 'Pipelines',
     category: 'OpenStreetMap',
-    color: hexColor('#c0392b'),
+    color: hexColorUnchecked('#c0392b'),
     minZoom: 14,
     fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];(way["man_made"="pipeline"]({bbox});way["utility"="gas"]({bbox});way["utility"="water"]({bbox});way["utility"="sewer"]({bbox}););out body geom;`,
@@ -151,10 +152,10 @@ export function registerOSMSources(): void {
     popupContent: (f) => {
       const p = f.properties as Record<string, string | undefined>;
       let html = `<b>Pipeline</b>`;
-      if (p['substance']) html += `<br>Substance: ${p['substance']}`;
-      if (p['utility']) html += `<br>Utility: ${p['utility']}`;
-      if (p['operator']) html += `<br>Operator: ${p['operator']}`;
-      if (p['location']) html += `<br>Location: ${p['location']}`;
+      if (p['substance']) html += `<br>Substance: ${escHtml(p['substance'])}`;
+      if (p['utility']) html += `<br>Utility: ${escHtml(p['utility'])}`;
+      if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
+      if (p['location']) html += `<br>Location: ${escHtml(p['location'])}`;
       return html;
     },
   });
@@ -163,7 +164,7 @@ export function registerOSMSources(): void {
     id: dataSourceId('osm-fences'),
     name: 'Fences',
     category: 'OpenStreetMap',
-    color: hexColor('#8B6914'),
+    color: hexColorUnchecked('#8B6914'),
     minZoom: 16,
     fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];(way["barrier"="fence"]({bbox});way["barrier"="wall"]({bbox});way["barrier"="hedge"]({bbox}););out body geom;`,
@@ -181,10 +182,10 @@ export function registerOSMSources(): void {
     popupContent: (f) => {
       const p = f.properties as Record<string, string | undefined>;
       const barrier = p['barrier'] ?? 'barrier';
-      let html = `<b>${barrier.charAt(0).toUpperCase() + barrier.slice(1)}</b>`;
-      if (p['fence_type']) html += `<br>Type: ${p['fence_type']}`;
-      if (p['material']) html += `<br>Material: ${p['material']}`;
-      if (p['height']) html += `<br>Height: ${p['height']}`;
+      let html = `<b>${escHtml(barrier.charAt(0).toUpperCase() + barrier.slice(1))}</b>`;
+      if (p['fence_type']) html += `<br>Type: ${escHtml(p['fence_type'])}`;
+      if (p['material']) html += `<br>Material: ${escHtml(p['material'])}`;
+      if (p['height']) html += `<br>Height: ${escHtml(p['height'])}`;
       return html;
     },
   });
@@ -193,7 +194,7 @@ export function registerOSMSources(): void {
     id: dataSourceId('osm-water'),
     name: 'Water Features',
     category: 'OpenStreetMap',
-    color: hexColor('#2980b9'),
+    color: hexColorUnchecked('#2980b9'),
     minZoom: 14,
     fetch: (bounds) => queryOverpass(
       `[out:json][timeout:25];(way["waterway"]({bbox});way["natural"="water"]({bbox});relation["natural"="water"]({bbox}););out body geom;`,
@@ -211,8 +212,8 @@ export function registerOSMSources(): void {
     popupContent: (f) => {
       const p = f.properties as Record<string, string | undefined>;
       const waterType = p['waterway'] ?? p['natural'] ?? 'Water';
-      let html = `<b>${waterType.charAt(0).toUpperCase() + waterType.slice(1)}</b>`;
-      if (p['name']) html += `<br>${p['name']}`;
+      let html = `<b>${escHtml(waterType.charAt(0).toUpperCase() + waterType.slice(1))}</b>`;
+      if (p['name']) html += `<br>${escHtml(p['name'])}`;
       return html;
     },
   });

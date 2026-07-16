@@ -4,6 +4,7 @@ import { distance as turfDistance } from '@turf/distance';
 import { midpoint } from '@turf/midpoint';
 import { bearing as turfBearing } from '@turf/bearing';
 import { point } from '@turf/helpers';
+import { FEET_PER_MILE } from '../constants.js';
 import type { EntityId } from '../core/entity.js';
 import { createEntity } from '../core/entity.js';
 import { store } from '../core/store.js';
@@ -260,7 +261,7 @@ function cleanupLive(): void {
 }
 
 function formatDist(feet: number): string {
-  if (feet >= 5280) return `${(feet / 5280).toFixed(2)} mi`;
+  if (feet >= FEET_PER_MILE) return `${(feet / FEET_PER_MILE).toFixed(2)} mi`;
   if (feet >= 100) return `${Math.round(feet)} ft`;
   return `${feet.toFixed(1)} ft`;
 }

@@ -12,6 +12,9 @@ import {
   SOLVER_TOLERANCE,
   SOLVER_STEP_SIZE,
   SOLVER_DAMPING,
+  SOLVER_SATISFIED_THRESHOLD,
+  SOLVER_DIST_EPSILON,
+  SOLVER_PIVOT_EPSILON,
 } from '../constants.js';
 
 interface ConstraintError {
@@ -39,7 +42,7 @@ function fixedDistanceError(
   const err = dist - targetDist;
 
   const jac = new Array<number>(coords.length).fill(0);
-  if (dist > 1e-12) {
+  if (dist > SOLVER_DIST_EPSILON) {
     jac[i1 * 2] = -dx / dist;
     jac[i1 * 2 + 1] = -dy / dist;
     jac[i2 * 2] = dx / dist;
@@ -336,7 +339,7 @@ function applySolverResult(
     ));
   }
 
-  const satisfied = residual < SOLVER_TOLERANCE * 100;
+  const satisfied = residual < SOLVER_SATISFIED_THRESHOLD;
   for (const cId of state.constraintEntities) {
     const cOpt = store.getEntity(cId);
     if (!isSome(cOpt)) continue;
@@ -400,7 +403,7 @@ function solveLinearSystem(A: number[], b: number[], n: number): number[] | null
       if (val > maxVal) { maxVal = val; maxRow = row; }
     }
 
-    if (maxVal < 1e-15) continue;
+    if (maxVal < SOLVER_PIVOT_EPSILON) continue;
 
     if (maxRow !== col) {
       for (let c = 0; c <= n; c++) {

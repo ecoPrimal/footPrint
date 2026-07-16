@@ -142,6 +142,7 @@ async function handleProxyGet(req: Request, res: Response): Promise<void> {
     const ttl = ttlForUrl(targetUrl);
     const cached = await getCached(key, ttl);
     if (cached !== null) {
+      res.set('X-Cache', 'HIT');
       res.json(cached);
       return;
     }
@@ -153,8 +154,14 @@ async function handleProxyGet(req: Request, res: Response): Promise<void> {
       res.status(resp.status).json({ error: `Upstream ${String(resp.status)}: ${resp.statusText}` } satisfies ErrorResponse);
       return;
     }
+    const ct = resp.headers.get('content-type') ?? '';
+    if (!ct.includes('json') && !ct.includes('geojson')) {
+      res.status(502).json({ error: `Upstream returned non-JSON content-type: ${ct}` } satisfies ErrorResponse);
+      return;
+    }
     const data: unknown = await resp.json();
     await setCache(key, data);
+    res.set('X-Cache', 'MISS');
     res.json(data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -180,6 +187,7 @@ async function handleProxyPost(req: Request, res: Response): Promise<void> {
     const ttl = ttlForUrl(targetUrl);
     const cached = await getCached(key, ttl);
     if (cached !== null) {
+      res.set('X-Cache', 'HIT');
       res.json(cached);
       return;
     }
@@ -196,8 +204,14 @@ async function handleProxyPost(req: Request, res: Response): Promise<void> {
       res.status(resp.status).json({ error: `Upstream ${String(resp.status)}: ${resp.statusText}` } satisfies ErrorResponse);
       return;
     }
+    const ct = resp.headers.get('content-type') ?? '';
+    if (!ct.includes('json') && !ct.includes('geojson')) {
+      res.status(502).json({ error: `Upstream returned non-JSON content-type: ${ct}` } satisfies ErrorResponse);
+      return;
+    }
     const data: unknown = await resp.json();
     await setCache(key, data);
+    res.set('X-Cache', 'MISS');
     res.json(data);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

@@ -4,7 +4,7 @@ import { store } from '../core/store.js';
 import { execute } from '../core/history.js';
 import { AddEntityCommand, RemoveEntityCommand, UpdateComponentCommand } from '../core/commands.js';
 import type { LayerId, HexColor } from '../types/brands.js';
-import { layerId, hexColor } from '../types/brands.js';
+import { layerId, hexColorUnchecked } from '../types/brands.js';
 import { parseHexColor } from '../types/brands.js';
 import { unwrapOr } from '../rustscript/result.js';
 import type { SerializedLayers, SerializedLayerData } from '../types/layer.js';
@@ -18,11 +18,11 @@ interface DefaultLayerDef {
 }
 
 const DEFAULT_LAYERS: readonly DefaultLayerDef[] = [
-  { id: layerId('property'), name: 'Property Boundary', color: hexColor('#e74c3c') },
-  { id: layerId('fencing'),  name: 'Fencing',           color: hexColor('#8B4513') },
-  { id: layerId('landscape'), name: 'Landscaping',      color: hexColor('#27ae60') },
-  { id: layerId('utilities'), name: 'Utilities',        color: hexColor('#f1c40f') },
-  { id: layerId('notes'),    name: 'Notes',             color: hexColor('#3498db') },
+  { id: layerId('property'), name: 'Property Boundary', color: hexColorUnchecked('#e74c3c') },
+  { id: layerId('fencing'),  name: 'Fencing',           color: hexColorUnchecked('#8B4513') },
+  { id: layerId('landscape'), name: 'Landscaping',      color: hexColorUnchecked('#27ae60') },
+  { id: layerId('utilities'), name: 'Utilities',        color: hexColorUnchecked('#f1c40f') },
+  { id: layerId('notes'),    name: 'Notes',             color: hexColorUnchecked('#3498db') },
 ];
 
 let activeLayerId: EntityId | null = null;
@@ -66,7 +66,7 @@ export function setActiveLayer(entityId: EntityId): void {
   activeLayerId = entityId;
   renderLayerList();
   const res = store.get(entityId);
-  const color = (res.ok && res.value.kind === 'layer') ? res.value.components.style.color : hexColor('#e94560');
+  const color = (res.ok && res.value.kind === 'layer') ? res.value.components.style.color : hexColorUnchecked('#e94560');
   if (onLayerChange) onLayerChange(entityId, color);
 }
 
@@ -103,7 +103,7 @@ export function addCustomLayer(): void {
   const name = prompt('Layer name:');
   if (!name) return;
   const rawColor = prompt('Layer color (hex):', '#9b59b6') ?? '#9b59b6';
-  const validatedColor = unwrapOr(parseHexColor(rawColor), hexColor('#9b59b6'));
+  const validatedColor = unwrapOr(parseHexColor(rawColor), hexColorUnchecked('#9b59b6'));
   const id = layerId('custom_' + Date.now().toString());
   const entityId = createLayerEntity(id, name, validatedColor);
   setActiveLayer(entityId);
@@ -214,7 +214,7 @@ export function deserializeLayers(data: SerializedLayers): void {
 
   for (const [id, layerData] of Object.entries(data)) {
     // Deserialize bypasses history intentionally -- project load is not undoable
-    const entityId = createLayerEntity(layerId(id), layerData.name, hexColor(layerData.color), false);
+    const entityId = createLayerEntity(layerId(id), layerData.name, unwrapOr(parseHexColor(layerData.color), hexColorUnchecked('#9b59b6')), false);
 
     for (const feature of layerData.features) {
       const props = (feature.properties ?? {}) as SerializedShapeProps;
@@ -231,7 +231,7 @@ export function deserializeLayers(data: SerializedLayers): void {
         ...(props._radius != null ? { radius: props._radius } : {}),
       };
       shapeEntity.components.style = {
-        color: hexColor(props.color ?? layerData.color),
+        color: unwrapOr(parseHexColor(props.color ?? layerData.color), hexColorUnchecked('#9b59b6')),
         weight: 3,
         opacity: 0.9,
         fillOpacity: 0.25,

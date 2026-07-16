@@ -1,9 +1,10 @@
 import * as L from 'leaflet';
 import type { ArcGISFeatureResponse, ZoningProperties } from '../../types/arcgis.js';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { ZONING_URL } from '../../constants.js';
 import { proxyGet } from '../api.js';
+import { escHtml } from '../html.js';
 
 const ZONE_CATEGORY_COLORS: Readonly<Record<string, string>> = {
   'R': '#66bb6a',
@@ -32,7 +33,7 @@ export function registerZoningSource(): void {
     id: dataSourceId('lansing-zoning'),
     name: 'Zoning Districts',
     category: 'Lansing',
-    color: hexColor('#ab47bc'),
+    color: hexColorUnchecked('#ab47bc'),
     minZoom: 13,
     fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
       const bbox = [
@@ -69,8 +70,8 @@ export function registerZoningSource(): void {
       const p = (f.properties ?? {}) as ZoningProperties;
       const zone = p.ZONING ?? p.Zone ?? p.ZONE_CODE ?? 'Unknown';
       const desc = p.ZONING_DES ?? p.Description ?? p.ZONE_DESC ?? '';
-      let html = `<b>Zoning: ${zone}</b>`;
-      if (desc) html += `<br>${desc}`;
+      let html = `<b>Zoning: ${escHtml(zone)}</b>`;
+      if (desc) html += `<br>${escHtml(desc)}`;
       html += `<br><i style="opacity:0.6">Note: historic / pre-FBC data</i>`;
       return html;
     },

@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import type { ArcGISFeatureResponse } from '../../types/arcgis.js';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { MI_FRAMEWORK_BASE } from '../../constants.js';
 import { proxyGet } from '../api.js';
@@ -11,7 +11,7 @@ export function registerMichiganSources(): void {
     id: dataSourceId('mi-roads'),
     name: 'Road Centerlines',
     category: 'Michigan',
-    color: hexColor('#78909C'),
+    color: hexColorUnchecked('#78909C'),
     minZoom: 15,
     fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
       const bbox = [

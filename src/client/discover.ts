@@ -10,7 +10,7 @@ import { buildTerrainGrid, renderContours, renderSlopeArrows } from './terrain.j
 import { boundedChannel } from '../rustscript/channel.js';
 import { Owned, take } from '../rustscript/owned.js';
 import { isOk } from '../rustscript/result.js';
-import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT } from '../constants.js';
+import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT, DISCOVERY_DEBOUNCE_MS } from '../constants.js';
 import { store } from '../core/store.js';
 import { escHtml } from './html.js';
 
@@ -19,7 +19,6 @@ let onDiscovery: ((report: DiscoveryReport) => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const BUFFER_RADIUS_M = 100;
-const DEBOUNCE_MS = 800;
 const MAX_FEATURE_SAMPLE = 50;
 const PROXIMITY_RADIUS_M = 500;
 
@@ -78,7 +77,7 @@ export function initDiscover(
     if (debounceTimer !== null) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       void fetchAllEnabled();
-    }, DEBOUNCE_MS);
+    }, DISCOVERY_DEBOUNCE_MS);
   });
 }
 

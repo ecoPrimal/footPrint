@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import type { USGSElevationResponse } from '../../types/terrain.js';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { EPQS_BASE_URL, MAX_ELEVATION_CONCURRENT, ELEVATION_THROTTLE_MS } from '../../constants.js';
 import { proxyUrl } from '../api.js';
@@ -56,7 +56,7 @@ export function registerUSGSSource(): void {
     id: dataSourceId('usgs-elevation'),
     name: 'Elevation Points',
     category: 'USGS',
-    color: hexColor('#795548'),
+    color: hexColorUnchecked('#795548'),
     minZoom: 16,
     fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
       const zoom = 18;

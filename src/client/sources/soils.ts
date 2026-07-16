@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource, getSource } from '../datasources.js';
 import type { DataSourceState } from '../../types/source.js';
 import { NRCS_WMS_URL } from '../../constants.js';
@@ -11,7 +11,7 @@ export function registerSoilsSource(): void {
     id: dataSourceId('nrcs-soils'),
     name: 'Soil Map Units',
     category: 'Soils',
-    color: hexColor('#8D6E63'),
+    color: hexColorUnchecked('#8D6E63'),
     type: 'tiles',
     tileUrl: NRCS_WMS_URL,
     opacity: 0.5,

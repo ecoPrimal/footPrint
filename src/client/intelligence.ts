@@ -10,6 +10,7 @@ import { polygonToLine } from '@turf/polygon-to-line';
 import { point } from '@turf/helpers';
 import { FEET_PER_METER } from '../constants.js';
 import type { ProximityResult } from '../types/spatial.js';
+import { escHtml } from './html.js';
 import type { EntityId } from '../core/entity.js';
 import { getAllSources } from './datasources.js';
 import { batchElevation } from './sources/usgs.js';
@@ -162,7 +163,7 @@ export function formatProximityHtml(results: ProximityResult[]): string {
     const distFt = Math.round(r.distance * FEET_PER_METER);
     const dir = compassDir(r.bearing);
     return `<div class="proximity-row">
-      <span class="proximity-name">${r.sourceName}</span>
+      <span class="proximity-name">${escHtml(r.sourceName)}</span>
       <span class="proximity-dist">${String(distFt)} ft ${dir}</span>
     </div>`;
   });

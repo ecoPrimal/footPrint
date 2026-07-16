@@ -59,7 +59,7 @@ function connect(): void {
   ws = new WebSocket(agentWsUrl());
 
   ws.addEventListener('open', () => {
-    reconnectDelay = 1000;
+    reconnectDelay = AGENT_RECONNECT_MS;
     statusCallback?.(true);
     sendFullSync();
   });

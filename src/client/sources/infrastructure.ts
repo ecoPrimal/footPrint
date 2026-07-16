@@ -1,8 +1,9 @@
 import * as L from 'leaflet';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
 import { OVERPASS_URL, OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { proxyPost } from '../api.js';
+import { escHtml } from '../html.js';
 
 interface OverpassNodeResult {
   elements?: ReadonlyArray<{
@@ -51,7 +52,7 @@ export function registerInfrastructureSources(): void {
     id: dataSourceId('osm-manholes'),
     name: 'Manholes',
     category: 'Infrastructure',
-    color: hexColor('#546E7A'),
+    color: hexColorUnchecked('#546E7A'),
     minZoom: 17,
     fetch: (bounds) => queryOverpassNodes(
       `[out:json][timeout:25];node["man_made"="manhole"]({bbox});out body;`,
@@ -62,9 +63,9 @@ export function registerInfrastructureSources(): void {
     popupContent: (f) => {
       const p = (f.properties ?? {}) as Record<string, string | undefined>;
       let html = '<b>Manhole</b>';
-      if (p['manhole']) html += `<br>Type: ${p['manhole']}`;
-      if (p['utility']) html += `<br>Utility: ${p['utility']}`;
-      if (p['operator']) html += `<br>Operator: ${p['operator']}`;
+      if (p['manhole']) html += `<br>Type: ${escHtml(p['manhole'])}`;
+      if (p['utility']) html += `<br>Utility: ${escHtml(p['utility'])}`;
+      if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
       return html;
     },
   });
@@ -73,7 +74,7 @@ export function registerInfrastructureSources(): void {
     id: dataSourceId('osm-hydrants'),
     name: 'Fire Hydrants',
     category: 'Infrastructure',
-    color: hexColor('#D32F2F'),
+    color: hexColorUnchecked('#D32F2F'),
     minZoom: 17,
     fetch: (bounds) => queryOverpassNodes(
       `[out:json][timeout:25];node["emergency"="fire_hydrant"]({bbox});out body;`,
@@ -84,9 +85,9 @@ export function registerInfrastructureSources(): void {
     popupContent: (f) => {
       const p = (f.properties ?? {}) as Record<string, string | undefined>;
       let html = '<b>Fire Hydrant</b>';
-      if (p['fire_hydrant:type']) html += `<br>Type: ${p['fire_hydrant:type']}`;
-      if (p['fire_hydrant:diameter']) html += `<br>Diameter: ${p['fire_hydrant:diameter']}`;
-      if (p['operator']) html += `<br>Operator: ${p['operator']}`;
+      if (p['fire_hydrant:type']) html += `<br>Type: ${escHtml(p['fire_hydrant:type'])}`;
+      if (p['fire_hydrant:diameter']) html += `<br>Diameter: ${escHtml(p['fire_hydrant:diameter'])}`;
+      if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
       return html;
     },
   });
@@ -95,7 +96,7 @@ export function registerInfrastructureSources(): void {
     id: dataSourceId('osm-streetlights'),
     name: 'Street Lights',
     category: 'Infrastructure',
-    color: hexColor('#FFC107'),
+    color: hexColorUnchecked('#FFC107'),
     minZoom: 17,
     fetch: (bounds) => queryOverpassNodes(
       `[out:json][timeout:25];node["highway"="street_lamp"]({bbox});out body;`,
@@ -106,8 +107,8 @@ export function registerInfrastructureSources(): void {
     popupContent: (f) => {
       const p = (f.properties ?? {}) as Record<string, string | undefined>;
       let html = '<b>Street Light</b>';
-      if (p['lamp_type']) html += `<br>Type: ${p['lamp_type']}`;
-      if (p['operator']) html += `<br>Operator: ${p['operator']}`;
+      if (p['lamp_type']) html += `<br>Type: ${escHtml(p['lamp_type'])}`;
+      if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
       return html;
     },
   });
@@ -116,7 +117,7 @@ export function registerInfrastructureSources(): void {
     id: dataSourceId('osm-poles'),
     name: 'Utility Poles',
     category: 'Infrastructure',
-    color: hexColor('#FF8F00'),
+    color: hexColorUnchecked('#FF8F00'),
     minZoom: 16,
     fetch: (bounds) => queryOverpassNodes(
       `[out:json][timeout:25];(node["power"="pole"]({bbox});node["power"="tower"]({bbox});node["utility"="pole"]({bbox}););out body;`,
@@ -127,10 +128,10 @@ export function registerInfrastructureSources(): void {
     popupContent: (f) => {
       const p = (f.properties ?? {}) as Record<string, string | undefined>;
       const type = p['power'] ?? p['utility'] ?? 'pole';
-      let html = `<b>${type.charAt(0).toUpperCase() + type.slice(1)}</b>`;
-      if (p['operator']) html += `<br>Operator: ${p['operator']}`;
-      if (p['material']) html += `<br>Material: ${p['material']}`;
-      if (p['height']) html += `<br>Height: ${p['height']}`;
+      let html = `<b>${escHtml(type.charAt(0).toUpperCase() + type.slice(1))}</b>`;
+      if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
+      if (p['material']) html += `<br>Material: ${escHtml(p['material'])}`;
+      if (p['height']) html += `<br>Height: ${escHtml(p['height'])}`;
       return html;
     },
   });
