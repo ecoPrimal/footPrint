@@ -5,6 +5,12 @@ import { queryOverpass } from './osm.js';
 import { OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { escHtml } from '../html.js';
 
+type OsmProps = Readonly<Record<string, string | undefined>>;
+
+function osmProps(f: GeoJSON.Feature): OsmProps {
+  return (f.properties ?? {}) as OsmProps;
+}
+
 function makePointIcon(symbol: string, color: string): L.DivIcon {
   return L.divIcon({
     className: 'infra-point-icon',
@@ -28,7 +34,7 @@ export function registerInfrastructureSources(): void {
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
       L.marker(latlng, { icon: makePointIcon('\u25CE', '#546E7A') }),
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as Record<string, string | undefined>;
+      const p = osmProps(f);
       let html = '<b>Manhole</b>';
       if (p['manhole']) html += `<br>Type: ${escHtml(p['manhole'])}`;
       if (p['utility']) html += `<br>Utility: ${escHtml(p['utility'])}`;
@@ -50,7 +56,7 @@ export function registerInfrastructureSources(): void {
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
       L.marker(latlng, { icon: makePointIcon('\u{1F6C8}', '#D32F2F') }),
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as Record<string, string | undefined>;
+      const p = osmProps(f);
       let html = '<b>Fire Hydrant</b>';
       if (p['fire_hydrant:type']) html += `<br>Type: ${escHtml(p['fire_hydrant:type'])}`;
       if (p['fire_hydrant:diameter']) html += `<br>Diameter: ${escHtml(p['fire_hydrant:diameter'])}`;
@@ -72,7 +78,7 @@ export function registerInfrastructureSources(): void {
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
       L.marker(latlng, { icon: makePointIcon('\u{1F4A1}', '#FFC107') }),
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as Record<string, string | undefined>;
+      const p = osmProps(f);
       let html = '<b>Street Light</b>';
       if (p['lamp_type']) html += `<br>Type: ${escHtml(p['lamp_type'])}`;
       if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
@@ -93,7 +99,7 @@ export function registerInfrastructureSources(): void {
     pointToLayer: (_feat: GeoJSON.Feature, latlng: L.LatLng) =>
       L.marker(latlng, { icon: makePointIcon('\u{1F5FC}', '#FF8F00') }),
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as Record<string, string | undefined>;
+      const p = osmProps(f);
       const type = p['power'] ?? p['utility'] ?? 'pole';
       let html = `<b>${escHtml(type.charAt(0).toUpperCase() + type.slice(1))}</b>`;
       if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;

@@ -281,13 +281,22 @@ export async function elevationAtVertices(shape: L.Layer): Promise<string> {
       if (ring) coords = ring.map(coordPair);
       break;
     }
+    case 'MultiPolygon':
+      for (const poly of g.coordinates) {
+        const ring = poly[0];
+        if (ring) coords.push(...ring.map(coordPair));
+      }
+      break;
     case 'LineString':
       coords = g.coordinates.map(coordPair);
       break;
+    case 'MultiLineString':
+      for (const line of g.coordinates) {
+        coords.push(...line.map(coordPair));
+      }
+      break;
     case 'Point':
       coords = [coordPair(g.coordinates)];
-      break;
-    default:
       break;
   }
 

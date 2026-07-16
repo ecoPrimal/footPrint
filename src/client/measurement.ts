@@ -13,6 +13,10 @@ import {
 } from '../constants.js';
 import { layerToFeature } from './geojson.js';
 
+function toLatLng(pos: readonly number[]): L.LatLngTuple {
+  return [pos[1] ?? 0, pos[0] ?? 0];
+}
+
 let map: L.Map | null = null;
 let measureMode = false;
 let measurePoints: Array<[number, number]> = [];
@@ -81,7 +85,7 @@ function onMeasureMove(e: L.LeafletMouseEvent): void {
 
   if (tempLine) measureLayers.removeLayer(tempLine);
   tempLine = L.polyline(
-    currentPts.map((p) => [p[1], p[0]] as L.LatLngTuple),
+    currentPts.map(toLatLng),
     { color: '#ff6b81', weight: 2, dashArray: '6 4' },
   );
   measureLayers.addLayer(tempLine);
@@ -90,17 +94,19 @@ function onMeasureMove(e: L.LeafletMouseEvent): void {
 function updateMeasureLine(): void {
   if (tempLine) measureLayers.removeLayer(tempLine);
 
-  const latlngs: L.LatLngTuple[] = measurePoints.map((p) => [p[1], p[0]] as L.LatLngTuple);
+  const latlngs: L.LatLngTuple[] = measurePoints.map(toLatLng);
   const line = L.polyline(latlngs, { color: '#ff6b81', weight: 2 });
   measureLayers.addLayer(line);
 
-  const lastTwo = measurePoints.slice(-2) as [[number, number], [number, number]];
-  const seg = lineString(lastTwo);
+  const a = measurePoints[measurePoints.length - 2];
+  const b = measurePoints[measurePoints.length - 1];
+  if (!a || !b) return;
+  const seg = lineString([a, b]);
   const segLen = turfLength(seg, { units: 'feet' });
-  const mid = midpoint(point(lastTwo[0]), point(lastTwo[1]));
+  const mid = midpoint(point(a), point(b));
 
   const label = L.marker(
-    [mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple,
+    toLatLng(mid.geometry.coordinates),
     {
       icon: L.divIcon({ className: 'measure-label', html: formatLength(segLen) }),
       interactive: false,
@@ -110,7 +116,9 @@ function updateMeasureLine(): void {
 }
 
 function finishMeasure(e: L.LeafletEvent): void {
-  L.DomEvent.preventDefault(e as unknown as Event);
+  if ('preventDefault' in e && typeof e.preventDefault === 'function') {
+    (e as { preventDefault(): void }).preventDefault();
+  }
   const tooltip = document.getElementById('measure-tooltip');
   tooltip?.classList.add('hidden');
 
@@ -122,7 +130,7 @@ function finishMeasure(e: L.LeafletEvent): void {
     const center = centroid(poly);
 
     const areaLabel = L.marker(
-      [center.geometry.coordinates[1], center.geometry.coordinates[0]] as L.LatLngTuple,
+      toLatLng(center.geometry.coordinates),
       {
         icon: L.divIcon({ className: 'measure-label', html: `Area: ${formatArea(areaSqFt)}` }),
         interactive: false,
@@ -136,7 +144,7 @@ function finishMeasure(e: L.LeafletEvent): void {
     const totalLen = turfLength(line, { units: 'feet' });
     const last = measurePoints[measurePoints.length - 1];
     if (last) {
-      const totalLabel = L.marker([last[1], last[0]] as L.LatLngTuple, {
+      const totalLabel = L.marker(toLatLng(last), {
         icon: L.divIcon({ className: 'measure-label', html: `Total: ${formatLength(totalLen)}` }),
         interactive: false,
       });
@@ -167,28 +175,33 @@ export function computeMeasurement(shape: L.Layer): string | null {
 
     const geo = layerToFeature(shape);
     if (!geo) return null;
-    const gtype = geo.geometry.type;
+    const g = geo.geometry;
 
-    if (gtype === 'LineString' || gtype === 'MultiLineString') {
-      const len = turfLength(geo as GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString>, { units: 'feet' });
-      return `Length: <span>${formatLength(len)}</span>`;
-    }
-
-    if (gtype === 'Polygon' || gtype === 'MultiPolygon') {
-      const polyFeature = geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
-      const polyArea = area(polyFeature);
-      const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
-      const lineFeature = polygonToLine(polyFeature as GeoJSON.Feature<GeoJSON.Polygon>);
-      const perimeter = turfLength(lineFeature, { units: 'feet' });
-      return `Area: <span>${formatArea(areaSqFt)}</span> · Perimeter: <span>${formatLength(perimeter)}</span>`;
-    }
-
-    if (gtype === 'Point') {
-      const coords = (geo.geometry as GeoJSON.Point).coordinates;
-      const lng = coords[0];
-      const lat = coords[1];
-      if (lng != null && lat != null) {
-        return `Position: <span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
+    switch (g.type) {
+      case 'LineString':
+      case 'MultiLineString': {
+        const len = turfLength({ type: 'Feature', properties: {}, geometry: g }, { units: 'feet' });
+        return `Length: <span>${formatLength(len)}</span>`;
+      }
+      case 'Polygon': {
+        const polyArea = area({ type: 'Feature', properties: {}, geometry: g });
+        const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+        const lineFeature = polygonToLine({ type: 'Feature', properties: {}, geometry: g });
+        const perimeter = turfLength(lineFeature, { units: 'feet' });
+        return `Area: <span>${formatArea(areaSqFt)}</span> · Perimeter: <span>${formatLength(perimeter)}</span>`;
+      }
+      case 'MultiPolygon': {
+        const polyArea = area({ type: 'Feature', properties: {}, geometry: g });
+        const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+        return `Area: <span>${formatArea(areaSqFt)}</span>`;
+      }
+      case 'Point': {
+        const lng = g.coordinates[0];
+        const lat = g.coordinates[1];
+        if (lng != null && lat != null) {
+          return `Position: <span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
+        }
+        break;
       }
     }
   } catch {

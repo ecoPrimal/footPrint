@@ -7,6 +7,12 @@ import { OVERPASS_URL, OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { proxyPost } from '../api.js';
 import { escHtml } from '../html.js';
 
+type OsmProps = Readonly<Record<string, string | undefined>>;
+
+function osmProps(f: GeoJSON.Feature): OsmProps {
+  return (f.properties ?? {}) as OsmProps;
+}
+
 export async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> {
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const normalized = overpassQL.replace(/\[timeout:\d+\]/, `[timeout:${String(OVERPASS_TIMEOUT_S)}]`);
@@ -95,7 +101,7 @@ export function registerOSMSources(): void {
       fillOpacity: 0.12,
     }),
     popupContent: (f) => {
-      const p = f.properties as Record<string, string | undefined>;
+      const p = osmProps(f);
       const name = p['name'] ?? p['addr:housenumber'] ?? 'Building';
       const parts = [p['addr:housenumber'], p['addr:street']].filter(Boolean);
       const addr = parts.join(' ');
@@ -115,7 +121,7 @@ export function registerOSMSources(): void {
       bounds,
     ),
     style: (feature) => {
-      const p = (feature?.properties ?? {}) as Record<string, string | undefined>;
+      const p = feature ? osmProps(feature) : {};
       return {
         color: p['power'] === 'minor_line' ? '#f39c12' : '#e67e22',
         weight: p['power'] === 'line' ? 3 : 2,
@@ -124,7 +130,7 @@ export function registerOSMSources(): void {
       };
     },
     popupContent: (f) => {
-      const p = f.properties as Record<string, string | undefined>;
+      const p = osmProps(f);
       let html = `<b>Power: ${escHtml(p['power'] ?? 'unknown')}</b>`;
       if (p['voltage']) html += `<br>Voltage: ${escHtml(p['voltage'])}V`;
       if (p['operator']) html += `<br>Operator: ${escHtml(p['operator'])}`;
@@ -150,7 +156,7 @@ export function registerOSMSources(): void {
       dashArray: '8 4',
     }),
     popupContent: (f) => {
-      const p = f.properties as Record<string, string | undefined>;
+      const p = osmProps(f);
       let html = `<b>Pipeline</b>`;
       if (p['substance']) html += `<br>Substance: ${escHtml(p['substance'])}`;
       if (p['utility']) html += `<br>Utility: ${escHtml(p['utility'])}`;
@@ -171,7 +177,7 @@ export function registerOSMSources(): void {
       bounds,
     ),
     style: (feature) => {
-      const p = (feature?.properties ?? {}) as Record<string, string | undefined>;
+      const p = feature ? osmProps(feature) : {};
       const barrierType = p['barrier'] ?? 'fence';
       return {
         color: barrierType === 'hedge' ? '#27ae60' : barrierType === 'wall' ? '#7f8c8d' : '#8B6914',
@@ -180,7 +186,7 @@ export function registerOSMSources(): void {
       };
     },
     popupContent: (f) => {
-      const p = f.properties as Record<string, string | undefined>;
+      const p = osmProps(f);
       const barrier = p['barrier'] ?? 'barrier';
       let html = `<b>${escHtml(barrier.charAt(0).toUpperCase() + barrier.slice(1))}</b>`;
       if (p['fence_type']) html += `<br>Type: ${escHtml(p['fence_type'])}`;
@@ -201,7 +207,7 @@ export function registerOSMSources(): void {
       bounds,
     ),
     style: (feature) => {
-      const p = (feature?.properties ?? {}) as Record<string, string | undefined>;
+      const p = feature ? osmProps(feature) : {};
       return {
         color: '#2980b9',
         weight: p['waterway'] ? 2 : 1,
@@ -210,7 +216,7 @@ export function registerOSMSources(): void {
       };
     },
     popupContent: (f) => {
-      const p = f.properties as Record<string, string | undefined>;
+      const p = osmProps(f);
       const waterType = p['waterway'] ?? p['natural'] ?? 'Water';
       let html = `<b>${escHtml(waterType.charAt(0).toUpperCase() + waterType.slice(1))}</b>`;
       if (p['name']) html += `<br>${escHtml(p['name'])}`;

@@ -5,6 +5,16 @@ import { registerSource } from '../datasources.js';
 import { EPQS_BASE_URL, MAX_ELEVATION_CONCURRENT, ELEVATION_THROTTLE_MS } from '../../constants.js';
 import { proxyUrl } from '../api.js';
 
+interface ElevationProps {
+  readonly elevation: number;
+  readonly unit: string;
+  readonly _source: string;
+}
+
+function elevProps(f: GeoJSON.Feature): ElevationProps {
+  return (f.properties ?? {}) as ElevationProps;
+}
+
 function gridDensityForZoom(zoom: number): number {
   if (zoom >= 19) return 8;
   if (zoom >= 18) return 6;
@@ -94,7 +104,7 @@ export function registerUSGSSource(): void {
       return features;
     },
     pointToLayer: (feat: GeoJSON.Feature, latlng: L.LatLng) => {
-      const elev = (feat.properties as Record<string, unknown>)['elevation'];
+      const elev = elevProps(feat).elevation;
       return L.marker(latlng, {
         icon: L.divIcon({
           className: 'elevation-label',
@@ -106,8 +116,8 @@ export function registerUSGSSource(): void {
       });
     },
     popupContent: (f) => {
-      const p = f.properties as Record<string, unknown>;
-      return `<b>Elevation: ${String(p['elevation'])} ft</b><br>Source: USGS 3DEP`;
+      const p = elevProps(f);
+      return `<b>Elevation: ${String(p.elevation)} ft</b><br>Source: USGS 3DEP`;
     },
   });
 }
