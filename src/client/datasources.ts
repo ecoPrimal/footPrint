@@ -52,8 +52,8 @@ export function registerSource(def: DataSourceDef): DataSourceState {
         })
       ),
       onEachFeature: (feature: GeoJSON.Feature, featureLayer: L.Layer) => {
-        if (!('bindPopup' in featureLayer)) return;
-        const path = featureLayer as L.Path;
+        if (!(featureLayer instanceof L.Path)) return;
+        const path = featureLayer;
         if (vecDef.popupContent) {
           path.bindPopup(vecDef.popupContent(feature), { maxWidth: 300, className: 'data-popup' });
         } else {

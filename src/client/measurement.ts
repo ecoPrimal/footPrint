@@ -117,7 +117,7 @@ function updateMeasureLine(): void {
 
 function finishMeasure(e: L.LeafletEvent): void {
   if ('preventDefault' in e && typeof e.preventDefault === 'function') {
-    (e as { preventDefault(): void }).preventDefault();
+    e.preventDefault();
   }
   const tooltip = document.getElementById('measure-tooltip');
   tooltip?.classList.add('hidden');

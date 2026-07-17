@@ -9,6 +9,7 @@ import { parseHexColor } from '../types/brands.js';
 import { unwrapOr } from '../rustscript/result.js';
 import type { SerializedLayers, SerializedLayerData } from '../types/layer.js';
 import type { SerializedShapeProps } from '../types/shape.js';
+import { parseSerializedShapeProps } from '../types/shape.js';
 import { escHtml } from './html.js';
 
 interface DefaultLayerDef {
@@ -169,22 +170,13 @@ export function serializeLayers(): SerializedLayers {
       const style = child.components.style;
 
       const geojsonGeometry = structuredClone(geo.geojson) as GeoJSON.Geometry;
-      const props: Record<string, unknown> = {};
-      if (meta) {
-        props['label'] = meta.label;
-        props['notes'] = meta.notes;
-        props['status'] = meta.status;
-        props['createdAt'] = meta.createdAt;
-      }
-      if (style) {
-        props['color'] = style.color;
-      }
-      props['layerId'] = layerEntityId;
-      props['_entityId'] = child.id;
-      if (geo.shapeType === 'circle' && geo.radius != null) {
-        props['_radius'] = geo.radius;
-        props['_shapeType'] = 'circle';
-      }
+      const props: SerializedShapeProps = {
+        ...(meta ? { label: meta.label, notes: meta.notes, status: meta.status, createdAt: meta.createdAt } : {}),
+        ...(style ? { color: style.color } : {}),
+        layerId: layerEntityId as string,
+        _entityId: child.id as string,
+        ...(geo.shapeType === 'circle' && geo.radius != null ? { _radius: geo.radius, _shapeType: 'circle' as const } : {}),
+      };
 
       features.push({
         type: 'Feature',
@@ -193,7 +185,7 @@ export function serializeLayers(): SerializedLayers {
       });
     }
 
-    let layerKey = layerEntityId as string;
+    let layerKey = String(layerEntityId);
     for (const [key, val] of layerIdToEntityId) {
       if (val === layerEntityId) { layerKey = key; break; }
     }
@@ -217,7 +209,7 @@ export function deserializeLayers(data: SerializedLayers): void {
     const entityId = createLayerEntity(layerId(id), layerData.name, unwrapOr(parseHexColor(layerData.color), hexColorUnchecked('#9b59b6')), false);
 
     for (const feature of layerData.features) {
-      const props = (feature.properties ?? {}) as SerializedShapeProps;
+      const props = parseSerializedShapeProps(feature.properties);
 
       const shapeEntity = createEntity('shape', entityId);
       const shapeType = props._shapeType === 'circle' ? 'circle' as const

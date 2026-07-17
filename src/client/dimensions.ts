@@ -34,8 +34,8 @@ export function initDimensions(leafletMap: L.Map): void {
 
     const wl = e.workingLayer;
     wl.on('pm:vertexadded' as string, (ve: L.LeafletEvent) => {
-      const latlng = (ve as unknown as { latlng: L.LatLng }).latlng;
-      onVertexAdded(latlng);
+      if (!('latlng' in ve) || !((ve as { latlng: unknown }).latlng instanceof L.LatLng)) return;
+      onVertexAdded((ve as { latlng: L.LatLng }).latlng);
     });
 
     mouseMoveHandler = (me: L.LeafletMouseEvent) => {

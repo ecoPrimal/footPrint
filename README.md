@@ -35,7 +35,7 @@ Express (:3000) — src/server.ts [DISAPPEARS]
   ├── Project CRUD      → absorbed by persistence primal
   ├── Proxy + cache     → absorbed by proxy primal
   └── Agent REST + WS   → absorbed by agent bridge primal
-      (runtime-validated via parseCommandPayload/parseWireMessage)
+      (deep per-variant field validation via protocol.ts)
 ```
 
 ### ECS (Entity-Component System)

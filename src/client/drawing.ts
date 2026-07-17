@@ -112,16 +112,16 @@ export function bindShapeClick(leafletLayer: L.Layer, entityId: EntityId): void 
 export function selectShape(entityId: EntityId): void {
   if (selectedEntityId && selectedEntityId !== entityId) {
     const prevLayer = getLeafletLayer(selectedEntityId);
-    if (prevLayer && 'setStyle' in prevLayer) {
-      try { (prevLayer as L.Path).setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
+    if (prevLayer instanceof L.Path) {
+      try { prevLayer.setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
     }
   }
 
   selectedEntityId = entityId;
 
   const layer = getLeafletLayer(entityId);
-  if (layer && 'setStyle' in layer) {
-    (layer as L.Path).setStyle({ weight: 5 });
+  if (layer instanceof L.Path) {
+    layer.setStyle({ weight: 5 });
   }
 
   if (onShapeSelect) onShapeSelect(entityId);
@@ -130,8 +130,8 @@ export function selectShape(entityId: EntityId): void {
 export function deselectShape(): void {
   if (selectedEntityId) {
     const layer = getLeafletLayer(selectedEntityId);
-    if (layer && 'setStyle' in layer) {
-      try { (layer as L.Path).setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
+    if (layer instanceof L.Path) {
+      try { layer.setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
     }
   }
   selectedEntityId = null;

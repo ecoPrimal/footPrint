@@ -168,6 +168,40 @@ export interface MutableEntity {
   components: ComponentMap;
 }
 
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+const SHAPE_TYPES: ReadonlySet<string> = new Set([
+  'polygon', 'polyline', 'rectangle', 'circle', 'marker', 'circlemarker',
+]);
+
+/**
+ * Runtime check that a value is a plausible component for the given key.
+ * Validates top-level field types; does NOT deep-clone.
+ */
+export function isValidComponentValue(key: ComponentKey, value: unknown): boolean {
+  if (!isObj(value)) return false;
+  switch (key) {
+    case 'geometry':
+      return isObj(value['geojson']) && typeof value['shapeType'] === 'string' && SHAPE_TYPES.has(value['shapeType']);
+    case 'style':
+      return typeof value['color'] === 'string' && typeof value['weight'] === 'number';
+    case 'meta':
+      return typeof value['label'] === 'string' && typeof value['status'] === 'string';
+    case 'layer':
+      return typeof value['layerName'] === 'string' && typeof value['visible'] === 'boolean';
+    case 'dimension':
+      return typeof value['targetEntityId'] === 'string' && typeof value['value'] === 'number';
+    case 'constraint':
+      return typeof value['type'] === 'string' && Array.isArray(value['entityIds']);
+    case 'elevation':
+      return Array.isArray(value['vertices']) && typeof value['min'] === 'number';
+    default:
+      return false;
+  }
+}
+
 export function createEntity(kind: EntityKind, parentId: EntityId | null = null): MutableEntity {
   return {
     id: entityId(),

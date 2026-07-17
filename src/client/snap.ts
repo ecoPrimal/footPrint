@@ -28,12 +28,12 @@ export function initSnap(
   });
 
   map.on('pm:snap' as string, (e: unknown) => {
-    const snapEvent = e as { snapLatLng?: L.LatLng };
-    if (snapEvent.snapLatLng) {
-      const name = findNearestSourceName(snapEvent.snapLatLng);
-      lastSnapInfo = name ?? 'Feature';
-      if (onSnapChange) onSnapChange(lastSnapInfo);
-    }
+    if (!e || typeof e !== 'object' || !('snapLatLng' in e)) return;
+    const latlng = (e as { snapLatLng: unknown }).snapLatLng;
+    if (!(latlng instanceof L.LatLng)) return;
+    const name = findNearestSourceName(latlng);
+    lastSnapInfo = name ?? 'Feature';
+    if (onSnapChange) onSnapChange(lastSnapInfo);
   });
 
   map.on('pm:unsnap' as string, () => {

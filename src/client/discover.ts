@@ -19,6 +19,7 @@ import {
   DISCOVERY_COUNT_DIVISOR, DISCOVERY_NO_DATA_DISTANCE,
 } from '../constants.js';
 import { store } from '../core/store.js';
+import { entityIdFrom } from '../core/entity.js';
 import { extractCoords } from '../core/geometry.js';
 import { escHtml } from './html.js';
 import { layerToFeature } from './geojson.js';
@@ -34,7 +35,7 @@ const AUTO_ENABLE_IDS: readonly string[] = [
 ];
 
 function isPropertyLayerEntity(entityId: string): boolean {
-  const res = store.get(entityId as import('../types/brands.js').EntityId);
+  const res = store.get(entityIdFrom(entityId));
   if (!res.ok) return false;
   const entity = res.value;
   if (entity.kind !== 'layer') return false;
@@ -72,7 +73,7 @@ export function initDiscover(
     void runDiscovery(bounds, {
       type: 'Feature',
       properties: {},
-      geometry: geo.geojson as unknown as GeoJSON.Geometry,
+      geometry: structuredClone(geo.geojson) as GeoJSON.Geometry, // structuredClone yields mutable copy; TS preserves readonly in return type
     });
   });
 

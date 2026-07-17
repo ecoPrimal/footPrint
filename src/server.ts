@@ -62,12 +62,12 @@ app.get('/api/projects/:name', async (req: Request<{ name: string }>, res: Respo
 app.post('/api/projects/:name', async (req: Request<{ name: string }>, res: Response) => {
   try {
     const body: unknown = req.body;
-    if (
-      !body || typeof body !== 'object' ||
-      !('name' in body) || typeof (body as { name: unknown }).name !== 'string' ||
-      !('savedAt' in body) || typeof (body as { savedAt: unknown }).savedAt !== 'string' ||
-      !('layers' in body) || typeof (body as { layers: unknown }).layers !== 'object'
-    ) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      res.status(400).json({ error: 'Invalid project — must include name, savedAt, and layers' } satisfies ErrorResponse);
+      return;
+    }
+    const rec = body as Record<string, unknown>;
+    if (typeof rec['name'] !== 'string' || typeof rec['savedAt'] !== 'string' || typeof rec['layers'] !== 'object') {
       res.status(400).json({ error: 'Invalid project — must include name, savedAt, and layers' } satisfies ErrorResponse);
       return;
     }
@@ -270,7 +270,8 @@ app.post('/api/agent/command', async (req: Request, res: Response) => {
   }
 
   const result = await sendCommand(payload);
-  const eid = 'entityId' in payload ? String((payload as { entityId: string }).entityId) : undefined;
+  const eid = (payload.action === 'remove-entity' || payload.action === 'update-component' || payload.action === 'move-geometry')
+    ? payload.entityId : undefined;
   sendAgentAction(`Executed ${payload.action}`, eid);
   if (result.ok) {
     res.json(result);
@@ -285,13 +286,18 @@ app.get('/api/agent/messages', (req: Request, res: Response) => {
 });
 
 app.post('/api/agent/messages', (req: Request, res: Response) => {
-  const body = req.body as { text?: string };
-  if (!body.text || typeof body.text !== 'string') {
+  const body: unknown = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    res.status(400).json({ error: 'Missing "text" field' });
+    return;
+  }
+  const text = (body as Record<string, unknown>)['text'];
+  if (typeof text !== 'string' || text.length === 0) {
     res.status(400).json({ error: 'Missing "text" field' });
     return;
   }
 
-  const delivered = sendAgentMessage(body.text);
+  const delivered = sendAgentMessage(text);
   res.json({ delivered, timestamp: Date.now() });
 });
 

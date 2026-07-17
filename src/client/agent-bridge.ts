@@ -9,7 +9,7 @@
 import { store } from '../core/store.js';
 import type { StoreEvent } from '../core/store.js';
 import type { Entity, ComponentMap, SerializedEntity } from '../core/entity.js';
-import { createEntity, entityIdFrom, ENTITY_KINDS } from '../core/entity.js';
+import { createEntity, entityIdFrom, ENTITY_KINDS, isValidComponentValue } from '../core/entity.js';
 import { execute, undo, redo } from '../core/history.js';
 import {
   AddEntityCommand,
@@ -190,6 +190,9 @@ function handleCommand(msg: CommandMessage): void {
       case 'update-component': {
         const eid = entityIdFrom(payload.entityId);
         const key = payload.componentKey;
+        if (!isValidComponentValue(key, payload.value)) {
+          throw new Error(`Invalid value for component "${key}"`);
+        }
         execute(new UpdateComponentCommand(eid, key, payload.value as ComponentMap[typeof key]));
         resultData = { updated: payload.entityId, component: key };
         break;
@@ -210,8 +213,10 @@ function handleCommand(msg: CommandMessage): void {
         resultData = { redone: true };
         break;
       }
-      default:
-        throw new Error(`Unknown command action: ${String((payload as { action: string }).action)}`);
+      default: {
+        const _exhaustive: never = payload;
+        throw new Error(`Unknown command action: ${String((_exhaustive as { action: string }).action)}`);
+      }
     }
 
     suppressSync = false;

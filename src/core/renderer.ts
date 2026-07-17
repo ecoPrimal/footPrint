@@ -256,9 +256,9 @@ function applyStyle(id: EntityId, entity: DeepReadonly<ShapeEntity>): void {
   if (!leafletLayer) return;
   const style = entity.components.style;
 
-  if ('setStyle' in leafletLayer) {
-    (leafletLayer as L.Path).setStyle({
-      color: style.color as string,
+  if (leafletLayer instanceof L.Path) {
+    leafletLayer.setStyle({
+      color: String(style.color),
       weight: style.weight,
       opacity: style.opacity,
       fillOpacity: style.fillOpacity,

@@ -36,14 +36,26 @@ describe('parseWireMessage', () => {
     expect(parseWireMessage(msg)).toBe(msg);
   });
 
-  it('accepts all known message types', () => {
-    const types = [
-      'state-sync', 'state-delta', 'command', 'command-result',
-      'user-message', 'agent-message', 'agent-action',
+  it('accepts all known message types with valid fields', () => {
+    const validMessages = [
+      { type: 'state-sync', entities: [] },
+      { type: 'state-delta', event: { kind: 'add', entityId: 'e1' } },
+      { type: 'command', id: 'c1', payload: { action: 'undo' } },
+      { type: 'command-result', id: 'c1', ok: true },
+      { type: 'user-message', text: 'hi', timestamp: 1 },
+      { type: 'agent-message', text: 'hi', timestamp: 1 },
+      { type: 'agent-action', description: 'did thing', timestamp: 1 },
     ];
-    for (const t of types) {
-      expect(parseWireMessage({ type: t })).not.toBeNull();
+    for (const msg of validMessages) {
+      expect(parseWireMessage(msg)).not.toBeNull();
     }
+  });
+
+  it('rejects messages with valid type but missing required fields', () => {
+    expect(parseWireMessage({ type: 'state-sync' })).toBeNull();
+    expect(parseWireMessage({ type: 'command', id: 'c1' })).toBeNull();
+    expect(parseWireMessage({ type: 'command-result', id: 'c1' })).toBeNull();
+    expect(parseWireMessage({ type: 'user-message', text: 'hi' })).toBeNull();
   });
 });
 
@@ -71,14 +83,25 @@ describe('parseCommandPayload', () => {
     expect(parseCommandPayload(p)).toBe(p);
   });
 
-  it('accepts all known actions', () => {
-    const actions = [
-      'add-entity', 'remove-entity', 'update-component',
-      'move-geometry', 'undo', 'redo',
+  it('accepts all known actions with valid fields', () => {
+    const validPayloads = [
+      { action: 'add-entity', kind: 'shape' },
+      { action: 'remove-entity', entityId: 'e1' },
+      { action: 'update-component', entityId: 'e1', componentKey: 'style', value: {} },
+      { action: 'move-geometry', entityId: 'e1', deltaLng: 1, deltaLat: 2 },
+      { action: 'undo' },
+      { action: 'redo' },
     ];
-    for (const a of actions) {
-      expect(parseCommandPayload({ action: a })).not.toBeNull();
+    for (const p of validPayloads) {
+      expect(parseCommandPayload(p)).not.toBeNull();
     }
+  });
+
+  it('rejects payloads with valid action but missing required fields', () => {
+    expect(parseCommandPayload({ action: 'add-entity' })).toBeNull();
+    expect(parseCommandPayload({ action: 'remove-entity' })).toBeNull();
+    expect(parseCommandPayload({ action: 'update-component', entityId: 'e1' })).toBeNull();
+    expect(parseCommandPayload({ action: 'move-geometry', entityId: 'e1' })).toBeNull();
   });
 });
 

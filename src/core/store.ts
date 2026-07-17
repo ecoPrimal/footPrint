@@ -28,7 +28,7 @@ export interface StoreEvent {
 type StoreListener = (event: StoreEvent) => void;
 
 export class EntityStore {
-  private readonly entities = new Map<EntityId, Entity>();
+  private readonly entities = new Map<EntityId, MutableEntity>();
   private readonly kindIndex = new Map<EntityKind, Set<EntityId>>();
   private readonly listeners: StoreListener[] = [];
   private batchDepth = 0;
@@ -118,8 +118,7 @@ export class EntityStore {
   get(id: EntityId): Result<ReadonlyEntity, EntityNotFound> {
     const entity = this.entities.get(id);
     if (!entity) return Err({ kind: 'EntityNotFound' as const, id });
-    // Entity → TypedEntity cast is safe: all construction paths create valid typed entities
-    return Ok(entity as unknown as ReadonlyEntity);
+    return Ok(entity as ReadonlyEntity);
   }
 
   /**
@@ -184,7 +183,7 @@ export class EntityStore {
     if (!entity) return;
     const newComponents = { ...entity.components, [key]: value };
     Object.freeze(newComponents);
-    (entity as { components: ComponentMap }).components = newComponents;
+    entity.components = newComponents;
     this.emit({ type: 'update', entityId: id, componentKey: key });
   }
 
@@ -194,7 +193,7 @@ export class EntityStore {
     const newComponents = { ...entity.components };
     delete newComponents[key];
     Object.freeze(newComponents);
-    (entity as { components: ComponentMap }).components = newComponents;
+    entity.components = newComponents;
     this.emit({ type: 'update', entityId: id, componentKey: key });
   }
 
