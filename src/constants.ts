@@ -97,6 +97,9 @@ export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
 export const PROXY_PATH = '/ext';
 export const PROJECTS_PATH = '/api/projects';
+export const CACHE_PATH = '/api/cache';
+export const AGENT_PATH = '/api/agent';
+export const HEALTH_PATH = '/api/health';
 export const WS_PATH = '/ws';
 
 export const ALLOWED_HOSTS: readonly string[] = [

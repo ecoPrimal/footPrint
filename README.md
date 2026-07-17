@@ -54,6 +54,7 @@ Gauss-Newton iterative solver with Levenberg-Marquardt damping (7 active types):
 - Stubs: tangent, symmetric, setback
 - 50 max iterations, 1e-8 tolerance, 0.5 step size
 - Dense J^T·J linear system with partial-pivot Gauss elimination
+- Pure math engine extracted to `src/core/solver.ts` (testable without ECS)
 
 ### RustScript
 
@@ -117,7 +118,10 @@ footPrint's Express server is replaced by primal services:
 |-----------------|----------|-----------------|
 | Project CRUD (`/api/projects/*`) | CAS persistence | `PROJECTS_PATH` |
 | Proxy + cache (`/ext`) | Drawbridge routing | `PROXY_PATH` |
+| Agent REST (`/api/agent/*`) | Agent bridge | `AGENT_PATH` |
 | Agent WebSocket (`/ws`) | WebSocket bridge | `WS_PATH` |
+| Cache clear (`/api/cache`) | Admin | `CACHE_PATH` |
+| Health check (`/api/health`) | Monitoring | `HEALTH_PATH` |
 | Static files | Axum static server | — |
 
 The browser frontend stays TypeScript unchanged. All backend calls go through `src/client/api.ts` — change the constants in `src/constants.ts` and the client rewires automatically. See `specs/PETALTONGUE_VISUAL_TARGETS.md` for the 12 visual target areas.

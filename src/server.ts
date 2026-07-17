@@ -18,7 +18,8 @@ import {
 } from './agent/server-bridge.js';
 import {
   ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT,
-  SHUTDOWN_GRACE_MS, SERVER_PORT, PROJECTS_PATH, PROXY_PATH, APP_VERSION,
+  SHUTDOWN_GRACE_MS, SERVER_PORT, PROJECTS_PATH, PROXY_PATH, CACHE_PATH,
+  AGENT_PATH, HEALTH_PATH, WS_PATH, APP_VERSION,
 } from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -242,7 +243,7 @@ async function handleProxyPost(req: Request, res: Response): Promise<void> {
 app.get(PROXY_PATH, handleProxyGet);
 app.post(PROXY_PATH, handleProxyPost);
 
-app.delete('/api/cache', async (_req: Request, res: Response) => {
+app.delete(CACHE_PATH, async (_req: Request, res: Response) => {
   try {
     const files = await readdir(CACHE_DIR);
     await Promise.all(files.map((f) => unlink(join(CACHE_DIR, f))));
@@ -254,7 +255,7 @@ app.delete('/api/cache', async (_req: Request, res: Response) => {
 
 // ── Agent API ─────────────────────────────────────
 
-app.get('/api/agent/status', (_req: Request, res: Response) => {
+app.get(`${AGENT_PATH}/status`, (_req: Request, res: Response) => {
   const state = getShadowState();
   res.json({
     connected: isBrowserConnected(),
@@ -263,7 +264,7 @@ app.get('/api/agent/status', (_req: Request, res: Response) => {
   });
 });
 
-app.get('/api/agent/state', (_req: Request, res: Response) => {
+app.get(`${AGENT_PATH}/state`, (_req: Request, res: Response) => {
   res.json({
     entities: getShadowState(),
     connected: isBrowserConnected(),
@@ -271,7 +272,7 @@ app.get('/api/agent/state', (_req: Request, res: Response) => {
   });
 });
 
-app.post('/api/agent/command', async (req: Request, res: Response) => {
+app.post(`${AGENT_PATH}/command`, async (req: Request, res: Response) => {
   const payload = parseCommandPayload(req.body);
   if (!payload) {
     res.status(400).json({ error: 'Invalid command payload — must include a known "action" field' } satisfies ErrorResponse);
@@ -289,12 +290,12 @@ app.post('/api/agent/command', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/agent/messages', (req: Request, res: Response) => {
+app.get(`${AGENT_PATH}/messages`, (req: Request, res: Response) => {
   const flush = req.query['flush'] !== 'false';
   res.json({ messages: getUserMessages(flush) });
 });
 
-app.post('/api/agent/messages', (req: Request, res: Response) => {
+app.post(`${AGENT_PATH}/messages`, (req: Request, res: Response) => {
   const body: unknown = req.body;
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     res.status(400).json({ error: 'Missing "text" field' });
@@ -312,7 +313,7 @@ app.post('/api/agent/messages', (req: Request, res: Response) => {
 
 // ── Start server + WebSocket bridge ───────────────
 
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get(HEALTH_PATH, (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     version: APP_VERSION,
@@ -325,9 +326,9 @@ app.get('/api/health', (_req: Request, res: Response) => {
 const server = await app.listen(PORT);
 initAgentBridge(server);
 console.log(`FootPrint server running at http://localhost:${String(PORT)}`);
-console.log(`  Agent WebSocket: ws://localhost:${String(PORT)}/ws`);
-console.log(`  Agent REST API:  http://localhost:${String(PORT)}/api/agent/`);
-console.log(`  Health check:    http://localhost:${String(PORT)}/api/health`);
+console.log(`  Agent WebSocket: ws://localhost:${String(PORT)}${WS_PATH}`);
+console.log(`  Agent REST API:  http://localhost:${String(PORT)}${AGENT_PATH}/`);
+console.log(`  Health check:    http://localhost:${String(PORT)}${HEALTH_PATH}`);
 
 function shutdown(): void {
   console.log('Shutting down…');

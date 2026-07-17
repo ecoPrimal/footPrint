@@ -24,7 +24,8 @@ function makeComputation(
   applyFn: (v: unknown) => void,
   watchComponents?: DerivedComputation['watchComponents'],
 ): DerivedComputation {
-  return { id, dependencies: deps, compute: computeFn, apply: applyFn, watchComponents };
+  const base = { id, dependencies: deps, compute: computeFn, apply: applyFn };
+  return watchComponents ? { ...base, watchComponents } : base;
 }
 
 describe('reactive', () => {
