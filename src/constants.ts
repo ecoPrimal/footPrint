@@ -55,6 +55,15 @@ export const DISCOVERY_DEFAULT_BOOST = 0.5;
 export const DISCOVERY_COUNT_DIVISOR = 20;
 export const DISCOVERY_NO_DATA_DISTANCE = 999;
 export const PROXIMITY_UI_LIMIT = 8;
+export const DISCOVERY_AUTO_ENABLE_IDS: readonly string[] = [
+  'osm-buildings', 'osm-power', 'parcels', 'osm-fences',
+  'osm-poles', 'osm-manholes', 'osm-hydrants',
+];
+export const CONFLICT_UTILITY_SOURCE_IDS: readonly string[] = [
+  'osm-power', 'osm-pipelines', 'osm-water',
+  'osm-manholes', 'osm-hydrants', 'osm-poles',
+];
+export const ELEVATION_SAMPLE_CAP = 20;
 
 // ── Grid defaults ────────────────────────────────────
 
@@ -66,6 +75,8 @@ export const GRID_MAX_LINES = 500;
 // ── Snap defaults ────────────────────────────────────
 
 export const DEFAULT_SNAP_DISTANCE = 20;
+export const SNAP_GRID_MAX_POINTS = 2500;
+export const SNAP_SOURCE_LABEL_RADIUS_M = 50;
 export const METERS_PER_FOOT = 0.3048;
 
 // ── UI timing ────────────────────────────────────────
@@ -77,6 +88,7 @@ export const SERVER_PORT = 3000;
 
 export const DEFAULT_MAP_CENTER: readonly [number, number] = [42.7085, -84.5537];
 export const DEFAULT_MAP_ZOOM = 18;
+export const APP_VERSION = '2.0.0';
 export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
 // ── API paths ────────────────────────────────────────

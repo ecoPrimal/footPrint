@@ -16,7 +16,10 @@ import {
   sendAgentAction,
   getUserMessages,
 } from './agent/server-bridge.js';
-import { ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT, SHUTDOWN_GRACE_MS, SERVER_PORT } from './constants.js';
+import {
+  ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT,
+  SHUTDOWN_GRACE_MS, SERVER_PORT, PROJECTS_PATH, PROXY_PATH, APP_VERSION,
+} from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -33,7 +36,11 @@ app.use(express.static(join(ROOT, 'dist', 'client')));
 await mkdir(PROJECTS_DIR, { recursive: true });
 await mkdir(CACHE_DIR, { recursive: true });
 
-app.get('/api/projects', async (_req: Request, res: Response) => {
+function sanitizeProjectName(raw: string): string {
+  return raw.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+app.get(PROJECTS_PATH, async (_req: Request, res: Response) => {
   try {
     const files = await readdir(PROJECTS_DIR);
     const projects = files
@@ -45,9 +52,10 @@ app.get('/api/projects', async (_req: Request, res: Response) => {
   }
 });
 
-app.get('/api/projects/:name', async (req: Request<{ name: string }>, res: Response) => {
+app.get(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: Response) => {
   try {
-    const filePath = join(PROJECTS_DIR, `${req.params['name']}.json`);
+    const safeName = sanitizeProjectName(req.params['name'] ?? '');
+    const filePath = join(PROJECTS_DIR, `${safeName}.json`);
     const data = await readFile(filePath, 'utf-8');
     res.json(JSON.parse(data) as ProjectFile);
   } catch (err: unknown) {
@@ -59,7 +67,7 @@ app.get('/api/projects/:name', async (req: Request<{ name: string }>, res: Respo
   }
 });
 
-app.post('/api/projects/:name', async (req: Request<{ name: string }>, res: Response) => {
+app.post(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: Response) => {
   try {
     const body: unknown = req.body;
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -72,7 +80,7 @@ app.post('/api/projects/:name', async (req: Request<{ name: string }>, res: Resp
       return;
     }
     const project = body as ProjectFile;
-    const safeName = (req.params['name'] ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeName = sanitizeProjectName(req.params['name'] ?? '');
     const filePath = join(PROJECTS_DIR, `${safeName}.json`);
     await writeFile(filePath, JSON.stringify(project, null, 2), 'utf-8');
     res.json({ saved: safeName } satisfies SaveResponse);
@@ -81,11 +89,12 @@ app.post('/api/projects/:name', async (req: Request<{ name: string }>, res: Resp
   }
 });
 
-app.delete('/api/projects/:name', async (req: Request<{ name: string }>, res: Response) => {
+app.delete(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: Response) => {
   try {
-    const filePath = join(PROJECTS_DIR, `${req.params['name']}.json`);
+    const safeName = sanitizeProjectName(req.params['name'] ?? '');
+    const filePath = join(PROJECTS_DIR, `${safeName}.json`);
     await unlink(filePath);
-    res.json({ deleted: req.params['name'] } satisfies DeleteResponse);
+    res.json({ deleted: safeName } satisfies DeleteResponse);
   } catch (err: unknown) {
     if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
       res.status(404).json({ error: 'Project not found' } satisfies ErrorResponse);
@@ -230,8 +239,8 @@ async function handleProxyPost(req: Request, res: Response): Promise<void> {
   }
 }
 
-app.get('/ext', handleProxyGet);
-app.post('/ext', handleProxyPost);
+app.get(PROXY_PATH, handleProxyGet);
+app.post(PROXY_PATH, handleProxyPost);
 
 app.delete('/api/cache', async (_req: Request, res: Response) => {
   try {
@@ -306,7 +315,7 @@ app.post('/api/agent/messages', (req: Request, res: Response) => {
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
-    version: '2.0.0',
+    version: APP_VERSION,
     uptime: Math.floor(process.uptime()),
     agentConnected: isBrowserConnected(),
     timestamp: Date.now(),

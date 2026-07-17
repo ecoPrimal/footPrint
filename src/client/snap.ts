@@ -4,6 +4,7 @@ import type { SnapConfig } from '../types/snap.js';
 import { DEFAULT_SNAP_CONFIG } from '../types/snap.js';
 import { getAllSources } from './datasources.js';
 import { layerToFeature } from './geojson.js';
+import { METERS_PER_DEGREE_LAT, SNAP_GRID_MAX_POINTS, SNAP_SOURCE_LABEL_RADIUS_M } from '../constants.js';
 
 let map: L.Map | null = null;
 let snapTargetGroup: L.LayerGroup = L.layerGroup();
@@ -105,16 +106,15 @@ function addGridSnapPoints(): void {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
 
-  const spacingDeg = config.gridSpacing / 111139;
+  const spacingDeg = config.gridSpacing / METERS_PER_DEGREE_LAT;
   const startLat = Math.floor(sw.lat / spacingDeg) * spacingDeg;
   const startLng = Math.floor(sw.lng / spacingDeg) * spacingDeg;
 
   let count = 0;
-  const maxPoints = 2500;
 
   for (let lat = startLat; lat <= ne.lat; lat += spacingDeg) {
     for (let lng = startLng; lng <= ne.lng; lng += spacingDeg) {
-      if (count >= maxPoints) return;
+      if (count >= SNAP_GRID_MAX_POINTS) return;
       const marker = L.circleMarker([lat, lng], {
         radius: 1,
         weight: 0,
@@ -158,5 +158,5 @@ function findNearestSourceName(latlng: L.LatLng): string | null {
     });
   }
 
-  return bestDist < 50 ? bestName : null;
+  return bestDist < SNAP_SOURCE_LABEL_RADIUS_M ? bestName : null;
 }

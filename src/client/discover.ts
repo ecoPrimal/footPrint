@@ -17,6 +17,7 @@ import {
   DISCOVERY_COUNT_WEIGHT, DISCOVERY_PROXIMITY_WEIGHT,
   DISCOVERY_CATEGORY_WEIGHT, DISCOVERY_DEFAULT_BOOST,
   DISCOVERY_COUNT_DIVISOR, DISCOVERY_NO_DATA_DISTANCE,
+  DISCOVERY_AUTO_ENABLE_IDS,
 } from '../constants.js';
 import { store } from '../core/store.js';
 import { entityIdFrom } from '../core/entity.js';
@@ -29,10 +30,7 @@ let onDiscovery: ((report: DiscoveryReport) => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 
-const AUTO_ENABLE_IDS: readonly string[] = [
-  'osm-buildings', 'osm-power', 'parcels', 'osm-fences',
-  'osm-poles', 'osm-manholes', 'osm-hydrants',
-];
+const AUTO_ENABLE_IDS = DISCOVERY_AUTO_ENABLE_IDS;
 
 function isPropertyLayerEntity(entityId: string): boolean {
   const res = store.get(entityIdFrom(entityId));

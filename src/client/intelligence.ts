@@ -8,7 +8,7 @@ import { lineIntersect } from '@turf/line-intersect';
 import { bearing } from '@turf/bearing';
 import { polygonToLine } from '@turf/polygon-to-line';
 import { point } from '@turf/helpers';
-import { FEET_PER_METER, CONFLICT_BUFFER_M, PROXIMITY_UI_LIMIT } from '../constants.js';
+import { FEET_PER_METER, CONFLICT_BUFFER_M, PROXIMITY_UI_LIMIT, CONFLICT_UTILITY_SOURCE_IDS, ELEVATION_SAMPLE_CAP } from '../constants.js';
 import type { ProximityResult } from '../types/spatial.js';
 import { escHtml } from './html.js';
 import { layerToFeature } from './geojson.js';
@@ -188,10 +188,7 @@ export function compassDir(bearing: number): string {
   return dirs[idx] ?? 'N';
 }
 
-const UTILITY_SOURCE_IDS: readonly string[] = [
-  'osm-power', 'osm-pipelines', 'osm-water',
-  'osm-manholes', 'osm-hydrants', 'osm-poles',
-];
+const UTILITY_SOURCE_IDS = CONFLICT_UTILITY_SOURCE_IDS;
 
 function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
   const geo = layerToFeature(shape);
@@ -302,7 +299,7 @@ export async function elevationAtVertices(shape: L.Layer): Promise<string> {
 
   if (coords.length === 0) return '';
 
-  const points = coords.slice(0, 20).map((c) => ({ lat: c[1], lng: c[0] }));
+  const points = coords.slice(0, ELEVATION_SAMPLE_CAP).map((c) => ({ lat: c[1], lng: c[0] }));
   const samples = await batchElevation(points);
   const elevations = samples
     .filter((s): s is { lat: number; lng: number; elevation: number } => s.elevation !== null)

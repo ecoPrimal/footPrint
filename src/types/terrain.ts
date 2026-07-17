@@ -39,14 +39,6 @@ export interface SlopeAspect {
   readonly drainageDirection: number;
 }
 
-export interface ElevationProfile {
-  readonly points: ReadonlyArray<ElevationSample>;
-  readonly minElevation: number;
-  readonly maxElevation: number;
-  readonly totalClimb: number;
-  readonly totalDescent: number;
-}
-
 export interface USGSElevationResponse {
   readonly value: number;
 }

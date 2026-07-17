@@ -17,7 +17,7 @@ export interface EntityNotFound {
 
 export type BorrowResult<T> = Result<T, EntityNotFound | BorrowError>;
 
-export type StoreEventType = 'add' | 'remove' | 'update';
+type StoreEventType = 'add' | 'remove' | 'update';
 
 export interface StoreEvent {
   type: StoreEventType;

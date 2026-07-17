@@ -102,7 +102,7 @@ function mapShapeType(pmShape: string): GeometryComponent['shapeType'] {
   }
 }
 
-export function bindShapeClick(leafletLayer: L.Layer, entityId: EntityId): void {
+function bindShapeClick(leafletLayer: L.Layer, entityId: EntityId): void {
   leafletLayer.on('click', (e: L.LeafletMouseEvent) => {
     L.DomEvent.stopPropagation(e);
     selectShape(entityId);

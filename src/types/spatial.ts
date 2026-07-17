@@ -28,7 +28,7 @@ export interface DiscoveryReport {
   readonly timestamp: string;
 }
 
-export type CategoryBoost = Record<string, number>;
+type CategoryBoost = Record<string, number>;
 
 export const DEFAULT_CATEGORY_BOOSTS: Readonly<CategoryBoost> = {
   'OpenStreetMap': 0.9,
