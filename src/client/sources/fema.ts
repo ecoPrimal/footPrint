@@ -6,6 +6,10 @@ import { NFHL_BASE_URL, FEMA_FLOOD_ZONE_LAYER } from '../../constants.js';
 import { proxyGet } from '../api.js';
 import { escHtml } from '../html.js';
 
+function femaProps(f: GeoJSON.Feature): FemaFloodProperties {
+  return (f.properties ?? {}) as FemaFloodProperties;
+}
+
 const ZONE_COLORS: Readonly<Record<string, string>> = {
   'A':  '#1a5276',
   'AE': '#2471a3',
@@ -45,7 +49,7 @@ export function registerFemaSource(): void {
       return data.features ?? [];
     },
     style: (feature) => {
-      const p = (feature?.properties ?? {}) as FemaFloodProperties;
+      const p = feature ? femaProps(feature) : {} as FemaFloodProperties;
       const zone = p.FLD_ZONE ?? 'X';
       const baseColor = ZONE_COLORS[zone] ?? '#95a5a6';
       const isSFHA = p.SFHA_TF === 'T';
@@ -58,7 +62,7 @@ export function registerFemaSource(): void {
       };
     },
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as FemaFloodProperties;
+      const p = femaProps(f);
       let html = `<b>FEMA Flood Zone: ${escHtml(p.FLD_ZONE ?? 'Unknown')}</b>`;
       if (p.ZONE_SUBTY) html += `<br>Subtype: ${escHtml(p.ZONE_SUBTY)}`;
       if (p.STATIC_BFE != null) html += `<br>Base Flood Elev: ${String(p.STATIC_BFE)} ft`;

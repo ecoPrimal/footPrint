@@ -137,10 +137,10 @@ function findNearestSourceName(latlng: L.LatLng): string | null {
 
     src.layer.eachLayer((sub: L.Layer) => {
       let dist = Infinity;
-      if ('getLatLng' in sub) {
-        dist = latlng.distanceTo((sub as L.Marker).getLatLng());
-      } else if ('getLatLngs' in sub) {
-        const coords = (sub as L.Polyline).getLatLngs();
+      if (sub instanceof L.Marker) {
+        dist = latlng.distanceTo(sub.getLatLng());
+      } else if (sub instanceof L.Polyline) {
+        const coords = sub.getLatLngs();
         const flat = (Array.isArray(coords[0]) && coords[0] instanceof L.LatLng)
           ? coords as L.LatLng[]
           : (coords as L.LatLng[][]).flat();

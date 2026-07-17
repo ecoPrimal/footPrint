@@ -10,6 +10,11 @@ export interface FemaFloodProperties {
   readonly SFHA_TF?: string;
 }
 
+export interface MichiganRoadProperties {
+  readonly NME?: string;
+  readonly LABEL?: string;
+}
+
 export interface ZoningProperties {
   readonly ZONING?: string;
   readonly Zone?: string;

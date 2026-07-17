@@ -6,6 +6,10 @@ import { ZONING_URL } from '../../constants.js';
 import { proxyGet } from '../api.js';
 import { escHtml } from '../html.js';
 
+function zoningProps(f: GeoJSON.Feature): ZoningProperties {
+  return (f.properties ?? {}) as ZoningProperties;
+}
+
 const ZONE_CATEGORY_COLORS: Readonly<Record<string, string>> = {
   'R': '#66bb6a',
   'A': '#43a047',
@@ -56,7 +60,7 @@ export function registerZoningSource(): void {
       return data.features ?? [];
     },
     style: (feature) => {
-      const p = (feature?.properties ?? {}) as ZoningProperties;
+      const p = feature ? zoningProps(feature) : {} as ZoningProperties;
       const zone = p.ZONING ?? p.Zone ?? '';
       return {
         color: zoneColor(zone),
@@ -67,7 +71,7 @@ export function registerZoningSource(): void {
       };
     },
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as ZoningProperties;
+      const p = zoningProps(f);
       const zone = p.ZONING ?? p.Zone ?? p.ZONE_CODE ?? 'Unknown';
       const desc = p.ZONING_DES ?? p.Description ?? p.ZONE_DESC ?? '';
       let html = `<b>Zoning: ${escHtml(zone)}</b>`;

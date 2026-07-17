@@ -61,9 +61,20 @@ app.get('/api/projects/:name', async (req: Request<{ name: string }>, res: Respo
 
 app.post('/api/projects/:name', async (req: Request<{ name: string }>, res: Response) => {
   try {
+    const body: unknown = req.body;
+    if (
+      !body || typeof body !== 'object' ||
+      !('name' in body) || typeof (body as { name: unknown }).name !== 'string' ||
+      !('savedAt' in body) || typeof (body as { savedAt: unknown }).savedAt !== 'string' ||
+      !('layers' in body) || typeof (body as { layers: unknown }).layers !== 'object'
+    ) {
+      res.status(400).json({ error: 'Invalid project — must include name, savedAt, and layers' } satisfies ErrorResponse);
+      return;
+    }
+    const project = body as ProjectFile;
     const safeName = (req.params['name'] ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
     const filePath = join(PROJECTS_DIR, `${safeName}.json`);
-    await writeFile(filePath, JSON.stringify(req.body as ProjectFile, null, 2), 'utf-8');
+    await writeFile(filePath, JSON.stringify(project, null, 2), 'utf-8');
     res.json({ saved: safeName } satisfies SaveResponse);
   } catch {
     res.status(500).json({ error: 'Failed to save project' } satisfies ErrorResponse);

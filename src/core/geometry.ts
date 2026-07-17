@@ -6,7 +6,7 @@ import { exhaustive } from '../rustscript/exhaustive.js';
  * Safely narrow a GeoJSON Position (number[]) to [lng, lat].
  * GeoJSON positions are number[] but footPrint only uses 2D coordinates.
  */
-function toLngLat(pos: readonly number[]): [number, number] {
+export function toLngLat(pos: readonly number[]): [number, number] {
   return [pos[0] ?? 0, pos[1] ?? 0];
 }
 

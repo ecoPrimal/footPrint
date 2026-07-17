@@ -3,7 +3,7 @@ import type { EntityId, ReadonlyEntity, ShapeEntity, DimensionEntity, Annotation
 import type { DeepReadonly } from '../rustscript/types.js';
 import type { StoreEvent } from './store.js';
 import { store } from './store.js';
-import { extractCoords } from './geometry.js';
+import { extractCoords, toLngLat } from './geometry.js';
 import { exhaustive } from '../rustscript/exhaustive.js';
 
 const layerMap = new Map<EntityId, L.Layer>();
@@ -138,17 +138,17 @@ function buildLeafletLayer(entity: DeepReadonly<ShapeEntity>): L.Layer | null {
   const fillOpacity = style.fillOpacity;
 
   if (geo.shapeType === 'circle' && geo.radius != null && geo.geojson.type === 'Point') {
-    const [lng, lat] = geo.geojson.coordinates as [number, number];
+    const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.circle([lat, lng], { radius: geo.radius, color, weight, opacity, fillOpacity });
   }
 
   if (geo.shapeType === 'marker' && geo.geojson.type === 'Point') {
-    const [lng, lat] = geo.geojson.coordinates as [number, number];
+    const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.marker([lat, lng]);
   }
 
   if (geo.shapeType === 'circlemarker' && geo.geojson.type === 'Point') {
-    const [lng, lat] = geo.geojson.coordinates as [number, number];
+    const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.circleMarker([lat, lng], {
       radius: 6, color, fillColor: color, fillOpacity: 0.6,
     });

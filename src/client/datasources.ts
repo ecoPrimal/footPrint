@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
-import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback, VectorSourceDef } from '../types/source.js';
-import { isTileSource, isWmsSource } from '../types/source.js';
+import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback } from '../types/source.js';
+import { isTileSource, isVectorSource, isWmsSource } from '../types/source.js';
 import { escHtml } from './html.js';
 
 let map: L.Map | null = null;
@@ -33,8 +33,8 @@ export function registerSource(def: DataSourceDef): DataSourceState {
       opacity: def.opacity ?? 0.6,
       attribution: def.attribution ?? '',
     });
-  } else {
-    const vecDef = def as VectorSourceDef;
+  } else if (isVectorSource(def)) {
+    const vecDef = def;
     layer = L.geoJSON(undefined, {
       style: vecDef.style ?? (() => ({
         color: vecDef.color,
@@ -52,20 +52,19 @@ export function registerSource(def: DataSourceDef): DataSourceState {
         })
       ),
       onEachFeature: (feature: GeoJSON.Feature, featureLayer: L.Layer) => {
+        if (!('bindPopup' in featureLayer)) return;
+        const path = featureLayer as L.Path;
         if (vecDef.popupContent) {
-          (featureLayer as L.Path).bindPopup(vecDef.popupContent(feature), {
-            maxWidth: 300,
-            className: 'data-popup',
-          });
+          path.bindPopup(vecDef.popupContent(feature), { maxWidth: 300, className: 'data-popup' });
         } else {
           const props = feature.properties ?? {};
-          const rows = Object.entries(props as Record<string, unknown>)
+          const rows = Object.entries(props)
             .filter(([k]) => !k.startsWith('_'))
             .slice(0, 12)
             .map(([k, v]) => `<tr><td>${escHtml(k)}</td><td>${escHtml(String(v ?? ''))}</td></tr>`)
             .join('');
           if (rows) {
-            (featureLayer as L.Path).bindPopup(
+            path.bindPopup(
               `<div class="data-popup-content"><table>${rows}</table></div>`,
               { maxWidth: 300, className: 'data-popup' },
             );
@@ -73,6 +72,8 @@ export function registerSource(def: DataSourceDef): DataSourceState {
         }
       },
     });
+  } else {
+    throw new Error(`Unknown source type: ${(def as { type: string }).type}`);
   }
 
   const state: DataSourceState = {
