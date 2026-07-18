@@ -81,3 +81,96 @@ describe('boundedChannel', () => {
     expect(rx.pending).toBe(1);
   });
 });
+
+describe('channel - additional coverage', () => {
+  it('tryRecv returns message when available', () => {
+    const [tx, rx] = channel<number>();
+    tx.send(Owned.of(7));
+    const msg = rx.tryRecv();
+    expect(isSome(msg)).toBe(true);
+    if (msg.some) expect(take(msg.value)).toBe(7);
+  });
+
+  it('tryRecv returns None when empty', () => {
+    const [, rx] = channel<number>();
+    expect(isNone(rx.tryRecv())).toBe(true);
+  });
+
+  it('tryRecv returns None after receiver closed', () => {
+    const [tx, rx] = channel<number>();
+    tx.send(Owned.of(1));
+    rx.close();
+    expect(isNone(rx.tryRecv())).toBe(true);
+  });
+
+  it('recv returns None after receiver closed', () => {
+    const [tx, rx] = channel<number>();
+    tx.send(Owned.of(1));
+    rx.close();
+    expect(isNone(rx.recv())).toBe(true);
+  });
+
+  it('sender isOpen tracks state', () => {
+    const [tx, rx] = channel<number>();
+    expect(tx.isOpen).toBe(true);
+    tx.close();
+    expect(tx.isOpen).toBe(false);
+    void rx;
+  });
+
+  it('sender isOpen becomes false when receiver drops', () => {
+    const [tx, rx] = channel<number>();
+    expect(tx.isOpen).toBe(true);
+    rx.close();
+    expect(tx.isOpen).toBe(false);
+  });
+
+  it('receiver isOpen tracks state', () => {
+    const [, rx] = channel<number>();
+    expect(rx.isOpen).toBe(true);
+    rx.close();
+    expect(rx.isOpen).toBe(false);
+  });
+
+  it('sender Symbol.dispose closes sender', () => {
+    const [tx, rx] = channel<number>();
+    tx[Symbol.dispose]();
+    expect(tx.isOpen).toBe(false);
+    void rx;
+  });
+
+  it('receiver Symbol.dispose closes receiver', () => {
+    const [tx, rx] = channel<number>();
+    rx[Symbol.dispose]();
+    expect(rx.isOpen).toBe(false);
+    const result = tx.send(Owned.of(1));
+    expect(isErr(result)).toBe(true);
+  });
+
+  it('double close on sender is safe', () => {
+    const [tx] = channel<number>();
+    tx.close();
+    tx.close();
+    expect(tx.isOpen).toBe(false);
+  });
+
+  it('double close on receiver is safe', () => {
+    const [, rx] = channel<number>();
+    rx.close();
+    rx.close();
+    expect(rx.isOpen).toBe(false);
+  });
+
+  it('Symbol.iterator drains all messages', () => {
+    const [tx, rx] = channel<number>();
+    tx.send(Owned.of(10));
+    tx.send(Owned.of(20));
+    tx.send(Owned.of(30));
+
+    const result: number[] = [];
+    for (const msg of rx) {
+      result.push(take(msg));
+    }
+    expect(result).toEqual([10, 20, 30]);
+  });
+});
