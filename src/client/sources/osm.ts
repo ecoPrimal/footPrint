@@ -10,10 +10,10 @@ import { escHtml } from '../html.js';
 type OsmProps = Readonly<Record<string, string | undefined>>;
 
 function osmProps(f: GeoJSON.Feature): OsmProps {
-  return (f.properties ?? {}) as OsmProps;
+  return (f.properties ?? {});
 }
 
-export async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> {
+export async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> {
   const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
   const normalized = overpassQL.replace(/\[timeout:\d+\]/, `[timeout:${String(OVERPASS_TIMEOUT_S)}]`);
   const query = normalized.replace(/\{bbox\}/g, bbox);
@@ -42,13 +42,13 @@ export function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
 
     if (isOverpassWay(el)) {
       if (el.geometry) {
-        const coords: Array<[number, number]> = el.geometry.map((n) => [n.lon, n.lat]);
+        const coords: [number, number][] = el.geometry.map((n) => [n.lon, n.lat]);
         if (coords.length < 2) continue;
 
         const first = coords[0];
         const last = coords[coords.length - 1];
-        const isClosed = coords.length > 3 && first && last &&
-          first[0] === last[0] && first[1] === last[1];
+        const isClosed = coords.length > 3 &&
+          first?.[0] === last?.[0] && first?.[1] === last?.[1];
 
         features.push({
           type: 'Feature',
@@ -63,7 +63,7 @@ export function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
 
     if (isOverpassRelation(el)) {
       if (el.members) {
-        const outerCoords: Array<Array<[number, number]>> = [];
+        const outerCoords: [number, number][][] = [];
         for (const m of el.members) {
           if (m.type === 'way' && m.geometry) {
             outerCoords.push(m.geometry.map((n) => [n.lon, n.lat]));
@@ -121,7 +121,7 @@ export function registerOSMSources(): void {
       bounds,
     ),
     style: (feature) => {
-      const p = feature ? osmProps(feature) : {};
+      const p = feature ? osmProps(feature as GeoJSON.Feature) : {};
       return {
         color: p['power'] === 'minor_line' ? '#f39c12' : '#e67e22',
         weight: p['power'] === 'line' ? 3 : 2,
@@ -177,7 +177,7 @@ export function registerOSMSources(): void {
       bounds,
     ),
     style: (feature) => {
-      const p = feature ? osmProps(feature) : {};
+      const p = feature ? osmProps(feature as GeoJSON.Feature) : {};
       const barrierType = p['barrier'] ?? 'fence';
       return {
         color: barrierType === 'hedge' ? '#27ae60' : barrierType === 'wall' ? '#7f8c8d' : '#8B6914',
@@ -207,7 +207,7 @@ export function registerOSMSources(): void {
       bounds,
     ),
     style: (feature) => {
-      const p = feature ? osmProps(feature) : {};
+      const p = feature ? osmProps(feature as GeoJSON.Feature) : {};
       return {
         color: '#2980b9',
         weight: p['waterway'] ? 2 : 1,

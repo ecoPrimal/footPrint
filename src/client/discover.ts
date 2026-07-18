@@ -112,7 +112,7 @@ async function runDiscovery(
   const sourceEntries = Object.entries(sources).filter(([, src]) => src.type === 'vector' && src.fetch);
   const [tx, rx] = boundedChannel<ScoredSource>(sourceEntries.length || 1);
 
-  const fetchTasks: Array<Promise<void>> = [];
+  const fetchTasks: Promise<void>[] = [];
 
   for (const [id, src] of sourceEntries) {
     fetchTasks.push((async () => {

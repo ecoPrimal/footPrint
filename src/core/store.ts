@@ -190,8 +190,8 @@ export class EntityStore {
   removeComponent(id: EntityId, key: ComponentKey): void {
     const entity = this.entities.get(id);
     if (!entity) return;
-    const newComponents = { ...entity.components };
-    delete newComponents[key];
+    const { [key]: _removed, ...rest } = entity.components;
+    const newComponents = rest as ComponentMap;
     Object.freeze(newComponents);
     entity.components = newComponents;
     this.emit({ type: 'update', entityId: id, componentKey: key });

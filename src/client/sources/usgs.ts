@@ -35,9 +35,9 @@ async function throttledFetch(url: string): Promise<number | null> {
 }
 
 async function batchElevation(
-  points: ReadonlyArray<{ lat: number; lng: number }>,
-): Promise<Array<{ lat: number; lng: number; elevation: number | null }>> {
-  const results: Array<{ lat: number; lng: number; elevation: number | null }> = [];
+  points: readonly { lat: number; lng: number }[],
+): Promise<{ lat: number; lng: number; elevation: number | null }[]> {
+  const results: { lat: number; lng: number; elevation: number | null }[] = [];
   const queue = [...points];
 
   while (queue.length > 0) {
@@ -68,7 +68,7 @@ export function registerUSGSSource(): void {
     category: 'USGS',
     color: hexColorUnchecked('#795548'),
     minZoom: 16,
-    fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
+    fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
       const zoom = 18;
       const density = gridDensityForZoom(zoom);
       const sw = bounds.getSouthWest();
@@ -76,7 +76,7 @@ export function registerUSGSSource(): void {
       const latStep = (ne.lat - sw.lat) / density;
       const lngStep = (ne.lng - sw.lng) / density;
 
-      const points: Array<{ lat: number; lng: number }> = [];
+      const points: { lat: number; lng: number }[] = [];
       for (let r = 0; r <= density; r++) {
         for (let c = 0; c <= density; c++) {
           points.push({

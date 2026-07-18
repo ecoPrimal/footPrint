@@ -12,7 +12,7 @@ export function registerMichiganSources(): void {
     category: 'Michigan',
     color: hexColorUnchecked('#78909C'),
     minZoom: 15,
-    fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
+    fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
       const bbox = [
         bounds.getWest(), bounds.getSouth(),
         bounds.getEast(), bounds.getNorth(),

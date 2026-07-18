@@ -3,9 +3,9 @@ import { ftToMeters } from '../types/snap.js';
 import { DEFAULT_GRID_SPACING_FT, GRID_MIN_ZOOM, GRID_COLOR, GRID_MAX_LINES } from '../constants.js';
 
 let map: L.Map | null = null;
-let gridLayer: L.LayerGroup = L.layerGroup();
+const gridLayer: L.LayerGroup = L.layerGroup();
 let gridEnabled = false;
-let spacingFt = DEFAULT_GRID_SPACING_FT;
+const spacingFt = DEFAULT_GRID_SPACING_FT;
 let onGridChange: ((enabled: boolean, spacing: number) => void) | null = null;
 
 export function initGrid(
@@ -33,8 +33,8 @@ export function getGridSpacing(): number {
 
 export function toggleGrid(): boolean {
   gridEnabled = !gridEnabled;
-  if (gridEnabled) {
-    gridLayer.addTo(map!);
+  if (gridEnabled && map) {
+    gridLayer.addTo(map);
     renderGrid();
   } else {
     gridLayer.clearLayers();

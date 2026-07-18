@@ -10,7 +10,7 @@ export function toLngLat(pos: readonly number[]): [number, number] {
   return [pos[0] ?? 0, pos[1] ?? 0];
 }
 
-function positionsToLngLat(positions: ReadonlyArray<readonly number[]>): Array<[number, number]> {
+function positionsToLngLat(positions: readonly (readonly number[])[]): [number, number][] {
   return positions.map(toLngLat);
 }
 
@@ -18,7 +18,7 @@ function positionsToLngLat(positions: ReadonlyArray<readonly number[]>): Array<[
  * Accept DeepReadonly<GeometryComponent> so both mutable and readonly callers work.
  * GeometryComponent (mutable) is assignable to DeepReadonly<GeometryComponent> (readonly).
  */
-export function extractCoords(geo: DeepReadonly<GeometryComponent>): Array<[number, number]> {
+export function extractCoords(geo: DeepReadonly<GeometryComponent>): [number, number][] {
   const g = geo.geojson;
   switch (g.type) {
     case 'Point': return [toLngLat(g.coordinates)];
@@ -26,14 +26,14 @@ export function extractCoords(geo: DeepReadonly<GeometryComponent>): Array<[numb
     case 'Polygon': return positionsToLngLat(g.coordinates[0] ?? []);
     case 'MultiPoint': return positionsToLngLat(g.coordinates);
     case 'MultiLineString': {
-      const result: Array<[number, number]> = [];
+      const result: [number, number][] = [];
       for (const line of g.coordinates) {
         for (const c of line) result.push(toLngLat(c));
       }
       return result;
     }
     case 'MultiPolygon': {
-      const result: Array<[number, number]> = [];
+      const result: [number, number][] = [];
       for (const poly of g.coordinates) {
         const ring = poly[0];
         if (ring) {
@@ -49,7 +49,7 @@ export function extractCoords(geo: DeepReadonly<GeometryComponent>): Array<[numb
 
 export function rebuildGeometry(
   original: DeepReadonly<GeometryComponent>,
-  newCoords: Array<[number, number]>,
+  newCoords: [number, number][],
 ): GeometryComponent {
   const geo = structuredClone(original) as GeometryComponent;
   const g = geo.geojson;

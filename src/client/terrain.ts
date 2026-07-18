@@ -6,9 +6,9 @@ import { batchElevation } from './sources/usgs.js';
 import { METERS_PER_DEGREE_LAT, FEET_PER_METER, DEFAULT_CONTOUR_INTERVAL_FT } from '../constants.js';
 
 let map: L.Map | null = null;
-let contourLayer: L.LayerGroup = L.layerGroup();
-let slopeLayer: L.LayerGroup = L.layerGroup();
-let contourInterval = DEFAULT_CONTOUR_INTERVAL_FT;
+const contourLayer: L.LayerGroup = L.layerGroup();
+const slopeLayer: L.LayerGroup = L.layerGroup();
+const contourInterval = DEFAULT_CONTOUR_INTERVAL_FT;
 let cachedGrid: TerrainGrid | null = null;
 
 export function initTerrain(leafletMap: L.Map): void {
@@ -51,13 +51,13 @@ export function getElevationAt(lat: number, lng: number): number | null {
        + z11 * dr * dc;
 }
 
-export async function buildTerrainGrid(bounds: L.LatLngBounds, density: number = 8): Promise<TerrainGrid> {
+export async function buildTerrainGrid(bounds: L.LatLngBounds, density = 8): Promise<TerrainGrid> {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
   const latStep = (ne.lat - sw.lat) / (density - 1);
   const lngStep = (ne.lng - sw.lng) / (density - 1);
 
-  const points: Array<{ lat: number; lng: number }> = [];
+  const points: { lat: number; lng: number }[] = [];
   for (let r = 0; r < density; r++) {
     for (let c = 0; c < density; c++) {
       points.push({
@@ -150,7 +150,7 @@ interface Segment {
 }
 
 function marchingSquares(
-  samples: ReadonlyArray<ElevationSample>,
+  samples: readonly ElevationSample[],
   rows: number,
   cols: number,
   gridBounds: { sw: readonly [number, number]; ne: readonly [number, number] },
@@ -215,7 +215,7 @@ function ptsClose(a: [number, number], b: [number, number]): boolean {
   return Math.abs(a[0] - b[0]) < CHAIN_EPS && Math.abs(a[1] - b[1]) < CHAIN_EPS;
 }
 
-function chainSegments(segments: Segment[]): Array<Array<[number, number]>> {
+function chainSegments(segments: Segment[]): [number, number][][] {
   if (segments.length === 0) return [];
 
   // Build adjacency: endpoint -> list of segment indices that touch it
@@ -234,7 +234,7 @@ function chainSegments(segments: Segment[]): Array<Array<[number, number]>> {
   }
 
   const used = new Set<number>();
-  const lines: Array<Array<[number, number]>> = [];
+  const lines: [number, number][][] = [];
 
   for (let i = 0; i < segments.length; i++) {
     if (used.has(i)) continue;
@@ -242,7 +242,7 @@ function chainSegments(segments: Segment[]): Array<Array<[number, number]>> {
     if (!startSeg) continue;
 
     used.add(i);
-    const chain: Array<[number, number]> = [startSeg.a, startSeg.b];
+    const chain: [number, number][] = [startSeg.a, startSeg.b];
 
     // Extend forward from chain tail
     let extended = true;

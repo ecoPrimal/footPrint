@@ -18,7 +18,7 @@ import { batchElevation } from './sources/usgs.js';
 import { getLeafletLayer } from '../core/renderer.js';
 
 let map: L.Map | null = null;
-let alertLayer: L.LayerGroup = L.layerGroup();
+const alertLayer: L.LayerGroup = L.layerGroup();
 
 export function initIntelligence(leafletMap: L.Map): void {
   map = leafletMap;
@@ -32,7 +32,7 @@ function coordPair(coords: GeoJSON.Position): [number, number] {
 
 /** Extract the `dist` property from a Turf nearest-point result. */
 function snapDist(feat: GeoJSON.Feature): number {
-  const d = feat.properties?.['dist'];
+  const d: unknown = feat.properties?.['dist'];
   return typeof d === 'number' ? d : 0;
 }
 
@@ -270,7 +270,7 @@ export async function elevationAtVertices(shape: L.Layer): Promise<string> {
   const geo = layerToFeature(shape);
   if (!geo) return '';
 
-  let coords: Array<[number, number]> = [];
+  let coords: [number, number][] = [];
   const g = geo.geometry;
   switch (g.type) {
     case 'Polygon': {

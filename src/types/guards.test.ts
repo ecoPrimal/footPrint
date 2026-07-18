@@ -34,7 +34,7 @@ describe('Overpass type guards', () => {
 describe('Source type guards', () => {
   const vec: DataSourceDef = {
     id: dummyId, name: 'v', category: 'c', color: dummyColor,
-    fetch: async () => [],
+    fetch: () => Promise.resolve([]),
   };
   const tile: DataSourceDef = {
     id: dummyId, name: 't', category: 'c', color: dummyColor,

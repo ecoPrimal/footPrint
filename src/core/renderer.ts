@@ -8,7 +8,7 @@ import { exhaustive } from '../rustscript/exhaustive.js';
 
 const layerMap = new Map<EntityId, L.Layer>();
 let map: L.Map | null = null;
-let layerGroups = new Map<EntityId, L.FeatureGroup>();
+const layerGroups = new Map<EntityId, L.FeatureGroup>();
 
 export function initRenderer(leafletMap: L.Map): void {
   map = leafletMap;
@@ -221,7 +221,7 @@ function isConstrained(dimensionEntityId: EntityId): boolean {
       comp.entityIds.includes(dimComp.targetEntityId)
     ) {
       const vi = comp.params.vertexIndices;
-      if (vi && vi[0] === dimComp.fromVertex && vi[1] === dimComp.toVertex) {
+      if (vi?.[0] === dimComp.fromVertex && vi?.[1] === dimComp.toVertex) {
         return true;
       }
     }

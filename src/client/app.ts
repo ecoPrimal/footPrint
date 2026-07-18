@@ -37,6 +37,16 @@ import type { SourceRegistry } from '../types/source.js';
 
 const map = initMap();
 
+// Responsive sidebar toggle
+const layerPanel = document.getElementById('layer-panel');
+const toggleLayersBtn = document.getElementById('btn-toggle-layers');
+if (toggleLayersBtn && layerPanel) {
+  toggleLayersBtn.addEventListener('click', () => {
+    layerPanel.classList.toggle('panel-open');
+  });
+  map.on('click', () => { layerPanel.classList.remove('panel-open'); });
+}
+
 // Core architecture
 initRenderer(map);
 initHistory();
@@ -162,7 +172,7 @@ function renderDataSourceList(sources: SourceRegistry): void {
   ul.innerHTML = '';
 
   const allSources = sources;
-  const byCategory: Record<string, Array<typeof allSources[string]>> = {};
+  const byCategory: Record<string, typeof allSources[string][]> = {};
 
   for (const src of Object.values(allSources)) {
     const cat = src.category || 'Other';

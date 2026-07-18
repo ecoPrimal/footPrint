@@ -19,7 +19,7 @@ function toLatLng(pos: readonly number[]): L.LatLngTuple {
 
 let map: L.Map | null = null;
 let measureMode = false;
-let measurePoints: Array<[number, number]> = [];
+let measurePoints: [number, number][] = [];
 const measureLayers: L.FeatureGroup = L.featureGroup();
 let tempLine: L.Polyline | null = null;
 
@@ -74,13 +74,13 @@ function onMeasureMove(e: L.LeafletMouseEvent): void {
   const tooltip = document.getElementById('measure-tooltip');
   if (!tooltip) return;
 
-  const currentPts: Array<[number, number]> = [...measurePoints, [e.latlng.lng, e.latlng.lat]];
+  const currentPts: [number, number][] = [...measurePoints, [e.latlng.lng, e.latlng.lat]];
   const line = lineString(currentPts);
   const length = turfLength(line, { units: 'feet' });
 
   tooltip.classList.remove('hidden');
-  tooltip.style.left = e.originalEvent.clientX + 14 + 'px';
-  tooltip.style.top = e.originalEvent.clientY - 14 + 'px';
+  tooltip.style.left = `${String(e.originalEvent.clientX + 14)}px`;
+  tooltip.style.top = `${String(e.originalEvent.clientY - 14)}px`;
   tooltip.textContent = formatLength(length);
 
   if (tempLine) measureLayers.removeLayer(tempLine);
@@ -115,15 +115,14 @@ function updateMeasureLine(): void {
   measureLayers.addLayer(label);
 }
 
-function finishMeasure(e: L.LeafletEvent): void {
-  if ('preventDefault' in e && typeof e.preventDefault === 'function') {
-    e.preventDefault();
-  }
+function finishMeasure(e: L.LeafletMouseEvent): void {
+  L.DomEvent.preventDefault(e.originalEvent);
   const tooltip = document.getElementById('measure-tooltip');
   tooltip?.classList.add('hidden');
 
-  if (measurePoints.length >= 3) {
-    const closed: Array<[number, number]> = [...measurePoints, measurePoints[0]!];
+  const firstPoint = measurePoints[0];
+  if (measurePoints.length >= 3 && firstPoint) {
+    const closed: [number, number][] = [...measurePoints, firstPoint];
     const poly = polygon([closed]);
     const polyArea = area(poly);
     const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;

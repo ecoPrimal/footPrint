@@ -14,7 +14,7 @@ export interface OverpassNode {
 export interface OverpassWay {
   readonly type: 'way';
   readonly id: number;
-  readonly geometry?: ReadonlyArray<OverpassGeomNode>;
+  readonly geometry?: readonly OverpassGeomNode[];
   readonly tags?: Readonly<Record<string, string>>;
 }
 
@@ -22,13 +22,13 @@ export interface OverpassRelationMember {
   readonly type: 'way' | 'node' | 'relation';
   readonly ref: number;
   readonly role: string;
-  readonly geometry?: ReadonlyArray<OverpassGeomNode>;
+  readonly geometry?: readonly OverpassGeomNode[];
 }
 
 export interface OverpassRelation {
   readonly type: 'relation';
   readonly id: number;
-  readonly members?: ReadonlyArray<OverpassRelationMember>;
+  readonly members?: readonly OverpassRelationMember[];
   readonly tags?: Readonly<Record<string, string>>;
 }
 
@@ -47,5 +47,5 @@ export function isOverpassRelation(el: OverpassElement): el is OverpassRelation 
 }
 
 export interface OverpassResponse {
-  readonly elements?: ReadonlyArray<OverpassElement>;
+  readonly elements?: readonly OverpassElement[];
 }

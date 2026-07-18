@@ -63,7 +63,7 @@ export class Primal {
   }
 
   expose<TIn, TOut>(capability: Capability<TIn, TOut>): void {
-    this.capabilities.set(capability.name, capability as Capability);
+    this.capabilities.set(capability.name, capability);
   }
 
   invoke(capabilityName: string, input: unknown): Result<unknown, PrimalError> {

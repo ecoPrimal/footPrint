@@ -55,7 +55,7 @@ app.get(PROJECTS_PATH, async (_req: Request, res: Response) => {
 
 app.get(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: Response) => {
   try {
-    const safeName = sanitizeProjectName(req.params['name'] ?? '');
+    const safeName = sanitizeProjectName(req.params.name ?? '');
     const filePath = join(PROJECTS_DIR, `${safeName}.json`);
     const data = await readFile(filePath, 'utf-8');
     res.json(JSON.parse(data) as ProjectFile);
@@ -81,7 +81,7 @@ app.post(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: R
       return;
     }
     const project = body as ProjectFile;
-    const safeName = sanitizeProjectName(req.params['name'] ?? '');
+    const safeName = sanitizeProjectName(req.params.name ?? '');
     const filePath = join(PROJECTS_DIR, `${safeName}.json`);
     await writeFile(filePath, JSON.stringify(project, null, 2), 'utf-8');
     res.json({ saved: safeName } satisfies SaveResponse);
@@ -92,7 +92,7 @@ app.post(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: R
 
 app.delete(`${PROJECTS_PATH}/:name`, async (req: Request<{ name: string }>, res: Response) => {
   try {
-    const safeName = sanitizeProjectName(req.params['name'] ?? '');
+    const safeName = sanitizeProjectName(req.params.name ?? '');
     const filePath = join(PROJECTS_DIR, `${safeName}.json`);
     await unlink(filePath);
     res.json({ deleted: safeName } satisfies DeleteResponse);
@@ -120,7 +120,7 @@ function ttlForUrl(url: string): number {
   return CACHE_TTLS.default;
 }
 
-async function getCached(key: string, ttl: number): Promise<unknown | null> {
+async function getCached(key: string, ttl: number): Promise<unknown> {
   try {
     const filePath = join(CACHE_DIR, `${key}.json`);
     const info = await stat(filePath);
@@ -323,7 +323,7 @@ app.get(HEALTH_PATH, (_req: Request, res: Response) => {
   });
 });
 
-const server = await app.listen(PORT);
+const server = app.listen(PORT);
 initAgentBridge(server);
 console.log(`FootPrint server running at http://localhost:${String(PORT)}`);
 console.log(`  Agent WebSocket: ws://localhost:${String(PORT)}${WS_PATH}`);

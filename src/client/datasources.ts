@@ -26,7 +26,7 @@ export function registerSource(def: DataSourceDef): DataSourceState {
       maxZoom: 20,
       opacity: def.opacity ?? 0.5,
       attribution: def.attribution ?? '',
-    } as L.WMSOptions);
+    });
   } else if (isTileSource(def)) {
     layer = L.tileLayer(def.tileUrl, {
       maxZoom: 20,

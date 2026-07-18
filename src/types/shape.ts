@@ -45,5 +45,5 @@ export function parseSerializedShapeProps(raw: unknown): SerializedShapeProps {
     out['_shapeType'] = 'circle';
     if (typeof r['_radius'] === 'number') out['_radius'] = r['_radius'];
   }
-  return out as SerializedShapeProps;
+  return out;
 }

@@ -10,7 +10,7 @@ export interface VectorSourceDef {
   readonly color: HexColor;
   readonly type?: 'vector';
   readonly minZoom?: number;
-  readonly fetch: (bounds: L.LatLngBounds) => Promise<ReadonlyArray<GeoJSON.Feature>>;
+  readonly fetch: (bounds: L.LatLngBounds) => Promise<readonly GeoJSON.Feature[]>;
   readonly style?: L.StyleFunction;
   readonly pointToLayer?: L.GeoJSON['options']['pointToLayer'];
   readonly popupContent?: (feature: GeoJSON.Feature) => string;
@@ -68,7 +68,7 @@ export interface DataSourceState {
   layer: L.TileLayer | L.GeoJSON;
   lastBounds: string | null;
   error: string | null;
-  readonly fetch?: ((bounds: L.LatLngBounds) => Promise<ReadonlyArray<GeoJSON.Feature>>) | undefined;
+  readonly fetch?: ((bounds: L.LatLngBounds) => Promise<readonly GeoJSON.Feature[]>) | undefined;
   readonly style?: L.StyleFunction | undefined;
   readonly pointToLayer?: L.GeoJSON['options']['pointToLayer'] | undefined;
   readonly popupContent?: ((feature: GeoJSON.Feature) => string) | undefined;

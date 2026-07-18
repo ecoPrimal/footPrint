@@ -7,8 +7,8 @@ import { layerToFeature } from './geojson.js';
 import { METERS_PER_DEGREE_LAT, SNAP_GRID_MAX_POINTS, SNAP_SOURCE_LABEL_RADIUS_M } from '../constants.js';
 
 let map: L.Map | null = null;
-let snapTargetGroup: L.LayerGroup = L.layerGroup();
-let config: SnapConfig = { ...DEFAULT_SNAP_CONFIG };
+const snapTargetGroup: L.LayerGroup = L.layerGroup();
+const config: SnapConfig = { ...DEFAULT_SNAP_CONFIG };
 let lastSnapInfo: string | null = null;
 let onSnapChange: ((info: string | null) => void) | null = null;
 
@@ -30,7 +30,7 @@ export function initSnap(
 
   map.on('pm:snap' as string, (e: unknown) => {
     if (!e || typeof e !== 'object' || !('snapLatLng' in e)) return;
-    const latlng = (e as { snapLatLng: unknown }).snapLatLng;
+    const latlng = (e).snapLatLng;
     if (!(latlng instanceof L.LatLng)) return;
     const name = findNearestSourceName(latlng);
     lastSnapInfo = name ?? 'Feature';

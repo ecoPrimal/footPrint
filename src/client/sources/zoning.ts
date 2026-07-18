@@ -7,7 +7,7 @@ import { proxyGet } from '../api.js';
 import { escHtml } from '../html.js';
 
 function zoningProps(f: GeoJSON.Feature): ZoningProperties {
-  return (f.properties ?? {}) as ZoningProperties;
+  return (f.properties ?? {});
 }
 
 const ZONE_CATEGORY_COLORS: Readonly<Record<string, string>> = {
@@ -39,7 +39,7 @@ export function registerZoningSource(): void {
     category: 'Lansing',
     color: hexColorUnchecked('#ab47bc'),
     minZoom: 13,
-    fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
+    fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
       const bbox = [
         bounds.getWest(), bounds.getSouth(),
         bounds.getEast(), bounds.getNorth(),
@@ -60,7 +60,7 @@ export function registerZoningSource(): void {
       return data.features ?? [];
     },
     style: (feature) => {
-      const p = feature ? zoningProps(feature) : {} as ZoningProperties;
+      const p = feature ? zoningProps(feature as GeoJSON.Feature) : {} as ZoningProperties;
       const zone = p.ZONING ?? p.Zone ?? '';
       return {
         color: zoneColor(zone),

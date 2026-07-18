@@ -173,8 +173,8 @@ export function serializeLayers(): SerializedLayers {
       const props: SerializedShapeProps = {
         ...(meta ? { label: meta.label, notes: meta.notes, status: meta.status, createdAt: meta.createdAt } : {}),
         ...(style ? { color: style.color } : {}),
-        layerId: layerEntityId as string,
-        _entityId: child.id as string,
+        layerId: layerEntityId,
+        _entityId: child.id,
         ...(geo.shapeType === 'circle' && geo.radius != null ? { _radius: geo.radius, _shapeType: 'circle' as const } : {}),
       };
 

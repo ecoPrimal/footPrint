@@ -9,7 +9,7 @@ import { TOAST_DURATION_MS } from '../constants.js';
 let currentProject: string | null = null;
 
 export function initStorage(): void {
-  document.getElementById('btn-new')?.addEventListener('click', () => { void newProject(); });
+  document.getElementById('btn-new')?.addEventListener('click', () => { newProject(); });
   document.getElementById('btn-save')?.addEventListener('click', () => { void saveProject(); });
   document.getElementById('btn-load')?.addEventListener('click', () => { void showLoadModal(); });
   document.getElementById('modal-close')?.addEventListener('click', hideModal);
@@ -18,7 +18,7 @@ export function initStorage(): void {
   });
 }
 
-async function newProject(): Promise<void> {
+function newProject(): void {
   const name = prompt('New project name:');
   if (!name) return;
   currentProject = name;

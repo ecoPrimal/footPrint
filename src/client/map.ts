@@ -89,7 +89,7 @@ function initGeocoder(): void {
     if (!q) return;
 
     try {
-      const results = await proxyGet<ReadonlyArray<NominatimResult>>(
+      const results = await proxyGet<readonly NominatimResult[]>(
         `${NOMINATIM_SEARCH_URL}?format=json&q=${encodeURIComponent(q)}&limit=1`,
       );
       if (results.length > 0) {

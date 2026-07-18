@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityStore } from './store.js';
 import { createEntity } from './entity.js';
+import type { EntityId } from './entity.js';
 import type { StoreEvent } from './store.js';
 import { hexColorUnchecked } from '../types/brands.js';
 
@@ -53,11 +54,11 @@ describe('EntityStore CRUD', () => {
   it('has() returns true for existing and false for missing', () => {
     const layer = makeLayer(store);
     expect(store.has(layer.id)).toBe(true);
-    expect(store.has('e_fake_0' as any)).toBe(false);
+    expect(store.has('e_fake_0' as EntityId)).toBe(false);
   });
 
   it('get returns EntityNotFound for missing', () => {
-    const res = store.get('e_missing_0' as any);
+    const res = store.get('e_missing_0' as EntityId);
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error.kind).toBe('EntityNotFound');
   });

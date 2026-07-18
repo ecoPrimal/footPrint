@@ -159,7 +159,7 @@ function applySolverResult(
     if (!isSome(eOpt) || !eOpt.value.components.geometry) continue;
     const offset = state.entityVertexOffsets.get(eId) ?? 0;
     const coords = extractCoords(eOpt.value.components.geometry);
-    const newCoords: Array<[number, number]> = [];
+    const newCoords: [number, number][] = [];
 
     for (let i = 0; i < coords.length; i++) {
       newCoords.push([
@@ -197,7 +197,7 @@ export function solveConstraints(): SolverResult {
   let residual = Infinity;
   let iter = 0;
 
-  for (iter = 0; iter < SOLVER_MAX_ITERATIONS; iter++) {
+  for (; iter < SOLVER_MAX_ITERATIONS; iter++) {
     const errors = evaluateConstraintErrors(
       state.constraintEntities, state.entityVertexOffsets, state.x,
     );

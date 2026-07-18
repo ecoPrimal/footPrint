@@ -8,7 +8,7 @@
 
 import { store } from '../core/store.js';
 import type { StoreEvent } from '../core/store.js';
-import type { Entity, ComponentMap, SerializedEntity } from '../core/entity.js';
+import type { Entity, SerializedEntity } from '../core/entity.js';
 import { createEntity, entityIdFrom, ENTITY_KINDS, isValidComponentValue } from '../core/entity.js';
 import { execute, undo, redo } from '../core/history.js';
 import {
@@ -99,7 +99,7 @@ function scheduleReconnect(): void {
 }
 
 function send(msg: AgentWireMessage): void {
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
   }
 }
@@ -168,7 +168,7 @@ function handleCommand(msg: CommandMessage): void {
     switch (payload.action) {
       case 'add-entity': {
         if (!payload.kind || !ENTITY_KINDS.includes(payload.kind)) {
-          throw new Error(`Invalid entity kind: ${String(payload.kind)}`);
+          throw new Error(`Invalid entity kind: ${payload.kind}`);
         }
         const kind = payload.kind;
         const parentId = payload.parentId ? entityIdFrom(payload.parentId) : null;
@@ -193,7 +193,7 @@ function handleCommand(msg: CommandMessage): void {
         if (!isValidComponentValue(key, payload.value)) {
           throw new Error(`Invalid value for component "${key}"`);
         }
-        execute(new UpdateComponentCommand(eid, key, payload.value as ComponentMap[typeof key]));
+        execute(new UpdateComponentCommand(eid, key, payload.value));
         resultData = { updated: payload.entityId, component: key };
         break;
       }
@@ -215,7 +215,7 @@ function handleCommand(msg: CommandMessage): void {
       }
       default: {
         const _exhaustive: never = payload;
-        throw new Error(`Unknown command action: ${String((_exhaustive as { action: string }).action)}`);
+        throw new Error(`Unknown command action: ${(_exhaustive as { action: string }).action}`);
       }
     }
 

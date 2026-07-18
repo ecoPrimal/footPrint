@@ -162,10 +162,11 @@ function handleUserMessage(msg: UserMessage): void {
 // ── Public API for REST layer ───────────────────────────────────
 
 export async function sendCommand(payload: CommandPayload): Promise<CommandResultMessage> {
-  if (!activeClient || activeClient.readyState !== WebSocket.OPEN) {
+  if (activeClient?.readyState !== WebSocket.OPEN) {
     return { type: 'command-result', id: '', ok: false, error: 'No browser connected' };
   }
 
+  const client = activeClient;
   const id = nextCommandId();
 
   return new Promise<CommandResultMessage>((resolve) => {
@@ -180,7 +181,7 @@ export async function sendCommand(payload: CommandPayload): Promise<CommandResul
     });
 
     const wireMsg: AgentWireMessage = { type: 'command', id, payload };
-    activeClient!.send(JSON.stringify(wireMsg));
+    client.send(JSON.stringify(wireMsg));
   });
 }
 
@@ -192,7 +193,7 @@ export function sendAgentMessage(text: string): boolean {
   };
   agentMessages.push({ text, timestamp: msg.timestamp });
 
-  if (activeClient && activeClient.readyState === WebSocket.OPEN) {
+  if (activeClient?.readyState === WebSocket.OPEN) {
     activeClient.send(JSON.stringify(msg));
     return true;
   }
@@ -207,7 +208,7 @@ export function sendAgentAction(description: string, entityId?: string): boolean
     timestamp: Date.now(),
   };
 
-  if (activeClient && activeClient.readyState === WebSocket.OPEN) {
+  if (activeClient?.readyState === WebSocket.OPEN) {
     activeClient.send(JSON.stringify(msg));
     return true;
   }

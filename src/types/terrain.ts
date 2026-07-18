@@ -17,7 +17,7 @@ export interface TerrainGridStats {
 }
 
 export interface TerrainGrid {
-  readonly samples: ReadonlyArray<ElevationSample>;
+  readonly samples: readonly ElevationSample[];
   readonly rows: number;
   readonly cols: number;
   readonly bounds: TerrainGridBounds;

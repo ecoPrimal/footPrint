@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { osmToGeoJSON } from './osm.js';
-import type { OverpassResponse } from '../../types/overpass.js';
 
 describe('osmToGeoJSON', () => {
   it('returns empty for missing elements', () => {
-    expect(osmToGeoJSON({} as OverpassResponse)).toEqual([]);
+    expect(osmToGeoJSON({})).toEqual([]);
   });
 
   it('returns empty for empty elements', () => {

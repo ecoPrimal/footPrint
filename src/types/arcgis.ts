@@ -1,5 +1,5 @@
 export interface ArcGISFeatureResponse {
-  readonly features?: ReadonlyArray<GeoJSON.Feature>;
+  readonly features?: readonly GeoJSON.Feature[];
   readonly exceededTransferLimit?: boolean;
 }
 

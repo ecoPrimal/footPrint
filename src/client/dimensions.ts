@@ -17,7 +17,7 @@ import { extractCoords } from '../core/geometry.js';
 import { Some, None } from '../rustscript/option.js';
 
 let map: L.Map | null = null;
-let dimensionLayer: L.LayerGroup = L.layerGroup();
+const dimensionLayer: L.LayerGroup = L.layerGroup();
 let liveLabel: L.Marker | null = null;
 let vertices: L.LatLng[] = [];
 let isDrawing = false;

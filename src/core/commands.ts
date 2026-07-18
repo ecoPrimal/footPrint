@@ -103,7 +103,7 @@ export class UpdateComponentCommand<K extends ComponentKey> implements Command {
     if (isSome(opt)) {
       const comp = opt.value.components[this.key];
       this.oldValue = comp != null
-        ? { some: true as const, value: structuredClone(comp) as ComponentMap[K] }
+        ? { some: true as const, value: structuredClone(comp) }
         : None();
     }
     store.setComponent(this.entityId, this.key, this.newValue);

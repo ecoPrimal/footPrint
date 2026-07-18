@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityStore } from './store.js';
 import { createEntity } from './entity.js';
-import type { EntityId } from './entity.js';
+import type { EntityId, ConstraintType } from './entity.js';
 import { AddEntityCommand } from './commands.js';
 import { solveConstraints, addFixedDistanceConstraint } from './constraints.js';
 import { hexColorUnchecked } from '../types/brands.js';
@@ -30,7 +30,7 @@ function addConstraint(
 ): EntityId {
   const entity = createEntity('constraint', null);
   entity.components.constraint = {
-    type: type as any,
+    type: type as ConstraintType,
     entityIds,
     params: { vertexIndices: [0, 1], ...params },
     satisfied: false,

@@ -88,7 +88,9 @@ function appendEntry(kind: 'agent' | 'action' | 'user', text: string, entityId?:
   logEl.appendChild(li);
 
   while (logEl.children.length > AGENT_LOG_LIMIT) {
-    logEl.removeChild(logEl.firstChild!);
+    const first = logEl.firstChild;
+    if (!first) break;
+    logEl.removeChild(first);
   }
 
   if (!collapsed) {

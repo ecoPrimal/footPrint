@@ -7,7 +7,7 @@ import { proxyGet } from '../api.js';
 import { escHtml } from '../html.js';
 
 function femaProps(f: GeoJSON.Feature): FemaFloodProperties {
-  return (f.properties ?? {}) as FemaFloodProperties;
+  return (f.properties ?? {});
 }
 
 const ZONE_COLORS: Readonly<Record<string, string>> = {
@@ -28,7 +28,7 @@ export function registerFemaSource(): void {
     category: 'FEMA',
     color: hexColorUnchecked('#2471a3'),
     minZoom: 13,
-    fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
+    fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
       const bbox = [
         bounds.getWest(), bounds.getSouth(),
         bounds.getEast(), bounds.getNorth(),
@@ -49,7 +49,7 @@ export function registerFemaSource(): void {
       return data.features ?? [];
     },
     style: (feature) => {
-      const p = feature ? femaProps(feature) : {} as FemaFloodProperties;
+      const p = feature ? femaProps(feature as GeoJSON.Feature) : {} as FemaFloodProperties;
       const zone = p.FLD_ZONE ?? 'X';
       const baseColor = ZONE_COLORS[zone] ?? '#95a5a6';
       const isSFHA = p.SFHA_TF === 'T';

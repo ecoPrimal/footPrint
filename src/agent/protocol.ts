@@ -188,7 +188,7 @@ export function parseWireMessage(raw: unknown): AgentWireMessage | null {
   const type = raw['type'];
   if (typeof type !== 'string') return null;
   const validator = WIRE_VALIDATORS[type];
-  if (!validator || !validator(raw)) return null;
+  if (!validator?.(raw)) return null;
   return raw as unknown as AgentWireMessage;
 }
 

@@ -46,7 +46,7 @@ describe('reactive', () => {
       'r-dep',
       () => [entity.id],
       () => ++callCount,
-      () => {},
+      () => { /* no-op */ },
     ));
 
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
@@ -67,7 +67,7 @@ describe('reactive', () => {
       'r-watch',
       () => [entity.id],
       () => ++callCount,
-      () => {},
+      () => { /* no-op */ },
       ['style'],
     ));
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
@@ -92,8 +92,8 @@ describe('reactive', () => {
   });
 
   it('handles computation errors gracefully', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const unregister = registerComputation(makeComputation('r-err', () => [], () => { throw new Error('boom'); }, () => {}));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { /* no-op */ });
+    const unregister = registerComputation(makeComputation('r-err', () => [], () => { throw new Error('boom'); }, () => { /* no-op */ }));
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();

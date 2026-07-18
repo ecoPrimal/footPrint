@@ -36,7 +36,7 @@ export async function proxyPost<T = unknown>(
 
 // ── Project persistence ─────────────────────────────
 
-export async function listProjects(): Promise<ReadonlyArray<string>> {
+export async function listProjects(): Promise<readonly string[]> {
   const resp = await fetch(PROJECTS_PATH);
   if (!resp.ok) throw new Error(`listProjects: ${resp.status}`);
   return (await resp.json()) as string[];

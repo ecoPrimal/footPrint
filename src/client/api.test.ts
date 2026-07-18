@@ -101,7 +101,7 @@ describe('saveProject', () => {
       json: () => Promise.resolve({ saved: 'test' }),
     });
 
-    const result = await saveProject('test', project as never);
+    const result = await saveProject('test', project);
     expect(result).toEqual({ saved: 'test' });
     expect(mockFetch).toHaveBeenCalledWith('/api/projects/test', {
       method: 'POST',

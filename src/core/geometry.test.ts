@@ -76,7 +76,7 @@ describe('rebuildGeometry', () => {
   it('round-trips Polygon', () => {
     const ring = [[0, 0], [1, 0], [1, 1], [0, 0]];
     const original = makeGeo({ type: 'Polygon', coordinates: [ring] });
-    const newRing: Array<[number, number]> = [[10, 10], [11, 10], [11, 11], [10, 10]];
+    const newRing: [number, number][] = [[10, 10], [11, 10], [11, 11], [10, 10]];
     const rebuilt = rebuildGeometry(original, newRing);
     expect((rebuilt.geojson as GeoJSON.Polygon).coordinates[0]).toEqual(newRing);
   });
@@ -92,7 +92,7 @@ describe('rebuildGeometry', () => {
       type: 'MultiLineString',
       coordinates: [[[0, 0], [1, 1]], [[2, 2], [3, 3], [4, 4]]],
     }, 'polyline');
-    const flat: Array<[number, number]> = [[10, 10], [11, 11], [12, 12], [13, 13], [14, 14]];
+    const flat: [number, number][] = [[10, 10], [11, 11], [12, 12], [13, 13], [14, 14]];
     const rebuilt = rebuildGeometry(original, flat);
     const coords = (rebuilt.geojson as GeoJSON.MultiLineString).coordinates;
     expect(coords[0]).toEqual([[10, 10], [11, 11]]);
@@ -107,7 +107,7 @@ describe('rebuildGeometry', () => {
         [[[2, 2], [3, 2], [3, 3], [2, 2]]],
       ],
     });
-    const flat: Array<[number, number]> = [
+    const flat: [number, number][] = [
       [10, 10], [11, 10], [11, 11], [10, 10],
       [20, 20], [21, 20], [21, 21], [20, 20],
     ];

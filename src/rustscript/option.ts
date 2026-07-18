@@ -11,10 +11,10 @@ export function Some<T>(value: T): Option<T> {
   return { some: true, value };
 }
 
-const NONE: Option<never> = Object.freeze({ some: false }) as Option<never>;
+const NONE: Option<never> = Object.freeze({ some: false });
 
 export function None<T = never>(): Option<T> {
-  return NONE as Option<T>;
+  return NONE;
 }
 
 export function isSome<T>(opt: Option<T>): opt is { some: true; value: T } {

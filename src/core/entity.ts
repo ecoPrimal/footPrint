@@ -57,7 +57,7 @@ export interface ConstraintComponent {
 }
 
 export interface ElevationComponent {
-  vertices: ReadonlyArray<{ index: number; elevation: number }>;
+  vertices: readonly { index: number; elevation: number }[];
   min: number;
   max: number;
 }

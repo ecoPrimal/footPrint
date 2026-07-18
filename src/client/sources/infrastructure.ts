@@ -8,7 +8,7 @@ import { escHtml } from '../html.js';
 type OsmProps = Readonly<Record<string, string | undefined>>;
 
 function osmProps(f: GeoJSON.Feature): OsmProps {
-  return (f.properties ?? {}) as OsmProps;
+  return (f.properties ?? {});
 }
 
 function makePointIcon(symbol: string, color: string): L.DivIcon {

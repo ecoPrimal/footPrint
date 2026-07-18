@@ -17,13 +17,13 @@ export interface ScoredSource {
   readonly relevanceScore: number;
   readonly nearestDistance: number;
   readonly avgDistance: number;
-  readonly samples: ReadonlyArray<GeoJSON.Feature>;
+  readonly samples: readonly GeoJSON.Feature[];
 }
 
 export interface DiscoveryReport {
   readonly propertyArea: number;
   readonly bufferRadius: number;
-  readonly sources: ReadonlyArray<ScoredSource>;
+  readonly sources: readonly ScoredSource[];
   readonly terrain: TerrainGrid | null;
   readonly timestamp: string;
 }
