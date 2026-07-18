@@ -157,6 +157,7 @@ export const CACHE_PATH = '/api/cache';
 export const AGENT_PATH = '/api/agent';
 export const HEALTH_PATH = '/api/health';
 export const WS_PATH = '/ws';
+export const AGENT_BRIDGE_PATH = '/ws/bridge';
 
 export const ALLOWED_HOSTS: readonly string[] = [
   'overpass-api.de',

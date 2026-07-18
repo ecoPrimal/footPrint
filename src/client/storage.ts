@@ -3,6 +3,7 @@ import { serializeLayers, deserializeLayers } from './layers.js';
 import { deselectShape } from './drawing.js';
 import { clearHistory } from '../core/history.js';
 import { listProjects as apiListProjects, loadProject as apiLoadProject, saveProject as apiSaveProject, deleteProject as apiDeleteProject } from './api.js';
+import { casStoreProject } from './nestgate-cas.js';
 import { escHtml } from './html.js';
 import { TOAST_DURATION_MS } from '../constants.js';
 import { modalPrompt, modalAlert, modalConfirm } from './modal.js';
@@ -45,6 +46,11 @@ async function saveProject(): Promise<void> {
     const result = await apiSaveProject(currentProject, data);
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Saved: ${result.saved}`);
+
+    // Dual-write to nestGate CAS (non-blocking, best-effort)
+    casStoreProject(data).catch(() => {
+      // CAS unavailable — local save still succeeded
+    });
   } catch {
     void modalAlert('Error', 'Failed to save project.');
   }

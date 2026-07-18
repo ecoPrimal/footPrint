@@ -32,6 +32,7 @@ import { initDiscover } from './discover.js';
 import { initIntelligence, computeProximityForEntity, renderConflictsForEntity, elevationAtVerticesForEntity } from './intelligence.js';
 import { initAgentBridge } from './agent-bridge.js';
 import { initAgentPanel, onAgentMessage, setAgentConnectionStatus } from './agent-panel.js';
+import { initPetalTongue } from './petal-tongue.js';
 import { FEET_PER_DEGREE_LAT } from '../constants.js';
 import type { SourceRegistry } from '../types/source.js';
 import { modalPrompt } from './modal.js';
@@ -149,6 +150,14 @@ initIntelligence(map);
 // Agent system
 initAgentPanel();
 initAgentBridge(onAgentMessage, setAgentConnectionStatus);
+initPetalTongue(
+  (method, params) => {
+    console.log(`[petalTongue] notification: ${method}`, params);
+  },
+  (connected) => {
+    console.log(`[petalTongue] ${connected ? 'connected' : 'disconnected'}`);
+  },
+);
 
 // First-run welcome
 initWelcome();

@@ -19,7 +19,7 @@ import {
 import {
   ALLOWED_HOSTS, CACHE_TTLS, USER_AGENT, JSON_BODY_LIMIT,
   SHUTDOWN_GRACE_MS, SERVER_PORT, PROJECTS_PATH, PROXY_PATH, CACHE_PATH,
-  AGENT_PATH, HEALTH_PATH, WS_PATH, APP_VERSION,
+  AGENT_PATH, HEALTH_PATH, AGENT_BRIDGE_PATH, APP_VERSION,
 } from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -274,6 +274,51 @@ app.delete(CACHE_PATH, async (_req: Request, res: Response) => {
 
 // ── Agent API ─────────────────────────────────────
 
+// ── CAS proxy (nestGate content-addressed storage) ──
+// In production, Caddy routes /api/cas → nestGate:8080/cas.
+// Locally, this proxy forwards to the NESTGATE_URL env var or returns 503.
+
+const NESTGATE_URL = process.env['NESTGATE_URL'] ?? '';
+
+app.all('/api/cas/*', async (req: Request, res: Response) => {
+  if (!NESTGATE_URL) {
+    res.status(503).json({ error: 'CAS not configured (NESTGATE_URL not set)' } satisfies ErrorResponse);
+    return;
+  }
+
+  const casPath = req.path.replace('/api/cas', '/cas');
+  const upstream = `${NESTGATE_URL}${casPath}`;
+
+  try {
+    const headers: Record<string, string> = { 'Content-Type': req.get('Content-Type') ?? 'application/json' };
+    const casFamily = req.get('X-CAS-Family');
+    const casName = req.get('X-CAS-Name');
+    if (casFamily) headers['X-CAS-Family'] = casFamily;
+    if (casName) headers['X-CAS-Name'] = casName;
+
+    const fetchOpts: RequestInit = {
+      method: req.method,
+      headers,
+    };
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      fetchOpts.body = JSON.stringify(req.body);
+    }
+
+    const resp = await fetch(upstream, fetchOpts);
+    const ct = resp.headers.get('content-type') ?? '';
+    if (ct.includes('json')) {
+      const data: unknown = await resp.json();
+      res.status(resp.status).json(data);
+    } else {
+      const text = await resp.text();
+      res.status(resp.status).type('text/plain').send(text);
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(502).json({ error: 'CAS proxy failed', detail: message } satisfies ErrorResponse);
+  }
+});
+
 app.get(`${AGENT_PATH}/status`, (_req: Request, res: Response) => {
   const state = getShadowState();
   res.json({
@@ -352,7 +397,7 @@ app.get('*', (_req: Request, res: Response) => {
 const server = app.listen(PORT);
 initAgentBridge(server);
 console.log(`FootPrint server running at http://localhost:${String(PORT)}`);
-console.log(`  Agent WebSocket: ws://localhost:${String(PORT)}${WS_PATH}`);
+console.log(`  Agent WebSocket: ws://localhost:${String(PORT)}${AGENT_BRIDGE_PATH}`);
 console.log(`  Agent REST API:  http://localhost:${String(PORT)}${AGENT_PATH}/`);
 console.log(`  Health check:    http://localhost:${String(PORT)}${HEALTH_PATH}`);
 

@@ -7,7 +7,7 @@
  */
 
 import type { ProjectFile, SaveResponse, DeleteResponse } from '../types/project.js';
-import { PROXY_PATH, PROJECTS_PATH, WS_PATH } from '../constants.js';
+import { PROXY_PATH, PROJECTS_PATH, WS_PATH, AGENT_BRIDGE_PATH } from '../constants.js';
 
 // ── Proxy (external data sources) ───────────────────
 
@@ -72,6 +72,11 @@ export async function deleteProject(name: string): Promise<DeleteResponse> {
 // ── WebSocket ───────────────────────────────────────
 
 export function agentWsUrl(): string {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}${AGENT_BRIDGE_PATH}`;
+}
+
+export function petalTongueWsUrl(): string {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${location.host}${WS_PATH}`;
 }

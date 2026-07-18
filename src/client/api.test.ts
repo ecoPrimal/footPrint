@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { proxyUrl, proxyGet, proxyPost, listProjects, loadProject, saveProject, deleteProject, agentWsUrl } from './api.js';
+import { proxyUrl, proxyGet, proxyPost, listProjects, loadProject, saveProject, deleteProject, agentWsUrl, petalTongueWsUrl } from './api.js';
 
 const mockFetch = vi.fn();
 
@@ -126,11 +126,22 @@ describe('deleteProject', () => {
 
 describe('agentWsUrl', () => {
   it('builds wss URL from https location', () => {
-    expect(agentWsUrl()).toBe('wss://primals.eco/ws');
+    expect(agentWsUrl()).toBe('wss://primals.eco/ws/bridge');
   });
 
   it('builds ws URL from http location', () => {
     vi.stubGlobal('location', { protocol: 'http:', host: 'localhost:5173' });
-    expect(agentWsUrl()).toBe('ws://localhost:5173/ws');
+    expect(agentWsUrl()).toBe('ws://localhost:5173/ws/bridge');
+  });
+});
+
+describe('petalTongueWsUrl', () => {
+  it('builds wss URL from https location', () => {
+    expect(petalTongueWsUrl()).toBe('wss://primals.eco/ws');
+  });
+
+  it('builds ws URL from http location', () => {
+    vi.stubGlobal('location', { protocol: 'http:', host: 'localhost:5173' });
+    expect(petalTongueWsUrl()).toBe('ws://localhost:5173/ws');
   });
 });
