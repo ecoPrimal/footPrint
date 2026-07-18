@@ -91,6 +91,62 @@ export const DEFAULT_MAP_ZOOM = 18;
 export const APP_VERSION = '2.0.0';
 export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
+// ── Known locations (E2E tutorial + verification) ────
+// Each location doubles as a user tutorial entry and an operator E2E harness.
+// expectedSources lists the data source IDs that MUST return data at this location.
+
+export interface KnownLocation {
+  readonly id: string;
+  readonly name: string;
+  readonly center: readonly [number, number];
+  readonly zoom: number;
+  readonly description: string;
+  readonly expectedSources: readonly string[];
+}
+
+export const KNOWN_LOCATIONS: readonly KnownLocation[] = [
+  {
+    id: 'msu-campus',
+    name: 'MSU Campus',
+    center: [42.7249, -84.4815],
+    zoom: 17,
+    description: 'Michigan State University — buildings, parcels, power infrastructure',
+    expectedSources: ['osm-buildings', 'osm-power', 'parcels', 'osm-fences'],
+  },
+  {
+    id: 'el-downtown',
+    name: 'Downtown East Lansing',
+    center: [42.7369, -84.4838],
+    zoom: 18,
+    description: 'East Lansing downtown — zoning, parcels, dense OSM coverage',
+    expectedSources: ['osm-buildings', 'parcels', 'zoning'],
+  },
+  {
+    id: 'red-cedar',
+    name: 'Red Cedar River',
+    center: [42.7271, -84.4747],
+    zoom: 17,
+    description: 'Red Cedar floodplain — FEMA flood zones, water features, terrain',
+    expectedSources: ['fema-flood', 'osm-water', 'elevation'],
+  },
+  {
+    id: 'meridian-twp',
+    name: 'Meridian Township',
+    center: [42.7120, -84.4230],
+    zoom: 17,
+    description: 'Suburban residential — parcels, soils, road network',
+    expectedSources: ['parcels', 'soils', 'mi-roads'],
+  },
+  {
+    id: 'haslett-farms',
+    name: 'Haslett Agriculture',
+    center: [42.7480, -84.3960],
+    zoom: 16,
+    description: 'Agricultural area — soil types, terrain contours, large parcels',
+    expectedSources: ['soils', 'elevation', 'parcels'],
+  },
+];
+
 // ── API paths ────────────────────────────────────────
 // Deployment teams rewire these when backend services absorb the Express server.
 // Each path is a single point of configuration for the entire client.

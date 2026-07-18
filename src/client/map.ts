@@ -3,7 +3,7 @@ import type { NominatimResult } from '../types/nominatim.js';
 import {
   DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL,
   BASEMAP_SATELLITE_URL, BASEMAP_STREET_URL, BASEMAP_LABELS_URL,
-  GEOCODER_ZOOM, GEOCODER_ERROR_FLASH_MS,
+  GEOCODER_ZOOM, GEOCODER_ERROR_FLASH_MS, KNOWN_LOCATIONS,
 } from '../constants.js';
 import { proxyGet } from './api.js';
 
@@ -16,9 +16,11 @@ const tileLayers = {
 } as const;
 
 export function initMap(): L.Map {
+  const startLocation = resolveStartLocation();
+
   map = L.map('map', {
-    center: [...DEFAULT_MAP_CENTER] as L.LatLngTuple,
-    zoom: DEFAULT_MAP_ZOOM,
+    center: [...startLocation.center] as L.LatLngTuple,
+    zoom: startLocation.zoom,
     zoomControl: true,
     layers: [tileLayers.satellite],
   });
@@ -33,7 +35,46 @@ export function initMap(): L.Map {
   L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
 
   initGeocoder();
+  initLocationPicker();
   return map;
+}
+
+function resolveStartLocation(): { center: readonly [number, number]; zoom: number } {
+  const hash = location.hash.replace('#', '');
+  if (hash) {
+    const loc = KNOWN_LOCATIONS.find(l => l.id === hash);
+    if (loc) return loc;
+  }
+  return { center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM };
+}
+
+function initLocationPicker(): void {
+  const picker = document.getElementById('location-picker');
+  if (!(picker instanceof HTMLSelectElement)) return;
+
+  for (const loc of KNOWN_LOCATIONS) {
+    const opt = document.createElement('option');
+    opt.value = loc.id;
+    opt.textContent = loc.name;
+    picker.appendChild(opt);
+  }
+
+  picker.addEventListener('change', () => {
+    const loc = KNOWN_LOCATIONS.find(l => l.id === picker.value);
+    if (loc) {
+      map.setView([...loc.center] as L.LatLngTuple, loc.zoom);
+      location.hash = loc.id;
+      picker.value = '';
+    }
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hash = location.hash.replace('#', '');
+    const loc = KNOWN_LOCATIONS.find(l => l.id === hash);
+    if (loc) {
+      map.setView([...loc.center] as L.LatLngTuple, loc.zoom);
+    }
+  });
 }
 
 function initGeocoder(): void {
