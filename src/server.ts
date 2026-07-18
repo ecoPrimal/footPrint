@@ -31,6 +31,25 @@ const CACHE_DIR = join(ROOT, 'cache');
 
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(express.text({ limit: JSON_BODY_LIMIT, type: 'text/plain' }));
+
+// ── Security + deployment headers ─────────────────
+app.use((_req: Request, res: Response, next: () => void) => {
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.arcgisonline.com https://*.tile.openstreetmap.org https://tiles.arcgis.com https://server.arcgisonline.com",
+    "connect-src 'self' ws: wss:",
+    "font-src 'self'",
+    "frame-src 'none'",
+    "object-src 'none'",
+  ].join('; '));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 app.use(express.static(join(ROOT, 'public')));
 app.use(express.static(join(ROOT, 'dist', 'client')));
 
@@ -320,6 +339,13 @@ app.get(HEALTH_PATH, (_req: Request, res: Response) => {
     uptime: Math.floor(process.uptime()),
     agentConnected: isBrowserConnected(),
     timestamp: Date.now(),
+  });
+});
+
+// SPA fallback — serve index.html for all non-API, non-static routes
+app.get('*', (_req: Request, res: Response) => {
+  res.sendFile(join(ROOT, 'dist', 'client', 'index.html'), (err) => {
+    if (err) res.sendFile(join(ROOT, 'index.html'));
   });
 });
 
