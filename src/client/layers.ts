@@ -9,6 +9,7 @@ import { parseHexColor } from '../types/brands.js';
 import { unwrapOr } from '../rustscript/result.js';
 import type { SerializedLayers, SerializedLayerData } from '../types/layer.js';
 import type { SerializedShapeProps } from '../types/shape.js';
+import { modalPrompt, modalConfirm } from './modal.js';
 import { parseSerializedShapeProps } from '../types/shape.js';
 import { escHtml } from './html.js';
 
@@ -100,11 +101,11 @@ export function deleteLayer(entityId: EntityId): void {
   renderLayerList();
 }
 
-export function addCustomLayer(): void {
-  const name = prompt('Layer name:');
+export async function addCustomLayer(): Promise<void> {
+  const name = await modalPrompt('New Layer', 'Layer name:');
   if (!name) return;
-  const rawColor = prompt('Layer color (hex):', '#9b59b6') ?? '#9b59b6';
-  const validatedColor = unwrapOr(parseHexColor(rawColor), hexColorUnchecked('#9b59b6'));
+  const rawColor = await modalPrompt('Layer Color', 'Layer color (hex):', '#9b59b6');
+  const validatedColor = unwrapOr(parseHexColor(rawColor ?? '#9b59b6'), hexColorUnchecked('#9b59b6'));
   const id = layerId('custom_' + Date.now().toString());
   const entityId = createLayerEntity(id, name, validatedColor);
   setActiveLayer(entityId);
@@ -142,9 +143,9 @@ export function renderLayerList(): void {
     });
     li.querySelector('.layer-delete')?.addEventListener('click', (e: Event) => {
       e.stopPropagation();
-      if (confirm(`Delete layer "${layerComp.layerName}" and all its shapes?`)) {
-        deleteLayer(eid);
-      }
+      void modalConfirm('Delete Layer', `Delete layer "${layerComp.layerName}" and all its shapes?`).then((yes) => {
+        if (yes) deleteLayer(eid);
+      });
     });
 
     ul.appendChild(li);

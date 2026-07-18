@@ -5,11 +5,12 @@ import { clearHistory } from '../core/history.js';
 import { listProjects as apiListProjects, loadProject as apiLoadProject, saveProject as apiSaveProject, deleteProject as apiDeleteProject } from './api.js';
 import { escHtml } from './html.js';
 import { TOAST_DURATION_MS } from '../constants.js';
+import { modalPrompt, modalAlert, modalConfirm } from './modal.js';
 
 let currentProject: string | null = null;
 
 export function initStorage(): void {
-  document.getElementById('btn-new')?.addEventListener('click', () => { newProject(); });
+  document.getElementById('btn-new')?.addEventListener('click', () => { void newProject(); });
   document.getElementById('btn-save')?.addEventListener('click', () => { void saveProject(); });
   document.getElementById('btn-load')?.addEventListener('click', () => { void showLoadModal(); });
   document.getElementById('modal-close')?.addEventListener('click', hideModal);
@@ -18,8 +19,8 @@ export function initStorage(): void {
   });
 }
 
-function newProject(): void {
-  const name = prompt('New project name:');
+async function newProject(): Promise<void> {
+  const name = await modalPrompt('New Project', 'Enter project name:');
   if (!name) return;
   currentProject = name;
   deselectShape();
@@ -29,7 +30,7 @@ function newProject(): void {
 
 async function saveProject(): Promise<void> {
   if (!currentProject) {
-    const name = prompt('Project name:');
+    const name = await modalPrompt('Save Project', 'Enter project name:');
     if (!name) return;
     currentProject = name;
   }
@@ -45,7 +46,7 @@ async function saveProject(): Promise<void> {
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Saved: ${result.saved}`);
   } catch {
-    alert('Failed to save project');
+    void modalAlert('Error', 'Failed to save project.');
   }
 }
 
@@ -82,8 +83,10 @@ async function showLoadModal(): Promise<void> {
         btn.addEventListener('click', (e: Event) => {
           e.stopPropagation();
           const name = btn.dataset['name'];
-          if (!name || !confirm(`Delete project "${name}"?`)) return;
-          void apiDeleteProject(name).then(() => { void showLoadModal(); });
+          if (!name) return;
+          void modalConfirm('Delete Project', `Delete project "${name}"?`).then((yes) => {
+            if (yes) void apiDeleteProject(name).then(() => { void showLoadModal(); });
+          });
         });
       });
     }
@@ -105,7 +108,7 @@ async function loadProject(name: string): Promise<void> {
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Loaded: ${currentProject}`);
   } catch {
-    alert('Failed to load project');
+    void modalAlert('Error', 'Failed to load project.');
   }
 }
 
@@ -125,4 +128,3 @@ function showToast(msg: string): void {
   document.body.appendChild(toast);
   setTimeout(() => { toast.remove(); }, TOAST_DURATION_MS);
 }
-

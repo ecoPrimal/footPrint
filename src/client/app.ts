@@ -34,6 +34,8 @@ import { initAgentBridge } from './agent-bridge.js';
 import { initAgentPanel, onAgentMessage, setAgentConnectionStatus } from './agent-panel.js';
 import { FEET_PER_DEGREE_LAT } from '../constants.js';
 import type { SourceRegistry } from '../types/source.js';
+import { modalPrompt } from './modal.js';
+import { initWelcome } from './welcome.js';
 
 const map = initMap();
 
@@ -98,7 +100,7 @@ initProperties();
 initMeasurement(map);
 initStorage();
 
-document.getElementById('btn-add-layer')?.addEventListener('click', addCustomLayer);
+document.getElementById('btn-add-layer')?.addEventListener('click', () => { void addCustomLayer(); });
 
 initDataSources(map, renderDataSourceList);
 
@@ -120,19 +122,20 @@ setDimensionClickHandler((dimEntityId) => {
   const dim = res.value.components.dimension;
 
   const currentFt = dim.value.toFixed(1);
-  const input = prompt(`Set distance constraint (current: ${currentFt} ft):`, currentFt);
-  if (!input) return;
+  void modalPrompt('Distance Constraint', `Set distance constraint (current: ${currentFt} ft):`, currentFt).then((input) => {
+    if (!input) return;
 
-  const newDist = parseFloat(input);
-  if (isNaN(newDist) || newDist <= 0) return;
+    const newDist = parseFloat(input);
+    if (isNaN(newDist) || newDist <= 0) return;
 
-  const distDeg = newDist / FEET_PER_DEGREE_LAT;
+    const distDeg = newDist / FEET_PER_DEGREE_LAT;
 
-  addFixedDistanceConstraint(
-    dim.targetEntityId, dim.fromVertex,
-    dim.targetEntityId, dim.toVertex,
-    distDeg,
-  );
+    addFixedDistanceConstraint(
+      dim.targetEntityId, dim.fromVertex,
+      dim.targetEntityId, dim.toVertex,
+      distDeg,
+    );
+  });
 });
 
 initTerrain(map);
@@ -146,6 +149,9 @@ initIntelligence(map);
 // Agent system
 initAgentPanel();
 initAgentBridge(onAgentMessage, setAgentConnectionStatus);
+
+// First-run welcome
+initWelcome();
 
 document.getElementById('btn-grid')?.addEventListener('click', () => {
   const active = toggleGrid();

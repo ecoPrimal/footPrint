@@ -55,7 +55,8 @@ function initLocationPicker(): void {
   for (const loc of KNOWN_LOCATIONS) {
     const opt = document.createElement('option');
     opt.value = loc.id;
-    opt.textContent = loc.name;
+    opt.textContent = `${loc.name} — ${loc.description}`;
+    opt.title = loc.description;
     picker.appendChild(opt);
   }
 

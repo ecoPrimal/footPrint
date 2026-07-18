@@ -3,6 +3,7 @@ import { store } from '../core/store.js';
 import { execute } from '../core/history.js';
 import { UpdateComponentCommand } from '../core/commands.js';
 import { deleteSelectedShape, deselectShape } from './drawing.js';
+import { modalConfirm } from './modal.js';
 import { computeMeasurement } from './measurement.js';
 import { getLeafletLayer } from '../core/renderer.js';
 import type { ShapeStatus } from '../types/shape.js';
@@ -105,10 +106,12 @@ export function showShapeProperties(entityId: EntityId | null): void {
   });
 
   content.querySelector('#btn-delete-shape')?.addEventListener('click', () => {
-    if (confirm('Delete this shape?')) {
-      deleteSelectedShape();
-      hidePanel();
-    }
+    void modalConfirm('Delete Shape', 'Delete this shape?').then((yes) => {
+      if (yes) {
+        deleteSelectedShape();
+        hidePanel();
+      }
+    });
   });
 }
 
