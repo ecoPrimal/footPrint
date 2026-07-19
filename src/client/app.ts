@@ -37,6 +37,7 @@ import { FEET_PER_DEGREE_LAT } from '../constants.js';
 import type { SourceRegistry } from '../types/source.js';
 import { modalPrompt } from './modal.js';
 import { initWelcome } from './welcome.js';
+import { initTutorial } from './tutorial.js';
 
 const map = initMap();
 
@@ -161,6 +162,9 @@ initPetalTongue(
 
 // First-run welcome
 initWelcome();
+
+// Interactive tutorial (after welcome)
+initTutorial();
 
 document.getElementById('btn-grid')?.addEventListener('click', () => {
   const active = toggleGrid();
