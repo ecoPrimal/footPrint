@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 projects/*.json
+!projects/lansing-scuffle.json
 cache/*.json
 .env
 .env.*
