@@ -145,6 +145,14 @@ export const KNOWN_LOCATIONS: readonly KnownLocation[] = [
     description: 'Agricultural area — soil types, terrain contours, large parcels',
     expectedSources: ['soils', 'elevation', 'parcels'],
   },
+  {
+    id: 'john-bean-building',
+    name: 'John Bean Building (Lansing Scuffle)',
+    center: [42.7184, -84.5440],
+    zoom: 17,
+    description: '1305 S Cedar St — 464K SF industrial, solarpunk sovereign campus target',
+    expectedSources: ['osm-buildings', 'parcels', 'mi-roads'],
+  },
 ];
 
 // ── API paths ────────────────────────────────────────
