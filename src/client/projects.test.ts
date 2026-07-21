@@ -48,24 +48,25 @@ describe('sample projects', () => {
           expect(feature.type, `${id} feature missing type`).toBe('Feature');
           expect(feature.geometry, `${id} feature missing geometry`).toBeTruthy();
           expect(feature.geometry.type, `${id} geometry missing type`).toBeTruthy();
-          expect(feature.geometry.coordinates, `${id} geometry missing coordinates`).toBeTruthy();
+          const geom = feature.geometry as { coordinates?: unknown };
+          expect(geom.coordinates, `${id} geometry missing coordinates`).toBeTruthy();
           expect(feature.properties, `${id} feature missing properties`).toBeTruthy();
         }
       }
     });
 
     it('parcel has address and area', () => {
-      const parcel = project.layers['parcel'];
+      const parcel = project.layers['parcel']!;
       expect(parcel).toBeTruthy();
-      const props = parcel.features[0].properties as Record<string, unknown>;
+      const props = parcel.features[0]!.properties as Record<string, unknown>;
       expect(props['address']).toContain('1305 S Cedar');
       expect(props['area_sf']).toBeGreaterThan(0);
     });
 
     it('building has structural specs', () => {
-      const building = project.layers['building'];
+      const building = project.layers['building']!;
       expect(building).toBeTruthy();
-      const props = building.features[0].properties as Record<string, unknown>;
+      const props = building.features[0]!.properties as Record<string, unknown>;
       expect(props['area_sf']).toBe(464000);
       expect(props['floors']).toBe(3);
       expect(props['power_mw']).toBe(8);
@@ -73,7 +74,7 @@ describe('sample projects', () => {
     });
 
     it('K-Derm zones cover all 3 floors', () => {
-      const kderm = project.layers['kderm-zones'];
+      const kderm = project.layers['kderm-zones']!;
       expect(kderm).toBeTruthy();
       expect(kderm.features.length).toBe(3);
       const floors = kderm.features.map(
@@ -85,7 +86,7 @@ describe('sample projects', () => {
     });
 
     it('infrastructure includes beachhead entry point', () => {
-      const infra = project.layers['infrastructure'];
+      const infra = project.layers['infrastructure']!;
       expect(infra).toBeTruthy();
       const beachhead = infra.features.find(
         (f) => (f.properties as Record<string, unknown>)['type'] === 'beachhead',
@@ -97,7 +98,8 @@ describe('sample projects', () => {
     it('all coordinates are in Lansing MI range', () => {
       for (const layer of Object.values(project.layers)) {
         for (const feature of layer.features) {
-          const coords = flattenCoords(feature.geometry.coordinates);
+          const geom = feature.geometry as { coordinates?: unknown };
+          const coords = flattenCoords(geom.coordinates);
           for (const [lng, lat] of coords) {
             expect(lat).toBeGreaterThan(42.7);
             expect(lat).toBeLessThan(42.73);
