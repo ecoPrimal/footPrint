@@ -1,54 +1,14 @@
-# footPrint API + WebSocket proxy — Caddy snippet for golgi
-# Add inside the primals.eco {} block, BEFORE the static /footprint/* handler.
+# footPrint reverse proxy — Caddy snippet for golgi
+# With subdomain routing (footprint.primals.eco), Caddy reverse-proxies
+# everything to the Express server. SPA fallback is handled server-side.
 #
 # Assumes footPrint Express runs on sporeGate at 10.13.37.2:3000.
-# Adjust IP if running on a different gate.
 
-# Project persistence + agent REST API
-handle /api/projects* {
+footprint.primals.eco {
 	reverse_proxy 10.13.37.2:3000 {
 		header_up Host {host}
 		header_up X-Real-IP {remote_host}
 		header_up X-Forwarded-For {remote_host}
 		header_up X-Forwarded-Proto {scheme}
-	}
-}
-
-handle /api/agent* {
-	reverse_proxy 10.13.37.2:3000 {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-	}
-}
-
-handle /api/health {
-	reverse_proxy 10.13.37.2:3000
-}
-
-handle /api/cache {
-	reverse_proxy 10.13.37.2:3000
-}
-
-# External data proxy
-handle /ext {
-	reverse_proxy 10.13.37.2:3000 {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-	}
-}
-
-# Agent WebSocket bridge
-handle /ws {
-	reverse_proxy 10.13.37.2:3000 {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up Connection {>Connection}
-		header_up Upgrade {>Upgrade}
 	}
 }

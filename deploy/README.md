@@ -35,9 +35,18 @@ sudo journalctl -u footprint -f
 
 ## Caddy (golgi)
 
-Import `deploy/caddy-footprint-api.snippet` into the `primals.eco {}` block,
-**before** the static `/footprint/*` handler. Adjust IP if Express is not on
-`10.13.37.2`.
+With subdomain routing (`footprint.primals.eco`), Caddy reverse-proxies everything
+to the Express server on sporeGate. SPA fallback is handled server-side. Import
+`deploy/caddy-footprint-api.snippet` into the Caddyfile. Adjust IP if Express is
+not on `10.13.37.2`.
+
+## Environment
+
+| Var | Default | Required |
+|-----|---------|----------|
+| `PORT` | `3000` | No |
+| `NESTGATE_URL` | — | No (CAS proxy disabled if unset) |
+| `NODE_ENV` | — | Optional |
 
 ## Ports
 
@@ -45,17 +54,17 @@ Import `deploy/caddy-footprint-api.snippet` into the `primals.eco {}` block,
 |------|------|---------|
 | 3000 | localhost or WG IP | HTTP + WebSocket (Caddy terminates TLS) |
 
+## WebSocket Paths
+
+| Path | Purpose |
+|------|---------|
+| `/ws` | petalTongue JSON-RPC bridge |
+| `/ws/bridge` | Agent state sync bridge |
+
 ## Directories
 
 | Path | Auto-created | Persist |
 |------|-------------|---------|
 | `projects/` | Yes | **Yes** — user project data |
 | `cache/` | Yes | No — proxy cache, safe to clear |
-| `dist/client/` | From build | Read-only (golgi serves its own copy) |
-
-## Environment
-
-| Var | Default | Required |
-|-----|---------|----------|
-| `PORT` | `3000` | No |
-| `NODE_ENV` | — | Optional (no behavior change currently) |
+| `dist/client/` | From build | Read-only |

@@ -29,11 +29,15 @@ Browser (Vite)
        ├── Intelligence (proximity, conflicts, elevation)
        ├── Terrain (DEM grid, contours, slope/aspect)
        ├── Discovery (auto-enables sources on property draw)
+       ├── petalTongue bridge (JSON-RPC over WebSocket)
+       ├── nestGate CAS client (dual-write project persistence)
+       ├── Interactive tutorial (11-step guided walkthrough)
        └── Agent bridge (WebSocket state sync)
 
 Express (:3000) — src/server.ts [DISAPPEARS]
-  ├── Project CRUD      → absorbed by persistence primal
-  ├── Proxy + cache     → absorbed by proxy primal
+  ├── Project CRUD      → absorbed by nestGate CAS
+  ├── Proxy + cache     → absorbed by songBird drawbridge
+  ├── CAS proxy (/api/cas/*) → absorbed when nestGate is direct
   └── Agent REST + WS   → absorbed by agent bridge primal
       (deep per-variant field validation via protocol.ts)
 ```
@@ -110,18 +114,31 @@ Open `http://localhost:5173/footprint/` — the map loads centered on East Lansi
 
 See `deploy/README.md` for Express server deployment on sporeGate (systemd + Caddy).
 
+## Inter-Primal Wiring
+
+footPrint connects to the ecosystem through two client-side bridges:
+
+| Bridge | Module | Protocol | Purpose |
+|--------|--------|----------|---------|
+| petalTongue | `src/client/petal-tongue.ts` | JSON-RPC 2.0 over WebSocket (`/ws`) | Scene rendering, agent queries, capabilities |
+| nestGate CAS | `src/client/nestgate-cas.ts` | REST via server proxy (`/api/cas/*`) | Content-addressed project persistence |
+
+Projects are dual-written: local filesystem (Express) + nestGate CAS (best-effort). When the Express server is absorbed, CAS becomes the sole persistence layer.
+
 ## Primal Composition Target
 
 footPrint's Express server is replaced by primal services:
 
 | Express Endpoint | Protocol | Client Constant |
 |-----------------|----------|-----------------|
-| Project CRUD (`/api/projects/*`) | CAS persistence | `PROJECTS_PATH` |
-| Proxy + cache (`/ext`) | Drawbridge routing | `PROXY_PATH` |
+| Project CRUD (`/api/projects/*`) | nestGate CAS persistence | `PROJECTS_PATH` |
+| CAS proxy (`/api/cas/*`) | nestGate CAS (BLAKE3 content-addressed) | — |
+| Proxy + cache (`/ext`) | songBird drawbridge routing | `PROXY_PATH` |
 | Agent REST (`/api/agent/*`) | Agent bridge | `AGENT_PATH` |
-| Agent WebSocket (`/ws`) | WebSocket bridge | `WS_PATH` |
+| Agent WebSocket (`/ws/bridge`) | WebSocket bridge | `AGENT_BRIDGE_PATH` |
+| petalTongue WebSocket (`/ws`) | JSON-RPC bridge | `WS_PATH` |
 | Cache clear (`/api/cache`) | Admin | `CACHE_PATH` |
 | Health check (`/api/health`) | Monitoring | `HEALTH_PATH` |
-| Static files | Axum static server | — |
+| Static files | cellMembrane / Axum | — |
 
 The browser frontend stays TypeScript unchanged. All backend calls go through `src/client/api.ts` — change the constants in `src/constants.ts` and the client rewires automatically. See `specs/PETALTONGUE_VISUAL_TARGETS.md` for the 12 visual target areas.

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+src/rustscript/dist/
 projects/*.json
 !projects/lansing-scuffle.json
 cache/*.json

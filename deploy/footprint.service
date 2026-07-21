@@ -7,7 +7,7 @@
 [Unit]
 Description=footPrint Express server (project persistence + agent bridge)
 After=network.target
-Documentation=https://github.com/protoKarya/footPrint
+Documentation=https://git.primals.eco/protoKarya/footPrint
 
 [Service]
 Type=simple
@@ -16,6 +16,8 @@ Group=membrane
 WorkingDirectory=/opt/ecoPrimals/protists/footPrint
 Environment=PORT=3000
 Environment=NODE_ENV=production
+# Set NESTGATE_URL to enable CAS proxy (e.g. http://10.13.37.2:7700)
+# Environment=NESTGATE_URL=http://10.13.37.2:7700
 ExecStart=/usr/bin/node dist/server.js
 Restart=on-failure
 RestartSec=5
