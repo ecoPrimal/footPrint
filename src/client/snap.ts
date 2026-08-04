@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import type { SnapConfig } from '../types/snap.js';
@@ -12,10 +13,7 @@ const config: SnapConfig = { ...DEFAULT_SNAP_CONFIG };
 let lastSnapInfo: string | null = null;
 let onSnapChange: ((info: string | null) => void) | null = null;
 
-export function initSnap(
-  leafletMap: L.Map,
-  snapCallback?: (info: string | null) => void,
-): void {
+export function initSnap(leafletMap: L.Map, snapCallback?: (info: string | null) => void): void {
   map = leafletMap;
   onSnapChange = snapCallback ?? null;
   snapTargetGroup.addTo(map);
@@ -30,7 +28,7 @@ export function initSnap(
 
   map.on('pm:snap' as string, (e: unknown) => {
     if (!e || typeof e !== 'object' || !('snapLatLng' in e)) return;
-    const latlng = (e).snapLatLng;
+    const latlng = e.snapLatLng;
     if (!(latlng instanceof L.LatLng)) return;
     const name = findNearestSourceName(latlng);
     lastSnapInfo = name ?? 'Feature';
@@ -66,7 +64,6 @@ export function toggleSnap(): boolean {
   return config.enabled;
 }
 
-
 export function rebuildSnapIndex(): void {
   snapTargetGroup.clearLayers();
   if (!config.enabled || !map) return;
@@ -82,9 +79,13 @@ export function rebuildSnapIndex(): void {
           if (geo) {
             const clone = L.geoJSON(geo, {
               style: () => ({ opacity: 0, fillOpacity: 0, weight: 0, interactive: false }),
-              pointToLayer: (_f, latlng) => L.circleMarker(latlng, {
-                radius: 0, weight: 0, fillOpacity: 0, interactive: false,
-              }),
+              pointToLayer: (_f, latlng) =>
+                L.circleMarker(latlng, {
+                  radius: 0,
+                  weight: 0,
+                  fillOpacity: 0,
+                  interactive: false,
+                }),
             });
             clone.eachLayer((cloneSub: L.Layer) => {
               snapTargetGroup.addLayer(cloneSub);
@@ -141,9 +142,10 @@ function findNearestSourceName(latlng: L.LatLng): string | null {
         dist = latlng.distanceTo(sub.getLatLng());
       } else if (sub instanceof L.Polyline) {
         const coords = sub.getLatLngs();
-        const flat = (Array.isArray(coords[0]) && coords[0] instanceof L.LatLng)
-          ? coords as L.LatLng[]
-          : (coords as L.LatLng[][]).flat();
+        const flat =
+          Array.isArray(coords[0]) && coords[0] instanceof L.LatLng
+            ? (coords as L.LatLng[])
+            : (coords as L.LatLng[][]).flat();
         for (const pt of flat) {
           if (pt instanceof L.LatLng) {
             const d = latlng.distanceTo(pt);

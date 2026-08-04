@@ -1,61 +1,73 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
-import { parseWireMessage, parseCommandPayload, isValidCommandAction } from './protocol.js';
+import {
+  parseJsonRpcFrame,
+  parseCommandPayload,
+  isValidCommandAction,
+  isAgentMethod,
+  AGENT_METHODS,
+} from './protocol.js';
 
-describe('parseWireMessage', () => {
+describe('parseJsonRpcFrame', () => {
   it('returns null for non-object', () => {
-    expect(parseWireMessage(null)).toBeNull();
-    expect(parseWireMessage(42)).toBeNull();
-    expect(parseWireMessage('string')).toBeNull();
-    expect(parseWireMessage(undefined)).toBeNull();
+    expect(parseJsonRpcFrame(null)).toBeNull();
+    expect(parseJsonRpcFrame(42)).toBeNull();
+    expect(parseJsonRpcFrame('string')).toBeNull();
+    expect(parseJsonRpcFrame(undefined)).toBeNull();
   });
 
-  it('returns null for missing type', () => {
-    expect(parseWireMessage({ foo: 'bar' })).toBeNull();
-  });
-
-  it('returns null for unknown type', () => {
-    expect(parseWireMessage({ type: 'bogus' })).toBeNull();
+  it('returns null for missing or invalid jsonrpc version', () => {
+    expect(parseJsonRpcFrame({ method: 'project.sync' })).toBeNull();
+    expect(parseJsonRpcFrame({ jsonrpc: '1.0', method: 'project.sync' })).toBeNull();
   });
 
   it('returns null for array', () => {
-    expect(parseWireMessage([1, 2, 3])).toBeNull();
+    expect(parseJsonRpcFrame([1, 2, 3])).toBeNull();
   });
 
-  it('accepts valid state-sync message', () => {
-    const msg = { type: 'state-sync', entities: [] };
-    expect(parseWireMessage(msg)).toBe(msg);
+  it('accepts valid notification', () => {
+    const msg = { jsonrpc: '2.0', method: 'project.sync', params: { entities: [] } };
+    expect(parseJsonRpcFrame(msg)).toBe(msg);
   });
 
-  it('accepts valid command message', () => {
-    const msg = { type: 'command', id: 'cmd_1', payload: { action: 'undo' } };
-    expect(parseWireMessage(msg)).toBe(msg);
+  it('accepts valid request', () => {
+    const msg = {
+      jsonrpc: '2.0',
+      method: 'project.command',
+      params: { payload: { action: 'undo' } },
+      id: 1,
+    };
+    expect(parseJsonRpcFrame(msg)).toBe(msg);
   });
 
-  it('accepts valid agent-message', () => {
-    const msg = { type: 'agent-message', text: 'hello', timestamp: 123 };
-    expect(parseWireMessage(msg)).toBe(msg);
+  it('accepts valid success response', () => {
+    const msg = { jsonrpc: '2.0', id: 1, result: { ok: true } };
+    expect(parseJsonRpcFrame(msg)).toBe(msg);
   });
 
-  it('accepts all known message types with valid fields', () => {
-    const validMessages = [
-      { type: 'state-sync', entities: [] },
-      { type: 'state-delta', event: { kind: 'add', entityId: 'e1' } },
-      { type: 'command', id: 'c1', payload: { action: 'undo' } },
-      { type: 'command-result', id: 'c1', ok: true },
-      { type: 'user-message', text: 'hi', timestamp: 1 },
-      { type: 'agent-message', text: 'hi', timestamp: 1 },
-      { type: 'agent-action', description: 'did thing', timestamp: 1 },
-    ];
-    for (const msg of validMessages) {
-      expect(parseWireMessage(msg)).not.toBeNull();
+  it('accepts valid error response', () => {
+    const msg = { jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'fail' } };
+    expect(parseJsonRpcFrame(msg)).toBe(msg);
+  });
+
+  it('rejects ambiguous or incomplete frames', () => {
+    expect(parseJsonRpcFrame({ jsonrpc: '2.0', id: 1 })).toBeNull();
+    expect(parseJsonRpcFrame({ jsonrpc: '2.0', method: 'project.sync', id: 1, result: {} })).toBeNull();
+    expect(parseJsonRpcFrame({ jsonrpc: '2.0', id: 1, error: { code: 'bad', message: 'fail' } })).toBeNull();
+    expect(parseJsonRpcFrame({ jsonrpc: '2.0', method: 'project.sync' })).not.toBeNull();
+  });
+});
+
+describe('isAgentMethod', () => {
+  it('returns true for known methods', () => {
+    for (const method of Object.values(AGENT_METHODS)) {
+      expect(isAgentMethod(method)).toBe(true);
     }
   });
 
-  it('rejects messages with valid type but missing required fields', () => {
-    expect(parseWireMessage({ type: 'state-sync' })).toBeNull();
-    expect(parseWireMessage({ type: 'command', id: 'c1' })).toBeNull();
-    expect(parseWireMessage({ type: 'command-result', id: 'c1' })).toBeNull();
-    expect(parseWireMessage({ type: 'user-message', text: 'hi' })).toBeNull();
+  it('returns false for unknown methods', () => {
+    expect(isAgentMethod('state-sync')).toBe(false);
+    expect(isAgentMethod('')).toBe(false);
   });
 });
 

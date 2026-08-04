@@ -1,5 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type {
-  Entity, MutableEntity, EntityId, EntityKind, ComponentKey, ComponentMap, SerializedEntity,
+  Entity,
+  MutableEntity,
+  EntityId,
+  EntityKind,
+  ComponentKey,
+  ComponentMap,
+  SerializedEntity,
   ReadonlyEntity,
 } from './entity.js';
 import { entityIdFrom } from './entity.js';
@@ -149,11 +156,13 @@ export class EntityStore {
     const count = this.borrowCounts.get(id) ?? 0;
     this.borrowCounts.set(id, count + 1);
 
-    return Ok(new Ref(entity, () => {
-      const current = this.borrowCounts.get(id) ?? 1;
-      if (current <= 1) this.borrowCounts.delete(id);
-      else this.borrowCounts.set(id, current - 1);
-    }));
+    return Ok(
+      new Ref(entity, () => {
+        const current = this.borrowCounts.get(id) ?? 1;
+        if (current <= 1) this.borrowCounts.delete(id);
+        else this.borrowCounts.set(id, current - 1);
+      }),
+    );
   }
 
   /**
@@ -173,9 +182,11 @@ export class EntityStore {
     }
 
     this.mutBorrowed.add(id);
-    return Ok(new RefMut(entity, () => {
-      this.mutBorrowed.delete(id);
-    }));
+    return Ok(
+      new RefMut(entity, () => {
+        this.mutBorrowed.delete(id);
+      }),
+    );
   }
 
   setComponent<K extends ComponentKey>(id: EntityId, key: K, value: ComponentMap[K]): void {
@@ -240,13 +251,15 @@ export class EntityStore {
   }
 
   serialize(): SerializedEntity[] {
-    return this.all().map((entity) => ({
-      id: entity.id,
-      kind: entity.kind,
-      parentId: entity.parentId,
-      children: [...entity.children],
-      components: structuredClone(entity.components),
-    })).collect();
+    return this.all()
+      .map((entity) => ({
+        id: entity.id,
+        kind: entity.kind,
+        parentId: entity.parentId,
+        children: [...entity.children],
+        components: structuredClone(entity.components),
+      }))
+      .collect();
   }
 
   deserialize(data: readonly SerializedEntity[]): void {

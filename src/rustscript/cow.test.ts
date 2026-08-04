@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { Cow } from './cow.js';
 
@@ -19,7 +20,7 @@ describe('Cow', () => {
   it('mutate auto-clones borrowed value', () => {
     const original = { x: 1 };
     const cow = Cow.borrowed(original);
-    cow.mutate(v => ({ ...v, x: 99 }));
+    cow.mutate((v) => ({ ...v, x: 99 }));
     expect(cow.value.x).toBe(99);
     expect(cow.isOwned()).toBe(true);
     expect(original.x).toBe(1);
@@ -27,7 +28,7 @@ describe('Cow', () => {
 
   it('mutate on owned does not clone', () => {
     const cow = Cow.of({ x: 1 });
-    cow.mutate(v => ({ ...v, x: 2 }));
+    cow.mutate((v) => ({ ...v, x: 2 }));
     expect(cow.value.x).toBe(2);
   });
 

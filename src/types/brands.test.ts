@@ -1,8 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import {
-  entityId, parseEntityId, entityIdUnchecked,
-  parseHexColor, hexColorUnchecked,
-  layerId, projectName, dataSourceId,
+  entityId,
+  parseEntityId,
+  entityIdUnchecked,
+  parseHexColor,
+  hexColorUnchecked,
+  layerId,
+  projectName,
+  dataSourceId,
 } from './brands.js';
 import { isOk, isErr } from '../rustscript/result.js';
 

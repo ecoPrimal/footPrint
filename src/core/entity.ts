@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { HexColor } from '../types/brands.js';
 import type { ShapeStatus } from '../types/shape.js';
 import type { DeepReadonly } from '../rustscript/types.js';
@@ -14,7 +15,7 @@ export { entityId, entityIdUnchecked as entityIdFrom } from '../types/brands.js'
 export type ReadonlyEntity = DeepReadonly<TypedEntity>;
 
 export const ENTITY_KINDS = ['shape', 'layer', 'dimension', 'constraint', 'annotation'] as const;
-export type EntityKind = typeof ENTITY_KINDS[number];
+export type EntityKind = (typeof ENTITY_KINDS)[number];
 
 export interface GeometryComponent {
   geojson: GeoJSON.Geometry;
@@ -63,10 +64,18 @@ export interface ElevationComponent {
 }
 
 export const CONSTRAINT_TYPES = [
-  'fixed-distance', 'parallel', 'perpendicular', 'point-on-line',
-  'coincident', 'horizontal', 'vertical', 'tangent', 'symmetric', 'setback',
+  'fixed-distance',
+  'parallel',
+  'perpendicular',
+  'point-on-line',
+  'coincident',
+  'horizontal',
+  'vertical',
+  'tangent',
+  'symmetric',
+  'setback',
 ] as const;
-export type ConstraintType = typeof CONSTRAINT_TYPES[number];
+export type ConstraintType = (typeof CONSTRAINT_TYPES)[number];
 
 export interface ConstraintParams {
   distance?: number;
@@ -74,6 +83,11 @@ export interface ConstraintParams {
   axisPoint?: [number, number];
   axisDirection?: [number, number];
   vertexIndices?: number[];
+  /** Tangent: use internal (difference of radii) vs external (sum of radii). */
+  internal?: boolean;
+  /** Tangent: fallback radii when not stored on geometry. */
+  radius1?: number;
+  radius2?: number;
 }
 
 export interface ComponentMap {
@@ -173,7 +187,12 @@ function isObj(v: unknown): v is Record<string, unknown> {
 }
 
 const SHAPE_TYPES: ReadonlySet<string> = new Set([
-  'polygon', 'polyline', 'rectangle', 'circle', 'marker', 'circlemarker',
+  'polygon',
+  'polyline',
+  'rectangle',
+  'circle',
+  'marker',
+  'circlemarker',
 ]);
 
 /**

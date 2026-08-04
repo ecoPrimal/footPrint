@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type * as L from 'leaflet';
 import type { DataSourceId, HexColor } from './brands.js';
 

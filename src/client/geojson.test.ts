@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { layerToFeature } from './geojson.js';
@@ -5,7 +6,11 @@ import * as L from 'leaflet';
 
 describe('layerToFeature', () => {
   it('extracts a GeoJSON Feature from a Leaflet polygon', () => {
-    const poly = L.polygon([[42.7, -84.5], [42.71, -84.5], [42.71, -84.49]]);
+    const poly = L.polygon([
+      [42.7, -84.5],
+      [42.71, -84.5],
+      [42.71, -84.49],
+    ]);
     const feat = layerToFeature(poly);
     expect(feat).not.toBeNull();
     expect(feat!.type).toBe('Feature');
@@ -13,7 +18,10 @@ describe('layerToFeature', () => {
   });
 
   it('extracts a GeoJSON Feature from a Leaflet polyline', () => {
-    const line = L.polyline([[42.7, -84.5], [42.71, -84.5]]);
+    const line = L.polyline([
+      [42.7, -84.5],
+      [42.71, -84.5],
+    ]);
     const feat = layerToFeature(line);
     expect(feat).not.toBeNull();
     expect(feat!.type).toBe('Feature');

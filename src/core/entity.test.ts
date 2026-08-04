@@ -1,10 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
-import {
-  createEntity,
-  isValidComponentValue,
-  ENTITY_KINDS,
-  CONSTRAINT_TYPES,
-} from './entity.js';
+import { createEntity, isValidComponentValue, ENTITY_KINDS, CONSTRAINT_TYPES } from './entity.js';
 import type { ComponentKey, EntityId } from './entity.js';
 
 describe('createEntity', () => {
@@ -55,10 +51,12 @@ describe('createEntity', () => {
 describe('isValidComponentValue', () => {
   describe('geometry', () => {
     it('accepts valid geometry', () => {
-      expect(isValidComponentValue('geometry', {
-        geojson: { type: 'Point', coordinates: [0, 0] },
-        shapeType: 'marker',
-      })).toBe(true);
+      expect(
+        isValidComponentValue('geometry', {
+          geojson: { type: 'Point', coordinates: [0, 0] },
+          shapeType: 'marker',
+        }),
+      ).toBe(true);
     });
 
     it('rejects missing geojson', () => {
@@ -66,37 +64,45 @@ describe('isValidComponentValue', () => {
     });
 
     it('rejects invalid shapeType', () => {
-      expect(isValidComponentValue('geometry', {
-        geojson: { type: 'Point', coordinates: [0, 0] },
-        shapeType: 'invalid',
-      })).toBe(false);
+      expect(
+        isValidComponentValue('geometry', {
+          geojson: { type: 'Point', coordinates: [0, 0] },
+          shapeType: 'invalid',
+        }),
+      ).toBe(false);
     });
 
     it('rejects non-object geojson', () => {
-      expect(isValidComponentValue('geometry', {
-        geojson: 'not an object',
-        shapeType: 'marker',
-      })).toBe(false);
+      expect(
+        isValidComponentValue('geometry', {
+          geojson: 'not an object',
+          shapeType: 'marker',
+        }),
+      ).toBe(false);
     });
 
     it('accepts all valid shape types', () => {
       for (const st of ['polygon', 'polyline', 'rectangle', 'circle', 'marker', 'circlemarker']) {
-        expect(isValidComponentValue('geometry', {
-          geojson: { type: 'Point', coordinates: [0, 0] },
-          shapeType: st,
-        })).toBe(true);
+        expect(
+          isValidComponentValue('geometry', {
+            geojson: { type: 'Point', coordinates: [0, 0] },
+            shapeType: st,
+          }),
+        ).toBe(true);
       }
     });
   });
 
   describe('style', () => {
     it('accepts valid style', () => {
-      expect(isValidComponentValue('style', {
-        color: '#ff0000',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.5,
-      })).toBe(true);
+      expect(
+        isValidComponentValue('style', {
+          color: '#ff0000',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.5,
+        }),
+      ).toBe(true);
     });
 
     it('rejects missing color', () => {
@@ -110,12 +116,14 @@ describe('isValidComponentValue', () => {
 
   describe('meta', () => {
     it('accepts valid meta', () => {
-      expect(isValidComponentValue('meta', {
-        label: 'test',
-        notes: '',
-        status: 'planned',
-        createdAt: '2026-01-01',
-      })).toBe(true);
+      expect(
+        isValidComponentValue('meta', {
+          label: 'test',
+          notes: '',
+          status: 'planned',
+          createdAt: '2026-01-01',
+        }),
+      ).toBe(true);
     });
 
     it('rejects missing label', () => {
@@ -143,76 +151,94 @@ describe('isValidComponentValue', () => {
 
   describe('dimension', () => {
     it('accepts valid dimension', () => {
-      expect(isValidComponentValue('dimension', {
-        targetEntityId: 'abc-123',
-        fromVertex: 0,
-        toVertex: 1,
-        value: 25.5,
-        unit: 'ft',
-      })).toBe(true);
+      expect(
+        isValidComponentValue('dimension', {
+          targetEntityId: 'abc-123',
+          fromVertex: 0,
+          toVertex: 1,
+          value: 25.5,
+          unit: 'ft',
+        }),
+      ).toBe(true);
     });
 
     it('rejects non-string targetEntityId', () => {
-      expect(isValidComponentValue('dimension', {
-        targetEntityId: 123,
-        value: 25.5,
-      })).toBe(false);
+      expect(
+        isValidComponentValue('dimension', {
+          targetEntityId: 123,
+          value: 25.5,
+        }),
+      ).toBe(false);
     });
 
     it('rejects non-number value', () => {
-      expect(isValidComponentValue('dimension', {
-        targetEntityId: 'abc',
-        value: 'twenty',
-      })).toBe(false);
+      expect(
+        isValidComponentValue('dimension', {
+          targetEntityId: 'abc',
+          value: 'twenty',
+        }),
+      ).toBe(false);
     });
   });
 
   describe('constraint', () => {
     it('accepts valid constraint', () => {
-      expect(isValidComponentValue('constraint', {
-        type: 'fixed-distance',
-        entityIds: ['abc' as EntityId],
-        params: { distance: 10 },
-        satisfied: true,
-      })).toBe(true);
+      expect(
+        isValidComponentValue('constraint', {
+          type: 'fixed-distance',
+          entityIds: ['abc' as EntityId],
+          params: { distance: 10 },
+          satisfied: true,
+        }),
+      ).toBe(true);
     });
 
     it('rejects non-array entityIds', () => {
-      expect(isValidComponentValue('constraint', {
-        type: 'fixed-distance',
-        entityIds: 'abc',
-      })).toBe(false);
+      expect(
+        isValidComponentValue('constraint', {
+          type: 'fixed-distance',
+          entityIds: 'abc',
+        }),
+      ).toBe(false);
     });
 
     it('rejects non-string type', () => {
-      expect(isValidComponentValue('constraint', {
-        type: 123,
-        entityIds: [],
-      })).toBe(false);
+      expect(
+        isValidComponentValue('constraint', {
+          type: 123,
+          entityIds: [],
+        }),
+      ).toBe(false);
     });
   });
 
   describe('elevation', () => {
     it('accepts valid elevation', () => {
-      expect(isValidComponentValue('elevation', {
-        vertices: [{ index: 0, elevation: 100 }],
-        min: 100,
-        max: 200,
-      })).toBe(true);
+      expect(
+        isValidComponentValue('elevation', {
+          vertices: [{ index: 0, elevation: 100 }],
+          min: 100,
+          max: 200,
+        }),
+      ).toBe(true);
     });
 
     it('rejects non-array vertices', () => {
-      expect(isValidComponentValue('elevation', {
-        vertices: 'not array',
-        min: 0,
-      })).toBe(false);
+      expect(
+        isValidComponentValue('elevation', {
+          vertices: 'not array',
+          min: 0,
+        }),
+      ).toBe(false);
     });
 
     it('rejects non-number min', () => {
-      expect(isValidComponentValue('elevation', {
-        vertices: [],
-        min: 'low',
-      })).toBe(false);
+      expect(
+        isValidComponentValue('elevation', {
+          vertices: [],
+          min: 'low',
+        }),
+      ).toBe(false);
     });
   });
 

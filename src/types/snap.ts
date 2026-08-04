@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { DEFAULT_SNAP_DISTANCE, METERS_PER_FOOT, DEFAULT_GRID_SPACING_FT } from '../constants.js';
 
 export interface SnapConfig {

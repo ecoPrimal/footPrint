@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { DeepReadonly } from './types.js';
 
 /**
@@ -74,7 +75,9 @@ export class RefCell<T> {
       throw new BorrowError('Cannot borrow immutably: already mutably borrowed');
     }
     this.borrowCount++;
-    return new Ref(this.inner, () => { this.borrowCount--; });
+    return new Ref(this.inner, () => {
+      this.borrowCount--;
+    });
   }
 
   /**
@@ -90,7 +93,9 @@ export class RefCell<T> {
       throw new BorrowError(`Cannot borrow mutably: ${String(this.borrowCount)} immutable borrow(s) active`);
     }
     this.mutBorrowed = true;
-    return new RefMut(this.inner, () => { this.mutBorrowed = false; });
+    return new RefMut(this.inner, () => {
+      this.mutBorrowed = false;
+    });
   }
 
   /**

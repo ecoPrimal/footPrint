@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * HTML escaping utility. Prevents XSS when interpolating user data
  * into innerHTML strings.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -77,9 +78,7 @@ describe('sample projects', () => {
       const kderm = project.layers['kderm-zones']!;
       expect(kderm).toBeTruthy();
       expect(kderm.features.length).toBe(3);
-      const floors = kderm.features.map(
-        (f) => (f.properties as Record<string, unknown>)['floor'],
-      );
+      const floors = kderm.features.map((f) => (f.properties as Record<string, unknown>)['floor']);
       expect(floors).toContain(1);
       expect(floors).toContain(2);
       expect(floors).toContain(3);
@@ -88,9 +87,7 @@ describe('sample projects', () => {
     it('infrastructure includes beachhead entry point', () => {
       const infra = project.layers['infrastructure']!;
       expect(infra).toBeTruthy();
-      const beachhead = infra.features.find(
-        (f) => (f.properties as Record<string, unknown>)['type'] === 'beachhead',
-      );
+      const beachhead = infra.features.find((f) => (f.properties as Record<string, unknown>)['type'] === 'beachhead');
       expect(beachhead).toBeTruthy();
       expect(beachhead?.geometry.type).toBe('Point');
     });

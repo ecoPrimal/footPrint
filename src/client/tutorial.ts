@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Interactive E2E tutorial with step-by-step element highlighting.
  *
@@ -169,8 +170,12 @@ function renderStep(): void {
 
   const target = document.querySelector<HTMLElement>(step.target);
   if (!target) {
-    if (currentStep < STEPS.length - 1) { currentStep++; renderStep(); }
-    else { completeTutorial(); }
+    if (currentStep < STEPS.length - 1) {
+      currentStep++;
+      renderStep();
+    } else {
+      completeTutorial();
+    }
     return;
   }
 
@@ -181,7 +186,7 @@ function renderStep(): void {
   positionSpotlight(target);
   positionTooltip(target, step.position);
 
-  tooltip!.innerHTML = `
+  tooltip.innerHTML = `
     <div class="tutorial-header">
       <span class="tutorial-step-counter">${String(currentStep + 1)} / ${String(STEPS.length)}</span>
       <button class="tutorial-close" aria-label="Skip tutorial">&times;</button>
@@ -194,9 +199,9 @@ function renderStep(): void {
     </div>
   `;
 
-  tooltip!.querySelector('.tutorial-close')?.addEventListener('click', completeTutorial);
-  tooltip!.querySelector('.tutorial-prev')?.addEventListener('click', prevStep);
-  tooltip!.querySelector('.tutorial-next')?.addEventListener('click', nextStep);
+  tooltip.querySelector('.tutorial-close')?.addEventListener('click', completeTutorial);
+  tooltip.querySelector('.tutorial-prev')?.addEventListener('click', prevStep);
+  tooltip.querySelector('.tutorial-next')?.addEventListener('click', nextStep);
 }
 
 function nextStep(): void {
@@ -255,6 +260,8 @@ export function initTutorial(): void {
   });
 
   if (!isTutorialComplete()) {
-    setTimeout(() => { startTutorial(); }, 500);
+    setTimeout(() => {
+      startTutorial();
+    }, 500);
   }
 }

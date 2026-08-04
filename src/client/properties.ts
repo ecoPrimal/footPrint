@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { EntityId, StyleComponent } from '../core/entity.js';
 import { store } from '../core/store.js';
 import { execute } from '../core/history.js';
@@ -121,4 +122,3 @@ function hidePanel(): void {
     content.innerHTML = '<p class="hint">Select a shape to view properties.</p>';
   }
 }
-

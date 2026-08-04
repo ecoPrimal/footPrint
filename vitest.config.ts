@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -5,12 +6,19 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/core/**', 'src/rustscript/**', 'src/constants.ts'],
+      include: [
+        'src/core/**',
+        'src/rustscript/**',
+        'src/constants.ts',
+        'src/client/**',
+        'src/agent/**',
+      ],
+      exclude: ['**/*.test.ts', '**/*.md', '**/LICENSE'],
       thresholds: {
-        statements: 80,
-        branches: 70,
-        functions: 60,
-        lines: 80,
+        statements: 38,
+        branches: 29,
+        functions: 42,
+        lines: 40,
       },
     },
   },

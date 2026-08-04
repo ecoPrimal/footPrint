@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { KNOWN_LOCATIONS, DEFAULT_MAP_CENTER } from '../constants.js';
 
@@ -7,7 +8,7 @@ describe('KNOWN_LOCATIONS', () => {
   });
 
   it('has unique IDs', () => {
-    const ids = KNOWN_LOCATIONS.map(l => l.id);
+    const ids = KNOWN_LOCATIONS.map((l) => l.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -49,7 +50,7 @@ describe('KNOWN_LOCATIONS', () => {
   });
 
   it('includes required locations from standard (MSU, Downtown EL, Red Cedar, Meridian, Haslett)', () => {
-    const ids = KNOWN_LOCATIONS.map(l => l.id);
+    const ids = KNOWN_LOCATIONS.map((l) => l.id);
     expect(ids).toContain('msu-campus');
     expect(ids).toContain('el-downtown');
     expect(ids).toContain('red-cedar');

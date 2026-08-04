@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rust's std::sync::mpsc -- message-passing channels with ownership transfer.
  *
@@ -51,11 +52,19 @@ class ChannelBuffer<T> {
     this.capacity = capacity;
   }
 
-  get isSenderClosed(): boolean { return this.senderClosed; }
-  get isReceiverClosed(): boolean { return this.receiverClosed; }
+  get isSenderClosed(): boolean {
+    return this.senderClosed;
+  }
+  get isReceiverClosed(): boolean {
+    return this.receiverClosed;
+  }
 
-  closeSender(): void { this.senderClosed = true; }
-  closeReceiver(): void { this.receiverClosed = true; }
+  closeSender(): void {
+    this.senderClosed = true;
+  }
+  closeReceiver(): void {
+    this.receiverClosed = true;
+  }
 
   get isFull(): boolean {
     return this.capacity !== null && this.queue.length >= this.capacity;

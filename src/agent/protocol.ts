@@ -1,25 +1,82 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Agent protocol -- shared types for WebSocket communication
- * between the FootPrint browser client and the Express server.
+ * Agent bridge protocol — JSON-RPC 2.0 over WebSocket.
  *
- * These types define every message that can flow across the wire.
- * Both sides import from this single source of truth.
+ * Semantic method names follow domain.verb (wateringHole SEMANTIC_METHOD_NAMING_STANDARD v2.0):
+ *   project.sync     notification  browser → server  full entity snapshot
+ *   project.delta    notification  browser → server  incremental store change
+ *   project.command  request       server → browser  execute a store command
+ *   agent.message    notification  server → browser  agent text to user
+ *   agent.action     notification  server → browser  agent action description
+ *   agent.query      notification  browser → server  user text to agent queue
+ *   agent.cancel     request       bidirectional     cancel in-flight agent work
+ *   bridge.health    request       bidirectional     connection / bridge status
  */
 
 import type { EntityKind, ComponentKey, ComponentMap, SerializedEntity } from '../core/entity.js';
 import { ENTITY_KINDS } from '../core/entity.js';
 
-// ── Store events (browser --> server) ───────────────────────────
+// ── JSON-RPC 2.0 wire types ─────────────────────────────────────
 
-export interface StateSyncMessage {
-  readonly type: 'state-sync';
-  readonly entities: readonly SerializedEntity[];
+export interface JsonRpcRequest {
+  readonly jsonrpc: '2.0';
+  readonly method: string;
+  readonly params?: unknown;
+  readonly id: number;
 }
 
-export interface StateDeltaMessage {
-  readonly type: 'state-delta';
-  readonly event: DeltaEvent;
-  readonly entity?: SerializedEntity | undefined;
+export interface JsonRpcResponse {
+  readonly jsonrpc: '2.0';
+  readonly id: number;
+  readonly result?: unknown;
+  readonly error?: JsonRpcError;
+}
+
+export interface JsonRpcNotification {
+  readonly jsonrpc: '2.0';
+  readonly method: string;
+  readonly params?: unknown;
+}
+
+export interface JsonRpcError {
+  readonly code: number;
+  readonly message: string;
+  readonly data?: unknown;
+}
+
+export type JsonRpcFrame = JsonRpcRequest | JsonRpcResponse | JsonRpcNotification;
+
+/** Standard JSON-RPC 2.0 error codes. */
+export const JSONRPC_PARSE_ERROR = -32700;
+export const JSONRPC_INVALID_REQUEST = -32600;
+export const JSONRPC_METHOD_NOT_FOUND = -32601;
+export const JSONRPC_INVALID_PARAMS = -32602;
+export const JSONRPC_INTERNAL_ERROR = -32603;
+
+/** Application-specific error code for command execution failures. */
+export const AGENT_COMMAND_ERROR = -32000;
+
+// ── Semantic method names ─────────────────────────────────────────
+
+export const AGENT_METHODS = {
+  PROJECT_SYNC: 'project.sync',
+  PROJECT_DELTA: 'project.delta',
+  PROJECT_COMMAND: 'project.command',
+  AGENT_MESSAGE: 'agent.message',
+  AGENT_ACTION: 'agent.action',
+  AGENT_QUERY: 'agent.query',
+  AGENT_CANCEL: 'agent.cancel',
+  BRIDGE_HEALTH: 'bridge.health',
+} as const;
+
+export type AgentMethod = (typeof AGENT_METHODS)[keyof typeof AGENT_METHODS];
+
+const AGENT_METHOD_SET: ReadonlySet<string> = new Set(Object.values(AGENT_METHODS));
+
+// ── Domain params / results ───────────────────────────────────────
+
+export interface ProjectSyncParams {
+  readonly entities: readonly SerializedEntity[];
 }
 
 export interface DeltaEvent {
@@ -28,16 +85,48 @@ export interface DeltaEvent {
   readonly componentKey?: string | undefined;
 }
 
-// ── Commands (server --> browser) ───────────────────────────────
+export interface ProjectDeltaParams {
+  readonly event: DeltaEvent;
+  readonly entity?: SerializedEntity | undefined;
+}
 
-export interface CommandMessage {
-  readonly type: 'command';
-  readonly id: string;
+export interface ProjectCommandParams {
   readonly payload: CommandPayload;
 }
 
+export interface ProjectCommandResult {
+  readonly ok: true;
+  readonly data?: unknown;
+}
+
+export interface AgentMessageParams {
+  readonly text: string;
+  readonly timestamp: number;
+}
+
+export interface AgentActionParams {
+  readonly description: string;
+  readonly entityId?: string | undefined;
+  readonly timestamp: number;
+}
+
+export interface AgentQueryParams {
+  readonly text: string;
+  readonly timestamp: number;
+}
+
+export interface AgentCancelParams {
+  readonly requestId?: number | undefined;
+}
+
+export interface BridgeHealthResult {
+  readonly connected: boolean;
+  readonly entityCount: number;
+  readonly timestamp: number;
+}
+
+/** REST-layer command result (maps from JSON-RPC success / error responses). */
 export interface CommandResultMessage {
-  readonly type: 'command-result';
   readonly id: string;
   readonly ok: boolean;
   readonly data?: unknown;
@@ -45,12 +134,7 @@ export interface CommandResultMessage {
 }
 
 export type CommandPayload =
-  | AddEntityPayload
-  | RemoveEntityPayload
-  | UpdateComponentPayload
-  | MoveGeometryPayload
-  | UndoPayload
-  | RedoPayload;
+  AddEntityPayload | RemoveEntityPayload | UpdateComponentPayload | MoveGeometryPayload | UndoPayload | RedoPayload;
 
 export interface AddEntityPayload {
   readonly action: 'add-entity';
@@ -86,14 +170,7 @@ export interface RedoPayload {
   readonly action: 'redo';
 }
 
-// ── Messaging (bidirectional) ───────────────────────────────────
-
-export interface UserMessage {
-  readonly type: 'user-message';
-  readonly text: string;
-  readonly timestamp: number;
-}
-
+/** UI-layer message types (panel callback, not wire format). */
 export interface AgentTextMessage {
   readonly type: 'agent-message';
   readonly text: string;
@@ -107,26 +184,44 @@ export interface AgentActionMessage {
   readonly timestamp: number;
 }
 
-// ── Union of all wire messages ──────────────────────────────────
+// ── Frame builders ──────────────────────────────────────────────
 
-export type AgentWireMessage =
-  | StateSyncMessage
-  | StateDeltaMessage
-  | CommandMessage
-  | CommandResultMessage
-  | UserMessage
-  | AgentTextMessage
-  | AgentActionMessage;
+export function jsonRpcNotify(method: AgentMethod, params?: unknown): JsonRpcNotification {
+  return params === undefined ? { jsonrpc: '2.0', method } : { jsonrpc: '2.0', method, params };
+}
 
-// ── Runtime validators ──────────────────────────────────────────
+export function jsonRpcRequest(method: AgentMethod, params: unknown, id: number): JsonRpcRequest {
+  return { jsonrpc: '2.0', method, params, id };
+}
+
+export function jsonRpcSuccess(id: number, result: unknown): JsonRpcResponse {
+  return { jsonrpc: '2.0', id, result };
+}
+
+export function jsonRpcError(id: number, code: number, message: string, data?: unknown): JsonRpcResponse {
+  const error: JsonRpcError = data === undefined ? { code, message } : { code, message, data };
+  return { jsonrpc: '2.0', id, error };
+}
+
+// ── Runtime validators ────────────────────────────────────────────
 
 const COMMAND_ACTIONS: ReadonlySet<string> = new Set([
-  'add-entity', 'remove-entity', 'update-component',
-  'move-geometry', 'undo', 'redo',
+  'add-entity',
+  'remove-entity',
+  'update-component',
+  'move-geometry',
+  'undo',
+  'redo',
 ]);
 
 const COMPONENT_KEY_SET: ReadonlySet<string> = new Set([
-  'geometry', 'style', 'meta', 'layer', 'dimension', 'constraint', 'elevation',
+  'geometry',
+  'style',
+  'meta',
+  'layer',
+  'dimension',
+  'constraint',
+  'elevation',
 ]);
 
 const ENTITY_KIND_SET: ReadonlySet<string> = new Set(ENTITY_KINDS);
@@ -140,56 +235,45 @@ function isSerializedEntity(v: unknown): boolean {
   return typeof v['id'] === 'string' && typeof v['kind'] === 'string' && ENTITY_KIND_SET.has(v['kind']);
 }
 
-function validateStateSyncFields(r: Record<string, unknown>): boolean {
-  return Array.isArray(r['entities']) && (r['entities'] as unknown[]).every(isSerializedEntity);
+function validateProjectSyncParams(params: unknown): params is ProjectSyncParams {
+  return isRecord(params) && Array.isArray(params['entities']) && params['entities'].every(isSerializedEntity);
 }
 
-function validateStateDeltaFields(r: Record<string, unknown>): boolean {
-  if (!isRecord(r['event'])) return false;
-  const ev = r['event'];
+function validateProjectDeltaParams(params: unknown): params is ProjectDeltaParams {
+  if (!isRecord(params) || !isRecord(params['event'])) return false;
+  const ev = params['event'];
   if (typeof ev['entityId'] !== 'string') return false;
   const kind = ev['kind'];
-  return kind === 'add' || kind === 'remove' || kind === 'update';
+  if (kind !== 'add' && kind !== 'remove' && kind !== 'update') return false;
+  if (params['entity'] !== undefined && !isSerializedEntity(params['entity'])) return false;
+  return true;
 }
 
-function validateCommandFields(r: Record<string, unknown>): boolean {
-  return typeof r['id'] === 'string' && isRecord(r['payload']) && validateCommandPayloadFields(r['payload']);
+function validateProjectCommandParams(params: unknown): params is ProjectCommandParams {
+  return isRecord(params) && isRecord(params['payload']) && validateCommandPayloadFields(params['payload']);
 }
 
-function validateCommandResultFields(r: Record<string, unknown>): boolean {
-  return typeof r['id'] === 'string' && typeof r['ok'] === 'boolean';
+function validateAgentMessageParams(params: unknown): params is AgentMessageParams {
+  return isRecord(params) && typeof params['text'] === 'string' && typeof params['timestamp'] === 'number';
 }
 
-function validateTextMessageFields(r: Record<string, unknown>): boolean {
-  return typeof r['text'] === 'string' && typeof r['timestamp'] === 'number';
+function validateAgentActionParams(params: unknown): params is AgentActionParams {
+  return (
+    isRecord(params) &&
+    typeof params['description'] === 'string' &&
+    typeof params['timestamp'] === 'number' &&
+    (params['entityId'] === undefined || typeof params['entityId'] === 'string')
+  );
 }
 
-function validateAgentActionFields(r: Record<string, unknown>): boolean {
-  return typeof r['description'] === 'string' && typeof r['timestamp'] === 'number';
+function validateAgentQueryParams(params: unknown): params is AgentQueryParams {
+  return isRecord(params) && typeof params['text'] === 'string' && typeof params['timestamp'] === 'number';
 }
 
-const WIRE_VALIDATORS: Record<string, (r: Record<string, unknown>) => boolean> = {
-  'state-sync': validateStateSyncFields,
-  'state-delta': validateStateDeltaFields,
-  'command': validateCommandFields,
-  'command-result': validateCommandResultFields,
-  'user-message': validateTextMessageFields,
-  'agent-message': validateTextMessageFields,
-  'agent-action': validateAgentActionFields,
-};
-
-/**
- * Validate a parsed JSON value as an AgentWireMessage.
- * Checks discriminant AND per-variant required fields.
- * Returns the same object identity on success, null on invalid shape.
- */
-export function parseWireMessage(raw: unknown): AgentWireMessage | null {
-  if (!isRecord(raw)) return null;
-  const type = raw['type'];
-  if (typeof type !== 'string') return null;
-  const validator = WIRE_VALIDATORS[type];
-  if (!validator?.(raw)) return null;
-  return raw as unknown as AgentWireMessage;
+function validateAgentCancelParams(params: unknown): params is AgentCancelParams {
+  if (!isRecord(params)) return false;
+  const requestId = params['requestId'];
+  return requestId === undefined || typeof requestId === 'number';
 }
 
 function validateCommandPayloadFields(r: Record<string, unknown>): boolean {
@@ -201,20 +285,101 @@ function validateCommandPayloadFields(r: Record<string, unknown>): boolean {
     case 'remove-entity':
       return typeof r['entityId'] === 'string';
     case 'update-component':
-      return typeof r['entityId'] === 'string'
-        && typeof r['componentKey'] === 'string'
-        && COMPONENT_KEY_SET.has(r['componentKey'])
-        && r['value'] !== undefined;
+      return (
+        typeof r['entityId'] === 'string' &&
+        typeof r['componentKey'] === 'string' &&
+        COMPONENT_KEY_SET.has(r['componentKey']) &&
+        r['value'] !== undefined
+      );
     case 'move-geometry':
-      return typeof r['entityId'] === 'string'
-        && typeof r['deltaLng'] === 'number'
-        && typeof r['deltaLat'] === 'number';
+      return (
+        typeof r['entityId'] === 'string' && typeof r['deltaLng'] === 'number' && typeof r['deltaLat'] === 'number'
+      );
     case 'undo':
     case 'redo':
       return true;
     default:
       return false;
   }
+}
+
+function hasValidJsonRpcVersion(raw: Record<string, unknown>): boolean {
+  return raw['jsonrpc'] === '2.0';
+}
+
+/**
+ * Parse a JSON value as a JSON-RPC 2.0 frame (request, response, or notification).
+ * Validates envelope shape only — use method-specific validators for params.
+ */
+export function parseJsonRpcFrame(raw: unknown): JsonRpcFrame | null {
+  if (!isRecord(raw) || !hasValidJsonRpcVersion(raw)) return null;
+
+  const hasId = 'id' in raw && typeof raw['id'] === 'number';
+  const hasMethod = 'method' in raw && typeof raw['method'] === 'string';
+  const hasResult = 'result' in raw;
+  const hasError = 'error' in raw;
+
+  if (hasId && hasMethod && !hasResult && !hasError) {
+    return raw as unknown as JsonRpcRequest;
+  }
+
+  if (hasId && (hasResult || hasError) && !hasMethod) {
+    if (hasError) {
+      const err = raw['error'];
+      if (!isRecord(err) || typeof err['code'] !== 'number' || typeof err['message'] !== 'string') return null;
+    }
+    return raw as unknown as JsonRpcResponse;
+  }
+
+  if (hasMethod && !hasId && !hasResult && !hasError) {
+    return raw as unknown as JsonRpcNotification;
+  }
+
+  return null;
+}
+
+export function isJsonRpcRequest(frame: JsonRpcFrame): frame is JsonRpcRequest {
+  return 'id' in frame && 'method' in frame && !('result' in frame) && !('error' in frame);
+}
+
+export function isJsonRpcResponse(frame: JsonRpcFrame): frame is JsonRpcResponse {
+  return 'id' in frame && !('method' in frame) && ('result' in frame || 'error' in frame);
+}
+
+export function isJsonRpcNotification(frame: JsonRpcFrame): frame is JsonRpcNotification {
+  return 'method' in frame && !('id' in frame) && !('result' in frame) && !('error' in frame);
+}
+
+export function isAgentMethod(method: string): method is AgentMethod {
+  return AGENT_METHOD_SET.has(method);
+}
+
+export function parseProjectSyncParams(params: unknown): ProjectSyncParams | null {
+  return validateProjectSyncParams(params) ? params : null;
+}
+
+export function parseProjectDeltaParams(params: unknown): ProjectDeltaParams | null {
+  return validateProjectDeltaParams(params) ? params : null;
+}
+
+export function parseProjectCommandParams(params: unknown): ProjectCommandParams | null {
+  return validateProjectCommandParams(params) ? params : null;
+}
+
+export function parseAgentMessageParams(params: unknown): AgentMessageParams | null {
+  return validateAgentMessageParams(params) ? params : null;
+}
+
+export function parseAgentActionParams(params: unknown): AgentActionParams | null {
+  return validateAgentActionParams(params) ? params : null;
+}
+
+export function parseAgentQueryParams(params: unknown): AgentQueryParams | null {
+  return validateAgentQueryParams(params) ? params : null;
+}
+
+export function parseAgentCancelParams(params: unknown): AgentCancelParams | null {
+  return validateAgentCancelParams(params) ? params : null;
 }
 
 /**
@@ -229,4 +394,15 @@ export function parseCommandPayload(raw: unknown): CommandPayload | null {
 
 export function isValidCommandAction(action: string): boolean {
   return COMMAND_ACTIONS.has(action);
+}
+
+/**
+ * Map a JSON-RPC response to the REST-layer CommandResultMessage shape.
+ */
+export function commandResultFromResponse(id: number, response: JsonRpcResponse): CommandResultMessage {
+  const idStr = String(id);
+  if (response.error) {
+    return { id: idStr, ok: false, error: response.error.message };
+  }
+  return { id: idStr, ok: true, data: response.result };
 }

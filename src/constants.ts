@@ -1,10 +1,48 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Shared constants for footPrint.
  *
- * Centralizes hardcoded values that were scattered across source files.
- * Conversion factors are named for clarity; API endpoints are grouped
- * so the proxy allowlist and the client-side references stay in sync.
+ * Conversion factors and tuning values remain here. Locality-specific values
+ * (endpoints, known locations, map center, discovery source IDs) live in the
+ * manifest registry and are re-exported here for backward compatibility.
  */
+
+import './core/manifest-defaults.js';
+import {
+  endpointKey,
+  getEndpoint,
+  getKnownLocations,
+  getMapViewDefaults,
+  endpointHosts,
+  type KnownLocation,
+} from './core/manifest.js';
+
+// Re-export registry types and API for runtime configuration
+export type { KnownLocation, SourceManifest, CoverageBounds, EndpointKey, MapViewDefaults } from './core/manifest.js';
+export {
+  endpointKey,
+  registerEndpoint,
+  setEndpoint,
+  getEndpoint,
+  tryGetEndpoint,
+  listEndpointKeys,
+  endpointHosts,
+  registerSourceManifest,
+  unregisterSourceManifest,
+  getSourceManifest,
+  listSourceManifests,
+  getSourceIdsByCapability,
+  coversPoint,
+  sourcesCoveringPoint,
+  registerKnownLocation,
+  unregisterKnownLocation,
+  getKnownLocations,
+  findKnownLocation,
+  setMapViewDefaults,
+  getMapViewDefaults,
+  resolveMapViewDefaults,
+  setMapViewResolver,
+} from './core/manifest.js';
 
 // ── Unit conversions ─────────────────────────────────
 
@@ -15,23 +53,20 @@ export const SQ_FEET_PER_SQ_METER = 10.7639;
 export const SQ_FEET_PER_ACRE = 43_560;
 export const FEET_PER_DEGREE_LAT = METERS_PER_DEGREE_LAT * FEET_PER_METER;
 
-// ── External service endpoints ───────────────────────
+// ── External service endpoints (registry-backed snapshots) ──
 
-export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
-export const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search';
-export const EPQS_BASE_URL = 'https://epqs.nationalmap.gov/v1/json';
-export const NFHL_BASE_URL = 'https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer';
-export const NRCS_WMS_URL = 'https://sdmdataaccess.sc.egov.usda.gov/Spatial/SDM.wms';
-
-export const MI_FRAMEWORK_BASE = 'https://gisagocss.state.mi.us/arcgis/rest/services/OpenData/michigan_geographic_framework/MapServer';
-export const ZONING_URL = 'https://gis2.cityofeastlansing.com/arcgis/rest/services/ZoningDistricts/FeatureServer/0';
+export const OVERPASS_URL = getEndpoint(endpointKey('overpass'));
+export const NOMINATIM_SEARCH_URL = getEndpoint(endpointKey('nominatim'));
+export const EPQS_BASE_URL = getEndpoint(endpointKey('epqs'));
+export const NFHL_BASE_URL = getEndpoint(endpointKey('nfhl'));
+export const NRCS_WMS_URL = getEndpoint(endpointKey('nrcs-wms'));
 
 // ── Basemap tile URLs ────────────────────────────────
 
-export const BASEMAP_SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-export const BASEMAP_STREET_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-export const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
-export const PARCELS_TILE_URL = 'https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}';
+export const BASEMAP_SATELLITE_URL = getEndpoint(endpointKey('basemap-satellite'));
+export const BASEMAP_STREET_URL = getEndpoint(endpointKey('basemap-street'));
+export const BASEMAP_LABELS_URL = getEndpoint(endpointKey('basemap-labels'));
+export const PARCELS_TILE_URL = getEndpoint(endpointKey('parcels-tiles'));
 
 // ── ArcGIS layer IDs ────────────────────────────────
 
@@ -55,14 +90,7 @@ export const DISCOVERY_DEFAULT_BOOST = 0.5;
 export const DISCOVERY_COUNT_DIVISOR = 20;
 export const DISCOVERY_NO_DATA_DISTANCE = 999;
 export const PROXIMITY_UI_LIMIT = 8;
-export const DISCOVERY_AUTO_ENABLE_IDS: readonly string[] = [
-  'osm-buildings', 'osm-power', 'parcels', 'osm-fences',
-  'osm-poles', 'osm-manholes', 'osm-hydrants',
-];
-export const CONFLICT_UTILITY_SOURCE_IDS: readonly string[] = [
-  'osm-power', 'osm-pipelines', 'osm-water',
-  'osm-manholes', 'osm-hydrants', 'osm-poles',
-];
+
 export const ELEVATION_SAMPLE_CAP = 20;
 
 // ── Grid defaults ────────────────────────────────────
@@ -84,76 +112,17 @@ export const METERS_PER_FOOT = 0.3048;
 export const GEOCODER_ERROR_FLASH_MS = 1500;
 export const SERVER_PORT = 3000;
 
-// ── Application defaults ─────────────────────────────
+// ── Application defaults (registry-backed) ───────────
 
-export const DEFAULT_MAP_CENTER: readonly [number, number] = [42.7085, -84.5537];
-export const DEFAULT_MAP_ZOOM = 18;
+export const DEFAULT_MAP_CENTER: readonly [number, number] = getMapViewDefaults().center;
+export const DEFAULT_MAP_ZOOM = getMapViewDefaults().zoom;
 export const APP_VERSION = '2.0.0';
 export const USER_AGENT = 'FootPrint-HomePlanner/2.0';
 
-// ── Known locations (E2E tutorial + verification) ────
-// Each location doubles as a user tutorial entry and an operator E2E harness.
-// expectedSources lists the data source IDs that MUST return data at this location.
+// ── Known locations (discoverable registry snapshot) ─
 
-export interface KnownLocation {
-  readonly id: string;
-  readonly name: string;
-  readonly center: readonly [number, number];
-  readonly zoom: number;
-  readonly description: string;
-  readonly expectedSources: readonly string[];
-}
-
-export const KNOWN_LOCATIONS: readonly KnownLocation[] = [
-  {
-    id: 'msu-campus',
-    name: 'MSU Campus',
-    center: [42.7249, -84.4815],
-    zoom: 17,
-    description: 'Michigan State University — buildings, parcels, power infrastructure',
-    expectedSources: ['osm-buildings', 'osm-power', 'parcels', 'osm-fences'],
-  },
-  {
-    id: 'el-downtown',
-    name: 'Downtown East Lansing',
-    center: [42.7369, -84.4838],
-    zoom: 18,
-    description: 'East Lansing downtown — zoning, parcels, dense OSM coverage',
-    expectedSources: ['osm-buildings', 'parcels', 'zoning'],
-  },
-  {
-    id: 'red-cedar',
-    name: 'Red Cedar River',
-    center: [42.7271, -84.4747],
-    zoom: 17,
-    description: 'Red Cedar floodplain — FEMA flood zones, water features, terrain',
-    expectedSources: ['fema-flood', 'osm-water', 'elevation'],
-  },
-  {
-    id: 'meridian-twp',
-    name: 'Meridian Township',
-    center: [42.7120, -84.4230],
-    zoom: 17,
-    description: 'Suburban residential — parcels, soils, road network',
-    expectedSources: ['parcels', 'soils', 'mi-roads'],
-  },
-  {
-    id: 'haslett-farms',
-    name: 'Haslett Agriculture',
-    center: [42.7480, -84.3960],
-    zoom: 16,
-    description: 'Agricultural area — soil types, terrain contours, large parcels',
-    expectedSources: ['soils', 'elevation', 'parcels'],
-  },
-  {
-    id: 'john-bean-building',
-    name: 'John Bean Building (Lansing Scuffle)',
-    center: [42.7184, -84.5440],
-    zoom: 17,
-    description: '1305 S Cedar St — 464K SF industrial, solarpunk sovereign campus target',
-    expectedSources: ['osm-buildings', 'parcels', 'mi-roads'],
-  },
-];
+/** Snapshot of registered known locations at module load; use getKnownLocations() for live registry. */
+export const KNOWN_LOCATIONS: readonly KnownLocation[] = getKnownLocations();
 
 // ── API paths ────────────────────────────────────────
 // Deployment teams rewire these when backend services absorb the Express server.
@@ -168,16 +137,10 @@ export const WS_PATH = '/ws';
 export const AGENT_BRIDGE_PATH = '/ws/bridge';
 
 export const ALLOWED_HOSTS: readonly string[] = [
-  'overpass-api.de',
-  'hazards.fema.gov',
+  ...endpointHosts(),
   'services1.arcgis.com',
   'services2.arcgis.com',
-  'nominatim.openstreetmap.org',
-  'epqs.nationalmap.gov',
-  'sdmdataaccess.sc.egov.usda.gov',
-  'gisagocss.state.mi.us',
   'gisp.mcgi.state.mi.us',
-  'gis2.cityofeastlansing.com',
 ] as const;
 
 // ── Cache TTLs (milliseconds) ────────────────────────

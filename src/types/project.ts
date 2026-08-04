@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { SerializedLayers } from './layer.js';
 
 export interface ProjectFile {

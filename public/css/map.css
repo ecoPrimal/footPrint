@@ -1,0 +1,184 @@
+/* ── Data popup styling ──────────────────────── */
+.data-popup .leaflet-popup-content-wrapper {
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.data-popup .leaflet-popup-tip {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+.data-popup .leaflet-popup-close-button {
+  color: var(--text-muted);
+}
+.data-popup-content {
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.data-popup-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-popup-content td {
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  word-break: break-word;
+}
+.data-popup-content td:first-child {
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  width: 40%;
+}
+
+/* ── Map ──────────────────────────────────────── */
+#map {
+  flex: 1;
+  z-index: 1;
+}
+
+/* Override Leaflet controls for dark theme */
+.leaflet-control-layers,
+.leaflet-control-zoom a,
+.leaflet-bar a {
+  background: var(--bg-panel) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+.leaflet-control-layers-expanded {
+  background: var(--bg-panel) !important;
+  color: var(--text) !important;
+}
+.leaflet-control-layers label {
+  color: var(--text);
+}
+
+/* Dark tile loading background */
+.leaflet-container {
+  background: #0d1117;
+}
+
+/* ── Measurement label on map ─────────────────── */
+.measure-label {
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  white-space: nowrap;
+  border: none;
+  box-shadow: none;
+}
+
+/* ── Geoman toolbar dark overrides ────────────── */
+.leaflet-pm-toolbar .leaflet-pm-icon-delete,
+.leaflet-pm-toolbar .leaflet-pm-icon-edit {
+  filter: invert(0.85);
+}
+
+/* ── Dimension Labels ────────────────────────── */
+.dimension-label {
+  background: rgba(233, 69, 96, 0.85);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.dimension-editable {
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(255,255,255,0.5);
+}
+
+.dimension-editable:hover {
+  background: rgba(233, 69, 96, 1);
+  box-shadow: 0 0 6px rgba(233, 69, 96, 0.6);
+}
+
+.dimension-constrained {
+  background: rgba(46, 204, 113, 0.85);
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.dimension-constrained:hover {
+  background: rgba(46, 204, 113, 1);
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.6);
+}
+
+.dimension-angle {
+  background: rgba(46, 204, 113, 0.85);
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+  border: none;
+}
+
+.dimension-live {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  line-height: 1.4;
+}
+
+/* ── Elevation Labels ────────────────────────── */
+.elevation-label {
+  background: rgba(121, 85, 72, 0.85);
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+  border: none;
+}
+
+/* ── Contour Labels ──────────────────────────── */
+.contour-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #8D6E63;
+  font-size: 9px;
+  font-weight: 600;
+  text-shadow: 0 0 3px rgba(0,0,0,0.8);
+}
+
+/* ── Infrastructure Point Icons ──────────────── */
+.infra-point-icon {
+  background: none;
+  border: none;
+  text-align: center;
+  line-height: 18px;
+}
+
+/* ── Conflict Markers ────────────────────────── */
+.conflict-marker {
+  background: rgba(192, 57, 43, 0.9);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 13px;
+  text-align: center;
+  line-height: 20px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 6px rgba(192, 57, 43, 0.7);
+}

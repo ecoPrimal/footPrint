@@ -45,6 +45,12 @@ Built as a single-page web application with a Node.js backend. The frontend uses
 └─────────────────────────────────────────────────┘
 ```
 
+**Runtime registries**: `SourceManifest` endpoint and capability discovery (`src/core/manifest.ts`, bootstrap pack in `manifest-defaults.ts`); Primal capability registry (`src/core/primal.ts`, client wiring in `src/client/primals.ts`).
+
+**Persistence & bridges**: nestGate CAS dual-write with health monitoring (local JSON + CAS best-effort); petalTongue JSON-RPC 2.0 over `/ws`; Agent bridge JSON-RPC 2.0 with `domain.verb` semantics over `/ws/bridge`.
+
+**Quality**: 563 tests across 35 files (Vitest, strict TypeScript).
+
 ## Core Design Decisions
 
 **Entity-Component System**: All domain objects (shapes, layers, dimensions, constraints, annotations) are entities with typed component maps. This decouples data from behavior and enables the command/undo system.
@@ -53,7 +59,7 @@ Built as a single-page web application with a Node.js backend. The frontend uses
 
 **Discriminated Entity Types**: `TypedEntity` is a union of `ShapeEntity | LayerEntity | DimensionEntity | ConstraintEntity | AnnotationEntity`. Narrowing on `entity.kind` guarantees component presence at the type level.
 
-**Parametric Constraint Solver**: Damped Gauss-Newton iterative relaxation for geometric constraints. Active constraint types: fixed-distance, perpendicular, parallel, horizontal, vertical, coincident, point-on-line (7 active). Stubbed for future: tangent, symmetric, setback. Constraints drive geometry -- dimensions are not labels, they are parameters.
+**Parametric Constraint Solver**: Damped Gauss-Newton iterative relaxation for geometric constraints. Active constraint types (10): fixed-distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line, tangent, symmetric, setback. Constraints drive geometry -- dimensions are not labels, they are parameters.
 
 **RustScript Foundation**: The type system is built on Rust safety primitives (see [RUSTSCRIPT.md](RUSTSCRIPT.md)). This is not incidental -- it is the project's thesis that Rust's constraints improve code quality in any language.
 

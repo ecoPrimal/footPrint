@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { EntityId } from '../core/entity.js';
 import { createEntity } from '../core/entity.js';
 import { store } from '../core/store.js';
@@ -21,10 +22,10 @@ interface DefaultLayerDef {
 
 const DEFAULT_LAYERS: readonly DefaultLayerDef[] = [
   { id: layerId('property'), name: 'Property Boundary', color: hexColorUnchecked('#e74c3c') },
-  { id: layerId('fencing'),  name: 'Fencing',           color: hexColorUnchecked('#8B4513') },
-  { id: layerId('landscape'), name: 'Landscaping',      color: hexColorUnchecked('#27ae60') },
-  { id: layerId('utilities'), name: 'Utilities',        color: hexColorUnchecked('#f1c40f') },
-  { id: layerId('notes'),    name: 'Notes',             color: hexColorUnchecked('#3498db') },
+  { id: layerId('fencing'), name: 'Fencing', color: hexColorUnchecked('#8B4513') },
+  { id: layerId('landscape'), name: 'Landscaping', color: hexColorUnchecked('#27ae60') },
+  { id: layerId('utilities'), name: 'Utilities', color: hexColorUnchecked('#f1c40f') },
+  { id: layerId('notes'), name: 'Notes', color: hexColorUnchecked('#3498db') },
 ];
 
 let activeLayerId: EntityId | null = null;
@@ -68,7 +69,7 @@ export function setActiveLayer(entityId: EntityId): void {
   activeLayerId = entityId;
   renderLayerList();
   const res = store.get(entityId);
-  const color = (res.ok && res.value.kind === 'layer') ? res.value.components.style.color : hexColorUnchecked('#e94560');
+  const color = res.ok && res.value.kind === 'layer' ? res.value.components.style.color : hexColorUnchecked('#e94560');
   if (onLayerChange) onLayerChange(entityId, color);
 }
 
@@ -77,10 +78,12 @@ export function toggleLayerVisibility(entityId: EntityId): void {
   if (!res.ok || res.value.kind !== 'layer') return;
   const entity = res.value;
   const current = entity.components.layer.visible;
-  execute(new UpdateComponentCommand(entityId, 'layer', {
-    ...entity.components.layer,
-    visible: !current,
-  }));
+  execute(
+    new UpdateComponentCommand(entityId, 'layer', {
+      ...entity.components.layer,
+      visible: !current,
+    }),
+  );
   renderLayerList();
 }
 
@@ -89,7 +92,10 @@ export function deleteLayer(entityId: EntityId): void {
 
   // Remove from lookup
   for (const [key, val] of layerIdToEntityId) {
-    if (val === entityId) { layerIdToEntityId.delete(key); break; }
+    if (val === entityId) {
+      layerIdToEntityId.delete(key);
+      break;
+    }
   }
 
   if (activeLayerId === entityId) {
@@ -135,8 +141,12 @@ export function renderLayerList(): void {
     `;
 
     const eid = entityId;
-    li.querySelector('.layer-name')?.addEventListener('click', () => { setActiveLayer(eid); });
-    li.querySelector('.layer-color')?.addEventListener('click', () => { setActiveLayer(eid); });
+    li.querySelector('.layer-name')?.addEventListener('click', () => {
+      setActiveLayer(eid);
+    });
+    li.querySelector('.layer-color')?.addEventListener('click', () => {
+      setActiveLayer(eid);
+    });
     li.querySelector('.layer-visibility')?.addEventListener('click', (e: Event) => {
       e.stopPropagation();
       toggleLayerVisibility(eid);
@@ -176,7 +186,9 @@ export function serializeLayers(): SerializedLayers {
         ...(style ? { color: style.color } : {}),
         layerId: layerEntityId,
         _entityId: child.id,
-        ...(geo.shapeType === 'circle' && geo.radius != null ? { _radius: geo.radius, _shapeType: 'circle' as const } : {}),
+        ...(geo.shapeType === 'circle' && geo.radius != null
+          ? { _radius: geo.radius, _shapeType: 'circle' as const }
+          : {}),
       };
 
       features.push({
@@ -188,7 +200,10 @@ export function serializeLayers(): SerializedLayers {
 
     let layerKey = String(layerEntityId);
     for (const [key, val] of layerIdToEntityId) {
-      if (val === layerEntityId) { layerKey = key; break; }
+      if (val === layerEntityId) {
+        layerKey = key;
+        break;
+      }
     }
 
     data[layerKey] = {
@@ -207,16 +222,25 @@ export function deserializeLayers(data: SerializedLayers): void {
 
   for (const [id, layerData] of Object.entries(data)) {
     // Deserialize bypasses history intentionally -- project load is not undoable
-    const entityId = createLayerEntity(layerId(id), layerData.name, unwrapOr(parseHexColor(layerData.color), hexColorUnchecked('#9b59b6')), false);
+    const entityId = createLayerEntity(
+      layerId(id),
+      layerData.name,
+      unwrapOr(parseHexColor(layerData.color), hexColorUnchecked('#9b59b6')),
+      false,
+    );
 
     for (const feature of layerData.features) {
       const props = parseSerializedShapeProps(feature.properties);
 
       const shapeEntity = createEntity('shape', entityId);
-      const shapeType = props._shapeType === 'circle' ? 'circle' as const
-        : feature.geometry.type === 'Point' ? 'marker' as const
-        : feature.geometry.type === 'LineString' ? 'polyline' as const
-        : 'polygon' as const;
+      const shapeType =
+        props._shapeType === 'circle'
+          ? ('circle' as const)
+          : feature.geometry.type === 'Point'
+            ? ('marker' as const)
+            : feature.geometry.type === 'LineString'
+              ? ('polyline' as const)
+              : ('polygon' as const);
 
       shapeEntity.components.geometry = {
         geojson: feature.geometry,

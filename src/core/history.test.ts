@@ -1,5 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, beforeEach } from 'vitest';
-import { execute, undo, redo, canUndo, canRedo, clearHistory, getUndoCount, getRedoCount, initHistory } from './history.js';
+import {
+  execute,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
+  clearHistory,
+  getUndoCount,
+  getRedoCount,
+  initHistory,
+} from './history.js';
 import { store } from './store.js';
 import { createEntity } from './entity.js';
 import { AddEntityCommand, RemoveEntityCommand, UpdateComponentCommand } from './commands.js';

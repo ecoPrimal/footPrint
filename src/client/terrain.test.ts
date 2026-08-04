@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { generateContours, computeSlopeAspect } from './terrain.js';
@@ -98,11 +99,15 @@ describe('generateContours', () => {
   it('contour coordinates are within grid bounds', () => {
     const sw: [number, number] = [42.0, -84.0];
     const ne: [number, number] = [42.001, -83.999];
-    const grid = makeGrid([
-      [100, 100, 110],
-      [100, 110, 120],
-      [110, 120, 130],
-    ], sw, ne);
+    const grid = makeGrid(
+      [
+        [100, 100, 110],
+        [100, 110, 120],
+        [110, 120, 130],
+      ],
+      sw,
+      ne,
+    );
     const contours = generateContours(grid, 10);
     for (const c of contours) {
       for (const [lng, lat] of c.geometry.coordinates) {
@@ -117,7 +122,10 @@ describe('generateContours', () => {
 
 describe('computeSlopeAspect', () => {
   it('returns empty for grid smaller than 3x3', () => {
-    const grid = makeGrid([[100, 110], [120, 130]]);
+    const grid = makeGrid([
+      [100, 110],
+      [120, 130],
+    ]);
     expect(computeSlopeAspect(grid)).toEqual([]);
   });
 

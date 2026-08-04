@@ -59,7 +59,7 @@ not on `10.13.37.2`.
 | Path | Purpose |
 |------|---------|
 | `/ws` | petalTongue JSON-RPC bridge |
-| `/ws/bridge` | Agent state sync bridge |
+| `/ws/bridge` | Agent JSON-RPC 2.0 bridge (`project.sync`, `project.command`, `agent.message`, `bridge.health`) |
 
 ## Directories
 

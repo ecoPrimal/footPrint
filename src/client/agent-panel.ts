@@ -1,10 +1,19 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Agent panel UI -- shows AI actions, messages, and provides
  * a text input for the user to message the AI agent.
  */
 
-import { sendUserMessage } from './agent-bridge.js';
 import type { AgentTextMessage, AgentActionMessage } from '../agent/protocol.js';
+import {
+  agentQuery,
+  agentStream,
+  agentCancel,
+  agentStatus,
+  agentCapabilities,
+  bridgeHealth,
+  bridgeSubscribe,
+} from './petal-tongue.js';
 import { escHtml } from './html.js';
 import { AGENT_LOG_LIMIT } from '../constants.js';
 
@@ -14,6 +23,8 @@ let dotEl: HTMLElement | null = null;
 let panelEl: HTMLElement | null = null;
 let collapsed = true;
 let unreadCount = 0;
+let activeRequestId: number | undefined;
+let streamingText = '';
 
 export function initAgentPanel(): void {
   panelEl = document.getElementById('agent-panel');
@@ -31,15 +42,148 @@ export function initAgentPanel(): void {
     if (!input) return;
     const text = input.value.trim();
     if (!text) return;
-    sendUserMessage(text);
-    appendEntry('user', text);
     input.value = '';
+    void sendAgentMessage(text);
   };
 
   sendBtn?.addEventListener('click', doSend);
   input?.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') doSend();
+    if (e.key === 'Escape' && activeRequestId !== undefined) {
+      void agentCancel(activeRequestId).catch(() => undefined);
+      activeRequestId = undefined;
+      streamingText = '';
+      appendEntry('action', 'Request cancelled');
+    }
   });
+}
+
+async function sendAgentMessage(text: string): Promise<void> {
+  appendEntry('user', text);
+
+  if (activeRequestId !== undefined) {
+    void agentCancel(activeRequestId).catch(() => undefined);
+    activeRequestId = undefined;
+    streamingText = '';
+  }
+
+  try {
+    const result = await agentStream(text);
+    activeRequestId = extractRequestId(result);
+
+    if (activeRequestId === undefined) {
+      appendAgentResponse(result);
+    }
+  } catch {
+    try {
+      const result = await agentQuery(text);
+      appendAgentResponse(result);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Agent query failed';
+      appendEntry('action', message);
+    }
+  }
+}
+
+function appendAgentResponse(result: unknown): void {
+  const text = extractResponseText(result);
+  if (text) appendEntry('agent', text);
+}
+
+function extractRequestId(result: unknown): number | undefined {
+  if (typeof result === 'number') return result;
+  if (typeof result === 'object' && result !== null) {
+    const rec = result as Record<string, unknown>;
+    if (typeof rec['requestId'] === 'number') return rec['requestId'];
+    if (typeof rec['id'] === 'number') return rec['id'];
+  }
+  return undefined;
+}
+
+function extractResponseText(result: unknown): string {
+  if (typeof result === 'string') return result;
+  if (typeof result === 'object' && result !== null) {
+    const rec = result as Record<string, unknown>;
+    if (typeof rec['text'] === 'string') return rec['text'];
+    if (typeof rec['response'] === 'string') return rec['response'];
+    if (typeof rec['content'] === 'string') return rec['content'];
+  }
+  return typeof result === 'undefined' ? '' : JSON.stringify(result);
+}
+
+async function setupPetalTongueBridge(): Promise<void> {
+  try {
+    const [health, status, capabilities] = await Promise.all([bridgeHealth(), agentStatus(), agentCapabilities()]);
+    await bridgeSubscribe('agent');
+    appendEntry('action', `Bridge healthy: ${formatBrief(health)}`);
+    appendEntry('action', `Agent status: ${formatBrief(status)}`);
+    appendEntry('action', `Capabilities: ${formatBrief(capabilities)}`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'petalTongue bridge unavailable';
+    appendEntry('action', message);
+  }
+}
+
+function formatBrief(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null) {
+    const text = JSON.stringify(value);
+    return text.length > 120 ? `${text.slice(0, 117)}...` : text;
+  }
+  return String(value);
+}
+
+export function onPetalTongueStatusChange(connected: boolean): void {
+  if (dotEl) {
+    dotEl.className = connected ? 'agent-dot-connected' : 'agent-dot-disconnected';
+  }
+  if (connected) {
+    appendEntry('action', 'Connected to petalTongue');
+    void setupPetalTongueBridge();
+  } else {
+    activeRequestId = undefined;
+    streamingText = '';
+  }
+}
+
+export function onPetalTongueNotification(method: string, params: unknown): void {
+  if (method === 'agent.stream.chunk' || method === 'agent.stream.delta') {
+    const chunk = extractStreamChunk(params);
+    if (chunk) {
+      streamingText += chunk;
+      appendEntry('agent', streamingText);
+    }
+    return;
+  }
+
+  if (method === 'agent.stream.end' || method === 'agent.stream.done') {
+    activeRequestId = undefined;
+    if (streamingText) {
+      appendEntry('agent', streamingText);
+      streamingText = '';
+    } else {
+      const text = extractResponseText(params);
+      if (text) appendEntry('agent', text);
+    }
+    return;
+  }
+
+  if (method === 'agent.message' || method === 'agent.response') {
+    appendAgentResponse(params);
+    activeRequestId = undefined;
+    streamingText = '';
+  }
+}
+
+function extractStreamChunk(params: unknown): string {
+  if (typeof params === 'string') return params;
+  if (typeof params === 'object' && params !== null) {
+    const rec = params as Record<string, unknown>;
+    if (typeof rec['chunk'] === 'string') return rec['chunk'];
+    if (typeof rec['text'] === 'string') return rec['text'];
+    if (typeof rec['delta'] === 'string') return rec['delta'];
+  }
+  return '';
 }
 
 function togglePanel(): void {
@@ -101,8 +245,7 @@ function appendEntry(kind: 'agent' | 'action' | 'user', text: string, entityId?:
   }
 }
 
-
-// Called by agent-bridge when a message arrives from the server
+// Called by agent-bridge when a message arrives from the FootPrint server
 export function onAgentMessage(msg: AgentTextMessage | AgentActionMessage): void {
   if (msg.type === 'agent-message') {
     appendEntry('agent', msg.text);
@@ -112,9 +255,6 @@ export function onAgentMessage(msg: AgentTextMessage | AgentActionMessage): void
 }
 
 export function setAgentConnectionStatus(connected: boolean): void {
-  if (dotEl) {
-    dotEl.className = connected ? 'agent-dot-connected' : 'agent-dot-disconnected';
-  }
   if (connected) {
     appendEntry('action', 'Connected to FootPrint server');
   }

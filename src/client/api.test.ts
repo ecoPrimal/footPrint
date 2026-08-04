@@ -1,5 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { proxyUrl, proxyGet, proxyPost, listProjects, loadProject, saveProject, deleteProject, agentWsUrl, petalTongueWsUrl } from './api.js';
+import {
+  proxyUrl,
+  proxyGet,
+  proxyPost,
+  listProjects,
+  loadProject,
+  saveProject,
+  deleteProject,
+  agentWsUrl,
+  petalTongueWsUrl,
+} from './api.js';
 
 const mockFetch = vi.fn();
 
@@ -50,14 +61,11 @@ describe('proxyPost', () => {
     });
 
     await proxyPost('https://overpass-api.de/api/interpreter', 'data=query');
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/ext?url=https%3A%2F%2Foverpass-api.de%2Fapi%2Finterpreter',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'data=query',
-      },
-    );
+    expect(mockFetch).toHaveBeenCalledWith('/ext?url=https%3A%2F%2Foverpass-api.de%2Fapi%2Finterpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'data=query',
+    });
   });
 
   it('throws on non-ok response', async () => {

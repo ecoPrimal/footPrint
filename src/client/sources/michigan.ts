@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { ArcGISFeatureResponse, MichiganRoadProperties } from '../../types/arcgis.js';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { MI_FRAMEWORK_BASE, MI_ROADS_LAYER } from '../../constants.js';
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
+import { MI_ROADS_LAYER } from '../../constants.js';
 import { proxyGet } from '../api.js';
 
 export function registerMichiganSources(): void {
@@ -13,10 +15,7 @@ export function registerMichiganSources(): void {
     color: hexColorUnchecked('#78909C'),
     minZoom: 15,
     fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
-      const bbox = [
-        bounds.getWest(), bounds.getSouth(),
-        bounds.getEast(), bounds.getNorth(),
-      ].join(',');
+      const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(',');
 
       const params = new URLSearchParams({
         geometry: bbox,
@@ -28,7 +27,7 @@ export function registerMichiganSources(): void {
         returnGeometry: 'true',
       });
 
-      const url = `${MI_FRAMEWORK_BASE}/${String(MI_ROADS_LAYER)}/query?${params.toString()}`;
+      const url = `${getEndpoint(endpointKey('mi-framework'))}/${String(MI_ROADS_LAYER)}/query?${params.toString()}`;
       const data = await proxyGet<ArcGISFeatureResponse>(url);
       return data.features ?? [];
     },

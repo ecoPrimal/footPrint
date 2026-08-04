@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Non-blocking modal dialogs replacing native alert/prompt/confirm.
  *
@@ -23,7 +24,10 @@ export function modalAlert(title: string, message: string): Promise<void> {
     const t = titleEl();
     const b = bodyEl();
     const c = closeBtn();
-    if (!t || !b) { resolve(); return; }
+    if (!t || !b) {
+      resolve();
+      return;
+    }
 
     t.textContent = title;
     b.innerHTML = `
@@ -31,7 +35,10 @@ export function modalAlert(title: string, message: string): Promise<void> {
       <button class="modal-action-btn" data-action="ok">OK</button>
     `;
 
-    const cleanup = () => { hideModal(); resolve(); };
+    const cleanup = () => {
+      hideModal();
+      resolve();
+    };
     b.querySelector('[data-action="ok"]')?.addEventListener('click', cleanup, { once: true });
     c?.addEventListener('click', cleanup, { once: true });
     showModal();
@@ -43,7 +50,10 @@ export function modalConfirm(title: string, message: string): Promise<boolean> {
     const t = titleEl();
     const b = bodyEl();
     const c = closeBtn();
-    if (!t || !b) { resolve(false); return; }
+    if (!t || !b) {
+      resolve(false);
+      return;
+    }
 
     t.textContent = title;
     b.innerHTML = `
@@ -54,10 +64,31 @@ export function modalConfirm(title: string, message: string): Promise<boolean> {
       </div>
     `;
 
-    const done = (val: boolean) => { hideModal(); resolve(val); };
-    b.querySelector('[data-action="confirm"]')?.addEventListener('click', () => { done(true); }, { once: true });
-    b.querySelector('[data-action="cancel"]')?.addEventListener('click', () => { done(false); }, { once: true });
-    c?.addEventListener('click', () => { done(false); }, { once: true });
+    const done = (val: boolean) => {
+      hideModal();
+      resolve(val);
+    };
+    b.querySelector('[data-action="confirm"]')?.addEventListener(
+      'click',
+      () => {
+        done(true);
+      },
+      { once: true },
+    );
+    b.querySelector('[data-action="cancel"]')?.addEventListener(
+      'click',
+      () => {
+        done(false);
+      },
+      { once: true },
+    );
+    c?.addEventListener(
+      'click',
+      () => {
+        done(false);
+      },
+      { once: true },
+    );
     showModal();
   });
 }
@@ -67,7 +98,10 @@ export function modalPrompt(title: string, message: string, defaultValue = ''): 
     const t = titleEl();
     const b = bodyEl();
     const c = closeBtn();
-    if (!t || !b) { resolve(null); return; }
+    if (!t || !b) {
+      resolve(null);
+      return;
+    }
 
     t.textContent = title;
     b.innerHTML = `
@@ -80,13 +114,32 @@ export function modalPrompt(title: string, message: string, defaultValue = ''): 
     `;
 
     const input: HTMLInputElement | null = b.querySelector('.modal-prompt-input');
-    const done = (val: string | null) => { hideModal(); resolve(val); };
+    const done = (val: string | null) => {
+      hideModal();
+      resolve(val);
+    };
 
-    b.querySelector('[data-action="ok"]')?.addEventListener('click', () => {
-      done(input?.value ?? null);
-    }, { once: true });
-    b.querySelector('[data-action="cancel"]')?.addEventListener('click', () => { done(null); }, { once: true });
-    c?.addEventListener('click', () => { done(null); }, { once: true });
+    b.querySelector('[data-action="ok"]')?.addEventListener(
+      'click',
+      () => {
+        done(input?.value ?? null);
+      },
+      { once: true },
+    );
+    b.querySelector('[data-action="cancel"]')?.addEventListener(
+      'click',
+      () => {
+        done(null);
+      },
+      { once: true },
+    );
+    c?.addEventListener(
+      'click',
+      () => {
+        done(null);
+      },
+      { once: true },
+    );
 
     showModal();
     input?.focus();

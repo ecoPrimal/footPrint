@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { NRCS_WMS_URL } from '../../constants.js';
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
 
 export function registerSoilsSource(): void {
   registerSource({
@@ -9,7 +10,7 @@ export function registerSoilsSource(): void {
     category: 'Soils',
     color: hexColorUnchecked('#8D6E63'),
     type: 'wms',
-    wmsUrl: NRCS_WMS_URL,
+    wmsUrl: getEndpoint(endpointKey('nrcs-wms')),
     wmsLayers: 'mapunitpoly',
     wmsFormat: 'image/png',
     wmsVersion: '1.1.1',

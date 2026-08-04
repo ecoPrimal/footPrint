@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { isOverpassNode, isOverpassWay, isOverpassRelation } from './overpass.js';
 import type { OverpassElement } from './overpass.js';
@@ -33,16 +34,28 @@ describe('Overpass type guards', () => {
 
 describe('Source type guards', () => {
   const vec: DataSourceDef = {
-    id: dummyId, name: 'v', category: 'c', color: dummyColor,
+    id: dummyId,
+    name: 'v',
+    category: 'c',
+    color: dummyColor,
     fetch: () => Promise.resolve([]),
   };
   const tile: DataSourceDef = {
-    id: dummyId, name: 't', category: 'c', color: dummyColor,
-    type: 'tiles', tileUrl: 'https://example.com/{z}/{x}/{y}.png',
+    id: dummyId,
+    name: 't',
+    category: 'c',
+    color: dummyColor,
+    type: 'tiles',
+    tileUrl: 'https://example.com/{z}/{x}/{y}.png',
   };
   const wms: DataSourceDef = {
-    id: dummyId, name: 'w', category: 'c', color: dummyColor,
-    type: 'wms', wmsUrl: 'https://example.com/wms', wmsLayers: 'layer1',
+    id: dummyId,
+    name: 'w',
+    category: 'c',
+    color: dummyColor,
+    type: 'wms',
+    wmsUrl: 'https://example.com/wms',
+    wmsLayers: 'layer1',
   };
 
   it('isVectorSource identifies vector (no type) and rejects others', () => {

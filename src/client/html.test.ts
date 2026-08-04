@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { escHtml } from './html.js';
 
@@ -15,7 +16,7 @@ describe('escHtml', () => {
   });
 
   it('escapes single quotes', () => {
-    expect(escHtml("it's")).toBe("it&#39;s");
+    expect(escHtml("it's")).toBe('it&#39;s');
   });
 
   it('handles empty string', () => {
@@ -27,8 +28,6 @@ describe('escHtml', () => {
   });
 
   it('escapes all special chars together', () => {
-    expect(escHtml('<a href="x&y">it\'s</a>')).toBe(
-      '&lt;a href=&quot;x&amp;y&quot;&gt;it&#39;s&lt;/a&gt;'
-    );
+    expect(escHtml('<a href="x&y">it\'s</a>')).toBe('&lt;a href=&quot;x&amp;y&quot;&gt;it&#39;s&lt;/a&gt;');
   });
 });

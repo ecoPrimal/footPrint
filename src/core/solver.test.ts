@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import {
   fixedDistanceError,
@@ -7,6 +8,10 @@ import {
   verticalError,
   coincidentError,
   pointOnLineError,
+  tangentError,
+  symmetricError,
+  symmetricErrorFixedAxis,
+  setbackError,
   solveLinearSystem,
   gaussNewtonStep,
 } from './solver.js';
@@ -122,6 +127,89 @@ describe('solver error functions', () => {
     it('returns empty array when lineEnd is undefined', () => {
       const c = coords2d([0, 0], [5, 5]);
       expect(pointOnLineError(c, 1, 0, undefined)).toEqual([]);
+    });
+  });
+
+  describe('tangentError', () => {
+    it('returns zero error when center distance equals sum of radii (external)', () => {
+      const c = coords2d([0, 0], [5, 0]);
+      expect(tangentError(c, 0, 1, 5).error).toBeCloseTo(0, 10);
+    });
+
+    it('returns zero error when center distance equals difference of radii (internal)', () => {
+      const c = coords2d([0, 0], [2, 0]);
+      expect(tangentError(c, 0, 1, 2).error).toBeCloseTo(0, 10);
+    });
+
+    it('returns positive error when circles are too far apart', () => {
+      const c = coords2d([0, 0], [7, 0]);
+      expect(tangentError(c, 0, 1, 5).error).toBeCloseTo(2, 10);
+    });
+
+    it('returns negative error when circles overlap externally', () => {
+      const c = coords2d([0, 0], [3, 0]);
+      expect(tangentError(c, 0, 1, 5).error).toBeCloseTo(-2, 10);
+    });
+  });
+
+  describe('symmetricError', () => {
+    it('returns zero errors for points mirrored across the Y axis', () => {
+      const c = coords2d([0, 2], [0, -2], [-1, 0], [1, 0]);
+      const errors = symmetricError(c, 0, 1, 2, 3);
+      expect(errors).toHaveLength(2);
+      expect(errors[0]!.error).toBeCloseTo(0, 10);
+      expect(errors[1]!.error).toBeCloseTo(0, 10);
+    });
+
+    it('returns non-zero when points are not symmetric', () => {
+      const c = coords2d([1, 2], [1, -1], [-1, 0], [1, 0]);
+      const errors = symmetricError(c, 0, 1, 2, 3);
+      const residual = Math.sqrt(errors.reduce((s, e) => s + e.error * e.error, 0));
+      expect(residual).toBeGreaterThan(0.01);
+    });
+  });
+
+  describe('symmetricErrorFixedAxis', () => {
+    it('returns zero errors for reflection across horizontal axis through origin', () => {
+      const c = coords2d([2, 3], [2, -3]);
+      const errors = symmetricErrorFixedAxis(c, 0, 1, [0, 0], [1, 0]);
+      expect(errors[0]!.error).toBeCloseTo(0, 10);
+      expect(errors[1]!.error).toBeCloseTo(0, 10);
+    });
+  });
+
+  describe('setbackError', () => {
+    it('returns zero errors when edge satisfies minimum distance', () => {
+      const c = coords2d([0, 5], [2, 5], [0, 0], [10, 0]);
+      const errors = setbackError(c, 0, 1, 2, 3, 3);
+      expect(errors).toHaveLength(2);
+      expect(errors[0]!.error).toBeCloseTo(0, 10);
+      expect(errors[1]!.error).toBeCloseTo(0, 10);
+    });
+
+    it('returns positive errors when edge violates minimum distance', () => {
+      const c = coords2d([0, 1], [2, 1], [0, 0], [10, 0]);
+      const errors = setbackError(c, 0, 1, 2, 3, 3);
+      expect(errors[0]!.error).toBeCloseTo(2, 10);
+      expect(errors[1]!.error).toBeCloseTo(2, 10);
+    });
+
+    it('returns zero jacobian when constraint is satisfied', () => {
+      const c = coords2d([0, 5], [2, 5], [0, 0], [10, 0]);
+      const errors = setbackError(c, 0, 1, 2, 3, 3);
+      expect(errors[0]!.jacobian.every((v) => v === 0)).toBe(true);
+    });
+
+    it('converges edge away from reference line in multiple steps', () => {
+      const x = [0, 1, 2, 1, 0, 0, 10, 0];
+      for (let i = 0; i < 80; i++) {
+        const errs = [...setbackError(x, 0, 1, 2, 3, 3), horizontalError(x, 2, 3)];
+        const residual = Math.sqrt(errs.reduce((s, e) => s + e.error * e.error, 0));
+        if (residual < 1e-8) break;
+        gaussNewtonStep(x, errs);
+      }
+      expect(x[1]).toBeGreaterThanOrEqual(2.99);
+      expect(x[3]).toBeGreaterThanOrEqual(2.99);
     });
   });
 });

@@ -2,6 +2,8 @@
 
 GIS home improvement planner — satellite map overlays, CAD-like drawing tools, and parametric constraint solving for property planning.
 
+**Maturity:** `research-ready` — Last measured: 2026-08-03
+
 **footPrint is a [protist](../../infra/wateringHole/handoffs/FRAGO_PROTISTS_CATEGORY_136b.md)** — a browser-based product served BY ecoPrimals primals, not a primal itself. The Express backend disappears into a primal composition.
 
 ## Stack
@@ -24,15 +26,19 @@ Browser (Vite)
   └─ src/client/app.ts
        ├── Leaflet + Geoman + Turf (npm imports)
        ├── ECS: entity → store → commands → history → renderer
-       ├── Gauss-Newton constraint solver (7 active constraint types)
+       ├── Gauss-Newton constraint solver (10 active constraint types)
        ├── Data source overlays (8 source modules, 15 sources)
        ├── Intelligence (proximity, conflicts, elevation)
        ├── Terrain (DEM grid, contours, slope/aspect)
        ├── Discovery (auto-enables sources on property draw)
-       ├── petalTongue bridge (JSON-RPC over WebSocket)
-       ├── nestGate CAS client (dual-write project persistence)
-       ├── Interactive tutorial (11-step guided walkthrough)
-       └── Agent bridge (WebSocket state sync)
+       ├── SourceManifest registry (runtime endpoint + capability discovery)
+       ├── Two JSON-RPC 2.0 WebSocket bridges: petalTongue (/ws) + Agent (domain.verb /ws/bridge)
+       ├── nestGate CAS client (dual-write project persistence + health monitoring)
+       ├── Primal capability registry (src/core/primal.ts, src/client/primals.ts)
+       └── Interactive tutorial (11-step guided walkthrough)
+
+CSS: 5 modules (base, controls, map, panels, tutorial) — public/css/
+563 tests in 35 files, all SPDX-headered
 
 Express (:3000) — src/server.ts [DISAPPEARS]
   ├── Project CRUD      → absorbed by nestGate CAS
@@ -52,10 +58,9 @@ All mutations go through the command pipeline with full undo/redo:
 
 ### Constraint Solver
 
-Gauss-Newton iterative solver with Levenberg-Marquardt damping (7 active types):
+Gauss-Newton iterative solver with Levenberg-Marquardt damping (10 active types):
 
-- Fixed distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line
-- Stubs: tangent, symmetric, setback
+- Fixed distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line, tangent, symmetric, setback
 - 50 max iterations, 1e-8 tolerance, 0.5 step size
 - Dense J^T·J linear system with partial-pivot Gauss elimination
 - Pure math engine extracted to `src/core/solver.ts` (testable without ECS)

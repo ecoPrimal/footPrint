@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rust's Cow<'a, T> -- Clone-on-Write smart pointer.
  *

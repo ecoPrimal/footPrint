@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** @vitest-environment jsdom */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { startTutorial, isTutorialComplete, resetTutorial, initTutorial, _resetState } from './tutorial.js';
@@ -47,28 +48,28 @@ describe('tutorial', () => {
 
   it('navigates forward with Next button', () => {
     startTutorial();
-    const tooltip = document.getElementById('tutorial-tooltip');
-    const nextBtn = tooltip?.querySelector('.tutorial-next') as HTMLButtonElement;
+    const tooltip = document.getElementById('tutorial-tooltip')!;
+    const nextBtn = tooltip.querySelector<HTMLButtonElement>('.tutorial-next')!;
     nextBtn.click();
-    expect(tooltip?.innerHTML).toContain('Search Any Address');
-    expect(tooltip?.innerHTML).toContain('2 / 11');
+    expect(tooltip.innerHTML).toContain('Search Any Address');
+    expect(tooltip.innerHTML).toContain('2 / 11');
   });
 
   it('navigates back with Back button', () => {
     startTutorial();
-    const tooltip = document.getElementById('tutorial-tooltip');
-    (tooltip?.querySelector('.tutorial-next') as HTMLButtonElement).click();
-    (tooltip?.querySelector('.tutorial-prev') as HTMLButtonElement).click();
-    expect(tooltip?.innerHTML).toContain('Choose a Location');
+    const tooltip = document.getElementById('tutorial-tooltip')!;
+    tooltip.querySelector<HTMLButtonElement>('.tutorial-next')!.click();
+    tooltip.querySelector<HTMLButtonElement>('.tutorial-prev')!.click();
+    expect(tooltip.innerHTML).toContain('Choose a Location');
   });
 
   it('completes tutorial and sets localStorage', () => {
     startTutorial();
     expect(isTutorialComplete()).toBe(false);
 
-    const tooltip = document.getElementById('tutorial-tooltip');
+    const tooltip = document.getElementById('tutorial-tooltip')!;
     for (let i = 0; i < 11; i++) {
-      const nextBtn = tooltip?.querySelector('.tutorial-next') as HTMLButtonElement;
+      const nextBtn = tooltip.querySelector<HTMLButtonElement>('.tutorial-next');
       if (nextBtn) nextBtn.click();
     }
 
@@ -86,7 +87,7 @@ describe('tutorial', () => {
 
   it('closes via X button', () => {
     startTutorial();
-    const closeBtn = document.querySelector('.tutorial-close') as HTMLButtonElement;
+    const closeBtn = document.querySelector<HTMLButtonElement>('.tutorial-close')!;
     closeBtn.click();
     expect(document.getElementById('tutorial-overlay')).toBeNull();
   });

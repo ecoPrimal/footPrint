@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import { centroid } from '@turf/centroid';
 import { distance } from '@turf/distance';
@@ -8,7 +9,8 @@ import { lineIntersect } from '@turf/line-intersect';
 import { bearing } from '@turf/bearing';
 import { polygonToLine } from '@turf/polygon-to-line';
 import { point } from '@turf/helpers';
-import { FEET_PER_METER, CONFLICT_BUFFER_M, PROXIMITY_UI_LIMIT, CONFLICT_UTILITY_SOURCE_IDS, ELEVATION_SAMPLE_CAP } from '../constants.js';
+import { FEET_PER_METER, CONFLICT_BUFFER_M, PROXIMITY_UI_LIMIT, ELEVATION_SAMPLE_CAP } from '../constants.js';
+import { getSourceIdsByCapability } from '../core/manifest.js';
 import type { ProximityResult } from '../types/spatial.js';
 import { escHtml } from './html.js';
 import { layerToFeature } from './geojson.js';
@@ -44,9 +46,7 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
   let shapeBoundary: GeoJSON.Feature | null = null;
   if (geo.geometry.type === 'Polygon' || geo.geometry.type === 'MultiPolygon') {
     try {
-      shapeBoundary = polygonToLine(
-        geo as GeoJSON.Feature<GeoJSON.Polygon>,
-      ) as GeoJSON.Feature;
+      shapeBoundary = polygonToLine(geo as GeoJSON.Feature<GeoJSON.Polygon>) as GeoJSON.Feature;
     } catch {
       // fall back to centroid
     }
@@ -73,11 +73,9 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
         if (feat.geometry.type === 'Point') {
           const coords = coordPair(feat.geometry.coordinates);
           if (shapeBoundary) {
-            const snapped = nearestPointOnLine(
-              shapeBoundary as GeoJSON.Feature<GeoJSON.LineString>,
-              point(coords),
-              { units: 'meters' },
-            );
+            const snapped = nearestPointOnLine(shapeBoundary as GeoJSON.Feature<GeoJSON.LineString>, point(coords), {
+              units: 'meters',
+            });
             dist = snapDist(snapped);
           } else {
             dist = distance(shapeCenter, point(coords), { units: 'meters' });
@@ -85,11 +83,9 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
           nearPt = coords;
         } else if (feat.geometry.type === 'LineString') {
           if (shapeBoundary) {
-            const snapped = nearestPointOnLine(
-              feat as GeoJSON.Feature<GeoJSON.LineString>,
-              shapeCenter,
-              { units: 'meters' },
-            );
+            const snapped = nearestPointOnLine(feat as GeoJSON.Feature<GeoJSON.LineString>, shapeCenter, {
+              units: 'meters',
+            });
             const snapCoords = coordPair(snapped.geometry.coordinates);
             const toShape = nearestPointOnLine(
               shapeBoundary as GeoJSON.Feature<GeoJSON.LineString>,
@@ -99,11 +95,9 @@ export function computeProximity(shape: L.Layer): ProximityResult[] {
             dist = snapDist(toShape);
             nearPt = snapCoords;
           } else {
-            const snapped = nearestPointOnLine(
-              feat as GeoJSON.Feature<GeoJSON.LineString>,
-              shapeCenter,
-              { units: 'meters' },
-            );
+            const snapped = nearestPointOnLine(feat as GeoJSON.Feature<GeoJSON.LineString>, shapeCenter, {
+              units: 'meters',
+            });
             dist = snapDist(snapped);
             nearPt = coordPair(snapped.geometry.coordinates);
           }
@@ -188,8 +182,6 @@ export function compassDir(bearing: number): string {
   return dirs[idx] ?? 'N';
 }
 
-const UTILITY_SOURCE_IDS = CONFLICT_UTILITY_SOURCE_IDS;
-
 function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
   const geo = layerToFeature(shape);
   if (!geo) return [];
@@ -204,7 +196,7 @@ function detectConflicts(shape: L.Layer): GeoJSON.Feature[] {
   const conflicts: GeoJSON.Feature[] = [];
   const sources = getAllSources();
 
-  for (const id of UTILITY_SOURCE_IDS) {
+  for (const id of getSourceIdsByCapability('intelligence:utility-conflict')) {
     const src = sources[id];
     if (!src?.enabled || src.type !== 'vector') continue;
 
@@ -236,7 +228,10 @@ export function renderConflicts(shape: L.Layer): void {
     try {
       let intersectPt: [number, number] | null = null;
 
-      if (conflict.geometry.type === 'LineString' && (geo.geometry.type === 'Polygon' || geo.geometry.type === 'LineString')) {
+      if (
+        conflict.geometry.type === 'LineString' &&
+        (geo.geometry.type === 'Polygon' || geo.geometry.type === 'LineString')
+      ) {
         const crossed = lineIntersect(
           geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.LineString>,
           conflict as GeoJSON.Feature<GeoJSON.LineString>,

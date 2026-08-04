@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import { distance as turfDistance } from '@turf/distance';
@@ -77,9 +78,7 @@ function createDimensionEntities(shapeEntityId: EntityId): void {
     const to = coords[i + 1];
     if (!from || !to) continue;
 
-    const dist = turfDistance(
-      point(from), point(to), { units: 'feet' },
-    );
+    const dist = turfDistance(point(from), point(to), { units: 'feet' });
 
     const dimEntity = createEntity('dimension', shapeEntityId);
     dimEntity.components.dimension = {
@@ -99,11 +98,14 @@ const dimensionReactiveComputation: DerivedComputation<Command[]> = {
   watchComponents: ['geometry'],
 
   dependencies(): EntityId[] {
-    return store.withComponent('dimension').filterMap((dimId) => {
-      const res = store.get(dimId);
-      if (!res.ok || res.value.kind !== 'dimension') return None();
-      return Some(res.value.components.dimension.targetEntityId);
-    }).collect();
+    return store
+      .withComponent('dimension')
+      .filterMap((dimId) => {
+        const res = store.get(dimId);
+        if (!res.ok || res.value.kind !== 'dimension') return None();
+        return Some(res.value.components.dimension.targetEntityId);
+      })
+      .collect();
   },
 
   compute(): Command[] {
@@ -122,15 +124,15 @@ const dimensionReactiveComputation: DerivedComputation<Command[]> = {
       const to = coords[dim.toVertex];
       if (!from || !to) continue;
 
-      const dist = turfDistance(
-        point(from), point(to), { units: 'feet' },
-      );
+      const dist = turfDistance(point(from), point(to), { units: 'feet' });
 
       if (Math.abs(dist - dim.value) > 0.01) {
-        cmds.push(new UpdateComponentCommand(dimId, 'dimension', {
-          ...dim,
-          value: Math.round(dist * 10) / 10,
-        }));
+        cmds.push(
+          new UpdateComponentCommand(dimId, 'dimension', {
+            ...dim,
+            value: Math.round(dist * 10) / 10,
+          }),
+        );
       }
     }
     return cmds;
@@ -168,30 +170,21 @@ function addSegmentLabel(from: L.LatLng, to: L.LatLng): void {
   const mid = midpoint(p1, p2);
   const dist = turfDistance(p1, p2, { units: 'feet' });
 
-  const label = L.marker(
-    [mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple,
-    {
-      icon: L.divIcon({
-        className: 'dimension-label',
-        html: formatDist(dist),
-        iconSize: [60, 16],
-        iconAnchor: [30, 8],
-      }),
-      interactive: false,
-    },
-  );
+  const label = L.marker([mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple, {
+    icon: L.divIcon({
+      className: 'dimension-label',
+      html: formatDist(dist),
+      iconSize: [60, 16],
+      iconAnchor: [30, 8],
+    }),
+    interactive: false,
+  });
   dimensionLayer.addLayer(label);
 }
 
 function addAngleLabel(a: L.LatLng, vertex: L.LatLng, b: L.LatLng): void {
-  const bearing1 = turfBearing(
-    point([vertex.lng, vertex.lat]),
-    point([a.lng, a.lat]),
-  );
-  const bearing2 = turfBearing(
-    point([vertex.lng, vertex.lat]),
-    point([b.lng, b.lat]),
-  );
+  const bearing1 = turfBearing(point([vertex.lng, vertex.lat]), point([a.lng, a.lat]));
+  const bearing2 = turfBearing(point([vertex.lng, vertex.lat]), point([b.lng, b.lat]));
   let angle = Math.abs(bearing2 - bearing1);
   if (angle > 180) angle = 360 - angle;
 
@@ -220,11 +213,7 @@ function updateLiveLabel(cursor: L.LatLng): void {
     const va = vertices[i - 1];
     const vb = vertices[i];
     if (va && vb) {
-      totalDist += turfDistance(
-        point([va.lng, va.lat]),
-        point([vb.lng, vb.lat]),
-        { units: 'feet' },
-      );
+      totalDist += turfDistance(point([va.lng, va.lat]), point([vb.lng, vb.lat]), { units: 'feet' });
     }
   }
   totalDist += dist;

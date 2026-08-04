@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export const SHAPE_STATUSES = ['planned', 'in-progress', 'complete'] as const;
-export type ShapeStatus = typeof SHAPE_STATUSES[number];
+export type ShapeStatus = (typeof SHAPE_STATUSES)[number];
 
 const SHAPE_STATUS_SET: ReadonlySet<string> = new Set(SHAPE_STATUSES);
 

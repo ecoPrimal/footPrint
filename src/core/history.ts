@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Command } from './commands.js';
 import { store } from './store.js';
 import { Owned, take } from '../rustscript/owned.js';

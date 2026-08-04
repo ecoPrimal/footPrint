@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { TerrainGrid } from './terrain.js';
 
 export interface ProximityResult {
@@ -31,12 +32,12 @@ export interface DiscoveryReport {
 type CategoryBoost = Record<string, number>;
 
 export const DEFAULT_CATEGORY_BOOSTS: Readonly<CategoryBoost> = {
-  'OpenStreetMap': 0.9,
-  'Property': 0.85,
-  'FEMA': 0.7,
-  'Lansing': 0.6,
-  'USGS': 0.8,
-  'Soils': 0.7,
-  'Michigan': 0.4,
-  'Infrastructure': 1.0,
+  OpenStreetMap: 0.9,
+  Property: 0.85,
+  FEMA: 0.7,
+  Lansing: 0.6,
+  USGS: 0.8,
+  Soils: 0.7,
+  Michigan: 0.4,
+  Infrastructure: 1.0,
 };

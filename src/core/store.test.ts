@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityStore } from './store.js';
 import { createEntity } from './entity.js';
@@ -32,7 +33,9 @@ function makeShape(store: EntityStore, parentId: ReturnType<typeof createEntity>
 describe('EntityStore CRUD', () => {
   let store: EntityStore;
 
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('adds and retrieves entities', () => {
     const layer = makeLayer(store);
@@ -92,7 +95,9 @@ describe('EntityStore CRUD', () => {
 describe('EntityStore queries', () => {
   let store: EntityStore;
 
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('byKind returns entities of the given kind', () => {
     makeLayer(store);
@@ -132,7 +137,9 @@ describe('EntityStore queries', () => {
 describe('EntityStore events', () => {
   let store: EntityStore;
 
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('emits add events', () => {
     const events: StoreEvent[] = [];
@@ -193,7 +200,9 @@ describe('EntityStore events', () => {
 describe('EntityStore borrow rules', () => {
   let store: EntityStore;
 
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('allows multiple immutable borrows', () => {
     const layer = makeLayer(store);

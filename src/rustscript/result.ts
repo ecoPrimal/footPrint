@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rust's Result<T, E> -- a discriminated union that forces handling both paths.
  * Unlike `T | undefined`, you cannot silently ignore the error case.
  */
-export type Result<T, E> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: E };
+export type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
 export function Ok<T>(value: T): Result<T, never> {
   return { ok: true, value };
@@ -76,9 +75,6 @@ export function andThen<T, U, E>(result: Result<T, E>, fn: (value: T) => Result<
  * Pattern match on a Result, handling both branches.
  * Equivalent to Rust's `match result { Ok(v) => ..., Err(e) => ... }`.
  */
-export function match<T, E, R>(
-  result: Result<T, E>,
-  handlers: { ok: (value: T) => R; err: (error: E) => R },
-): R {
+export function match<T, E, R>(result: Result<T, E>, handlers: { ok: (value: T) => R; err: (error: E) => R }): R {
   return result.ok ? handlers.ok(result.value) : handlers.err(result.error);
 }

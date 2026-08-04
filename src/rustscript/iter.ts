@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rust's Iterator trait -- lazy, composable data pipelines in TypeScript.
  *
@@ -46,7 +47,7 @@ export class Iter<T> implements Iterable<T> {
 
   static fromArray<T>(arr: readonly T[]): Iter<T> {
     let i = 0;
-    return new Iter(() => i < arr.length ? Some(arr[i++] as T) : None());
+    return new Iter(() => (i < arr.length ? Some(arr[i++] as T) : None()));
   }
 
   static fromRange(start: number, end: number, step = 1): Iter<number> {
@@ -125,9 +126,7 @@ export class Iter<T> implements Iterable<T> {
     return new Iter(() => {
       const a = this.next();
       const b = other.next();
-      return (isSome(a) && isSome(b))
-        ? Some([a.value, b.value] as [T, U])
-        : None();
+      return isSome(a) && isSome(b) ? Some([a.value, b.value] as [T, U]) : None();
     });
   }
 
@@ -222,7 +221,10 @@ export class Iter<T> implements Iterable<T> {
   }
 
   collect(): T[] {
-    return this.fold<T[]>([], (acc, v) => { acc.push(v); return acc; });
+    return this.fold<T[]>([], (acc, v) => {
+      acc.push(v);
+      return acc;
+    });
   }
 
   forEach(fn: (value: T) => void): void {
@@ -282,9 +284,7 @@ export class Iter<T> implements Iterable<T> {
     return {
       next: (): IteratorResult<T> => {
         const item = this.next();
-        return isSome(item)
-          ? { done: false, value: item.value }
-          : { done: true, value: undefined };
+        return isSome(item) ? { done: false, value: item.value } : { done: true, value: undefined };
       },
     };
   }
@@ -322,9 +322,7 @@ export class PeekableIter<T> implements Iterable<T> {
     return {
       next: (): IteratorResult<T> => {
         const item = this.next();
-        return isSome(item)
-          ? { done: false, value: item.value }
-          : { done: true, value: undefined };
+        return isSome(item) ? { done: false, value: item.value } : { done: true, value: undefined };
       },
     };
   }

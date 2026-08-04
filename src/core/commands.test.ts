@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityStore } from './store.js';
 import { createEntity } from './entity.js';
@@ -39,7 +40,9 @@ function addShape(store: EntityStore, parentId: EntityId): EntityId {
 
 describe('AddEntityCommand', () => {
   let store: EntityStore;
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('adds entity on execute', () => {
     const id = addLayer(store);
@@ -60,7 +63,9 @@ describe('AddEntityCommand', () => {
 
 describe('RemoveEntityCommand', () => {
   let store: EntityStore;
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('removes entity and children on execute', () => {
     const layerId = addLayer(store);
@@ -90,7 +95,9 @@ describe('RemoveEntityCommand', () => {
 
 describe('UpdateComponentCommand', () => {
   let store: EntityStore;
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('updates component value', () => {
     const layerId = addLayer(store, 'Original');
@@ -121,7 +128,9 @@ describe('UpdateComponentCommand', () => {
 
 describe('MoveGeometryCommand', () => {
   let store: EntityStore;
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('offsets Point coordinates', () => {
     const layerId = addLayer(store);
@@ -160,7 +169,17 @@ describe('MoveGeometryCommand', () => {
     const layerId = addLayer(store);
     const entity = createEntity('shape', layerId);
     entity.components.geometry = {
-      geojson: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] },
+      geojson: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      },
       shapeType: 'polygon',
     };
     entity.components.style = { color: hexColorUnchecked('#ff0000'), weight: 1, opacity: 1, fillOpacity: 0.3 };
@@ -180,7 +199,9 @@ describe('MoveGeometryCommand', () => {
 
 describe('BatchCommand', () => {
   let store: EntityStore;
-  beforeEach(() => { store = freshStore(); });
+  beforeEach(() => {
+    store = freshStore();
+  });
 
   it('executes all sub-commands', () => {
     const e1 = createEntity('layer', null);
@@ -201,10 +222,7 @@ describe('BatchCommand', () => {
     const s2 = addShape(store, layerId);
     expect(store.size).toBe(3);
 
-    const batch = new BatchCommand([
-      new RemoveEntityCommand(s1),
-      new RemoveEntityCommand(s2),
-    ]);
+    const batch = new BatchCommand([new RemoveEntityCommand(s1), new RemoveEntityCommand(s2)]);
     batch.execute(store);
     expect(store.size).toBe(1);
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rust's Vec<T> -- bounds-checked, ownership-aware growable array.
  *
@@ -72,7 +73,9 @@ export class RustVec<T> {
 
   insert(index: number, value: T): void {
     if (index < 0 || index > this.buf.length) {
-      throw new RangeError(`insertion index out of bounds: len is ${String(this.buf.length)} but index is ${String(index)}`);
+      throw new RangeError(
+        `insertion index out of bounds: len is ${String(this.buf.length)} but index is ${String(index)}`,
+      );
     }
     this.buf.splice(index, 0, value);
   }

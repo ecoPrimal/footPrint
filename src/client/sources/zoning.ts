@@ -1,29 +1,30 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { ArcGISFeatureResponse, ZoningProperties } from '../../types/arcgis.js';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { ZONING_URL } from '../../constants.js';
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
 import { proxyGet } from '../api.js';
 import { escHtml } from '../html.js';
 
 function zoningProps(f: GeoJSON.Feature): ZoningProperties {
-  return (f.properties ?? {});
+  return f.properties ?? {};
 }
 
 const ZONE_CATEGORY_COLORS: Readonly<Record<string, string>> = {
-  'R': '#66bb6a',
-  'A': '#43a047',
-  'B': '#42a5f5',
-  'C': '#5c6bc0',
-  'D': '#ab47bc',
-  'F': '#26c6da',
-  'G': '#9ccc65',
-  'H': '#78909c',
-  'I': '#ff7043',
-  'M': '#ef5350',
-  'O': '#29b6f6',
-  'P': '#8d6e63',
-  'S': '#ffa726',
+  R: '#66bb6a',
+  A: '#43a047',
+  B: '#42a5f5',
+  C: '#5c6bc0',
+  D: '#ab47bc',
+  F: '#26c6da',
+  G: '#9ccc65',
+  H: '#78909c',
+  I: '#ff7043',
+  M: '#ef5350',
+  O: '#29b6f6',
+  P: '#8d6e63',
+  S: '#ffa726',
 };
 
 function zoneColor(zoneCode: string | undefined): string {
@@ -40,10 +41,7 @@ export function registerZoningSource(): void {
     color: hexColorUnchecked('#ab47bc'),
     minZoom: 13,
     fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
-      const bbox = [
-        bounds.getWest(), bounds.getSouth(),
-        bounds.getEast(), bounds.getNorth(),
-      ].join(',');
+      const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(',');
 
       const params = new URLSearchParams({
         geometry: bbox,
@@ -55,12 +53,12 @@ export function registerZoningSource(): void {
         returnGeometry: 'true',
       });
 
-      const url = `${ZONING_URL}/query?${params.toString()}`;
+      const url = `${getEndpoint(endpointKey('zoning'))}/query?${params.toString()}`;
       const data = await proxyGet<ArcGISFeatureResponse>(url);
       return data.features ?? [];
     },
     style: (feature) => {
-      const p = feature ? zoningProps(feature as GeoJSON.Feature) : {} as ZoningProperties;
+      const p = feature ? zoningProps(feature as GeoJSON.Feature) : ({} as ZoningProperties);
       const zone = p.ZONING ?? p.Zone ?? '';
       return {
         color: zoneColor(zone),

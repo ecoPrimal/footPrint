@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { GeometryComponent } from './entity.js';
 import type { DeepReadonly } from '../rustscript/types.js';
 import { exhaustive } from '../rustscript/exhaustive.js';
@@ -21,10 +22,14 @@ function positionsToLngLat(positions: readonly (readonly number[])[]): [number, 
 export function extractCoords(geo: DeepReadonly<GeometryComponent>): [number, number][] {
   const g = geo.geojson;
   switch (g.type) {
-    case 'Point': return [toLngLat(g.coordinates)];
-    case 'LineString': return positionsToLngLat(g.coordinates);
-    case 'Polygon': return positionsToLngLat(g.coordinates[0] ?? []);
-    case 'MultiPoint': return positionsToLngLat(g.coordinates);
+    case 'Point':
+      return [toLngLat(g.coordinates)];
+    case 'LineString':
+      return positionsToLngLat(g.coordinates);
+    case 'Polygon':
+      return positionsToLngLat(g.coordinates[0] ?? []);
+    case 'MultiPoint':
+      return positionsToLngLat(g.coordinates);
     case 'MultiLineString': {
       const result: [number, number][] = [];
       for (const line of g.coordinates) {
@@ -42,8 +47,10 @@ export function extractCoords(geo: DeepReadonly<GeometryComponent>): [number, nu
       }
       return result;
     }
-    case 'GeometryCollection': return [];
-    default: exhaustive(g);
+    case 'GeometryCollection':
+      return [];
+    default:
+      exhaustive(g);
   }
 }
 
@@ -93,7 +100,8 @@ export function rebuildGeometry(
       break;
     case 'GeometryCollection':
       break;
-    default: exhaustive(g);
+    default:
+      exhaustive(g);
   }
 
   return geo;

@@ -1,16 +1,18 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { OverpassResponse } from '../../types/overpass.js';
 import { isOverpassNode, isOverpassWay, isOverpassRelation } from '../../types/overpass.js';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { OVERPASS_URL, OVERPASS_TIMEOUT_S } from '../../constants.js';
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
+import { OVERPASS_TIMEOUT_S } from '../../constants.js';
 import { proxyPost } from '../api.js';
 import { escHtml } from '../html.js';
 
 type OsmProps = Readonly<Record<string, string | undefined>>;
 
 function osmProps(f: GeoJSON.Feature): OsmProps {
-  return (f.properties ?? {});
+  return f.properties ?? {};
 }
 
 export async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> {
@@ -19,7 +21,7 @@ export async function queryOverpass(overpassQL: string, bounds: L.LatLngBounds):
   const query = normalized.replace(/\{bbox\}/g, bbox);
   const body = `data=${encodeURIComponent(query)}`;
 
-  const data = await proxyPost<OverpassResponse>(OVERPASS_URL, body);
+  const data = await proxyPost<OverpassResponse>(getEndpoint(endpointKey('overpass')), body);
   return osmToGeoJSON(data);
 }
 
@@ -47,14 +49,11 @@ export function osmToGeoJSON(data: OverpassResponse): GeoJSON.Feature[] {
 
         const first = coords[0];
         const last = coords[coords.length - 1];
-        const isClosed = coords.length > 3 &&
-          first?.[0] === last?.[0] && first?.[1] === last?.[1];
+        const isClosed = coords.length > 3 && first?.[0] === last?.[0] && first?.[1] === last?.[1];
 
         features.push({
           type: 'Feature',
-          geometry: isClosed
-            ? { type: 'Polygon', coordinates: [coords] }
-            : { type: 'LineString', coordinates: coords },
+          geometry: isClosed ? { type: 'Polygon', coordinates: [coords] } : { type: 'LineString', coordinates: coords },
           properties: { _osmId: el.id, _osmType: 'way', ...el.tags },
         });
       }
@@ -90,10 +89,11 @@ export function registerOSMSources(): void {
     category: 'OpenStreetMap',
     color: hexColorUnchecked('#9b59b6'),
     minZoom: 15,
-    fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["building"]({bbox});relation["building"]({bbox}););out body geom;`,
-      bounds,
-    ),
+    fetch: (bounds) =>
+      queryOverpass(
+        `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["building"]({bbox});relation["building"]({bbox}););out body geom;`,
+        bounds,
+      ),
     style: () => ({
       color: '#9b59b6',
       weight: 1.5,
@@ -116,10 +116,11 @@ export function registerOSMSources(): void {
     category: 'OpenStreetMap',
     color: hexColorUnchecked('#e67e22'),
     minZoom: 14,
-    fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["power"~"line|minor_line|cable"]({bbox});node["power"~"pole|tower|transformer"]({bbox}););out body geom;`,
-      bounds,
-    ),
+    fetch: (bounds) =>
+      queryOverpass(
+        `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["power"~"line|minor_line|cable"]({bbox});node["power"~"pole|tower|transformer"]({bbox}););out body geom;`,
+        bounds,
+      ),
     style: (feature) => {
       const p = feature ? osmProps(feature as GeoJSON.Feature) : {};
       return {
@@ -145,10 +146,11 @@ export function registerOSMSources(): void {
     category: 'OpenStreetMap',
     color: hexColorUnchecked('#c0392b'),
     minZoom: 14,
-    fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["man_made"="pipeline"]({bbox});way["utility"="gas"]({bbox});way["utility"="water"]({bbox});way["utility"="sewer"]({bbox}););out body geom;`,
-      bounds,
-    ),
+    fetch: (bounds) =>
+      queryOverpass(
+        `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["man_made"="pipeline"]({bbox});way["utility"="gas"]({bbox});way["utility"="water"]({bbox});way["utility"="sewer"]({bbox}););out body geom;`,
+        bounds,
+      ),
     style: () => ({
       color: '#c0392b',
       weight: 3,
@@ -172,10 +174,11 @@ export function registerOSMSources(): void {
     category: 'OpenStreetMap',
     color: hexColorUnchecked('#8B6914'),
     minZoom: 16,
-    fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["barrier"="fence"]({bbox});way["barrier"="wall"]({bbox});way["barrier"="hedge"]({bbox}););out body geom;`,
-      bounds,
-    ),
+    fetch: (bounds) =>
+      queryOverpass(
+        `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["barrier"="fence"]({bbox});way["barrier"="wall"]({bbox});way["barrier"="hedge"]({bbox}););out body geom;`,
+        bounds,
+      ),
     style: (feature) => {
       const p = feature ? osmProps(feature as GeoJSON.Feature) : {};
       const barrierType = p['barrier'] ?? 'fence';
@@ -202,10 +205,11 @@ export function registerOSMSources(): void {
     category: 'OpenStreetMap',
     color: hexColorUnchecked('#2980b9'),
     minZoom: 14,
-    fetch: (bounds) => queryOverpass(
-      `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["waterway"]({bbox});way["natural"="water"]({bbox});relation["natural"="water"]({bbox}););out body geom;`,
-      bounds,
-    ),
+    fetch: (bounds) =>
+      queryOverpass(
+        `[out:json][timeout:${OVERPASS_TIMEOUT_S}];(way["waterway"]({bbox});way["natural"="water"]({bbox});relation["natural"="water"]({bbox}););out body geom;`,
+        bounds,
+      ),
     style: (feature) => {
       const p = feature ? osmProps(feature as GeoJSON.Feature) : {};
       return {

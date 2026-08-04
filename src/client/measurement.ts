@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import { area } from '@turf/area';
 import { centroid } from '@turf/centroid';
@@ -5,12 +6,7 @@ import { length as turfLength } from '@turf/length';
 import { midpoint } from '@turf/midpoint';
 import { polygonToLine } from '@turf/polygon-to-line';
 import { lineString, point, polygon } from '@turf/helpers';
-import {
-  FEET_PER_METER,
-  SQ_FEET_PER_SQ_METER,
-  FEET_PER_MILE,
-  SQ_FEET_PER_ACRE,
-} from '../constants.js';
+import { FEET_PER_METER, SQ_FEET_PER_SQ_METER, FEET_PER_MILE, SQ_FEET_PER_ACRE } from '../constants.js';
 import { layerToFeature } from './geojson.js';
 
 function toLatLng(pos: readonly number[]): L.LatLngTuple {
@@ -28,7 +24,10 @@ export function initMeasurement(leafletMap: L.Map): void {
   measureLayers.addTo(map);
 
   const btn = document.getElementById('btn-measure');
-  if (btn) btn.addEventListener('click', () => { toggleMeasureMode(); });
+  if (btn)
+    btn.addEventListener('click', () => {
+      toggleMeasureMode();
+    });
 }
 
 function toggleMeasureMode(): void {
@@ -84,10 +83,7 @@ function onMeasureMove(e: L.LeafletMouseEvent): void {
   tooltip.textContent = formatLength(length);
 
   if (tempLine) measureLayers.removeLayer(tempLine);
-  tempLine = L.polyline(
-    currentPts.map(toLatLng),
-    { color: '#ff6b81', weight: 2, dashArray: '6 4' },
-  );
+  tempLine = L.polyline(currentPts.map(toLatLng), { color: '#ff6b81', weight: 2, dashArray: '6 4' });
   measureLayers.addLayer(tempLine);
 }
 
@@ -105,13 +101,10 @@ function updateMeasureLine(): void {
   const segLen = turfLength(seg, { units: 'feet' });
   const mid = midpoint(point(a), point(b));
 
-  const label = L.marker(
-    toLatLng(mid.geometry.coordinates),
-    {
-      icon: L.divIcon({ className: 'measure-label', html: formatLength(segLen) }),
-      interactive: false,
-    },
-  );
+  const label = L.marker(toLatLng(mid.geometry.coordinates), {
+    icon: L.divIcon({ className: 'measure-label', html: formatLength(segLen) }),
+    interactive: false,
+  });
   measureLayers.addLayer(label);
 }
 
@@ -128,13 +121,10 @@ function finishMeasure(e: L.LeafletMouseEvent): void {
     const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
     const center = centroid(poly);
 
-    const areaLabel = L.marker(
-      toLatLng(center.geometry.coordinates),
-      {
-        icon: L.divIcon({ className: 'measure-label', html: `Area: ${formatArea(areaSqFt)}` }),
-        interactive: false,
-      },
-    );
+    const areaLabel = L.marker(toLatLng(center.geometry.coordinates), {
+      icon: L.divIcon({ className: 'measure-label', html: `Area: ${formatArea(areaSqFt)}` }),
+      interactive: false,
+    });
     measureLayers.addLayer(areaLabel);
   }
 

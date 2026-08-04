@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import type { EntityId, GeometryComponent } from '../core/entity.js';
@@ -13,10 +14,7 @@ let selectedEntityId: EntityId | null = null;
 let activeLayerEntityId: EntityId | null = null;
 let activeColor: HexColor | null = null;
 
-export function initDrawing(
-  leafletMap: L.Map,
-  shapeSelectCallback: (entityId: EntityId | null) => void,
-): void {
+export function initDrawing(leafletMap: L.Map, shapeSelectCallback: (entityId: EntityId | null) => void): void {
   map = leafletMap;
   onShapeSelect = shapeSelectCallback;
 
@@ -65,13 +63,7 @@ function handleCreate(layer: L.Layer, shapeType: string): void {
   const mappedType = mapShapeType(shapeType);
   const radius = layer instanceof L.Circle ? layer.getRadius() : undefined;
 
-  const { entity, command } = createShapeEntity(
-    geo,
-    mappedType,
-    activeLayerEntityId,
-    activeColor,
-    radius,
-  );
+  const { entity, command } = createShapeEntity(geo, mappedType, activeLayerEntityId, activeColor, radius);
 
   execute(command);
 
@@ -92,13 +84,20 @@ function extractGeometry(layer: L.Layer): GeoJSON.Geometry | null {
 
 function mapShapeType(pmShape: string): GeometryComponent['shapeType'] {
   switch (pmShape.toLowerCase()) {
-    case 'polygon': return 'polygon';
-    case 'rectangle': return 'rectangle';
-    case 'line': return 'polyline';
-    case 'circle': return 'circle';
-    case 'marker': return 'marker';
-    case 'circlemarker': return 'circlemarker';
-    default: return 'polygon';
+    case 'polygon':
+      return 'polygon';
+    case 'rectangle':
+      return 'rectangle';
+    case 'line':
+      return 'polyline';
+    case 'circle':
+      return 'circle';
+    case 'marker':
+      return 'marker';
+    case 'circlemarker':
+      return 'circlemarker';
+    default:
+      return 'polygon';
   }
 }
 
@@ -113,7 +112,11 @@ export function selectShape(entityId: EntityId): void {
   if (selectedEntityId && selectedEntityId !== entityId) {
     const prevLayer = getLeafletLayer(selectedEntityId);
     if (prevLayer instanceof L.Path) {
-      try { prevLayer.setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
+      try {
+        prevLayer.setStyle({ weight: 3 });
+      } catch {
+        /* layer may already be gone */
+      }
     }
   }
 
@@ -131,7 +134,11 @@ export function deselectShape(): void {
   if (selectedEntityId) {
     const layer = getLeafletLayer(selectedEntityId);
     if (layer instanceof L.Path) {
-      try { layer.setStyle({ weight: 3 }); } catch { /* layer may already be gone */ }
+      try {
+        layer.setStyle({ weight: 3 });
+      } catch {
+        /* layer may already be gone */
+      }
     }
   }
   selectedEntityId = null;
@@ -144,4 +151,3 @@ export function deleteSelectedShape(): void {
   deselectShape();
   execute(new RemoveEntityCommand(id));
 }
-

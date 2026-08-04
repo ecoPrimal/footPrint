@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** @vitest-environment jsdom */
 /**
  * Visual verification tests — DOM structure smoke tests.
@@ -256,10 +257,7 @@ describe('visual verification — accessibility contract', () => {
     for (const input of inputs) {
       const hasAriaLabel = input.getAttribute('aria-label');
       const hasLabel = input.id && doc.querySelector(`label[for="${input.id}"]`);
-      expect(
-        hasAriaLabel || hasLabel,
-        `Input missing label: ${input.id}`,
-      ).toBeTruthy();
+      expect(hasAriaLabel || hasLabel, `Input missing label: ${input.id}`).toBeTruthy();
     }
   });
 
@@ -282,7 +280,7 @@ describe('visual verification — accessibility contract', () => {
   });
 
   it('no duplicate IDs in document', () => {
-    const allIds = Array.from(doc.querySelectorAll('[id]')).map(el => el.id);
+    const allIds = Array.from(doc.querySelectorAll('[id]')).map((el) => el.id);
     const duplicates = allIds.filter((id, i) => allIds.indexOf(id) !== i);
     expect(duplicates).toEqual([]);
   });

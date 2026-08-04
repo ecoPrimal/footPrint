@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { RustVec } from './vec.js';
 import { isSome, isNone } from './option.js';
@@ -182,13 +183,13 @@ describe('RustVec<T>', () => {
 
   describe('transforms', () => {
     it('mapVec transforms elements into new vec', () => {
-      const v = RustVec.of(1, 2, 3).mapVec(n => n * 10);
+      const v = RustVec.of(1, 2, 3).mapVec((n) => n * 10);
       expect(v.getUnchecked(0)).toBe(10);
       expect(v.getUnchecked(2)).toBe(30);
     });
 
     it('filterVec returns new vec with matching elements', () => {
-      const v = RustVec.of(1, 2, 3, 4, 5).filterVec(n => n % 2 === 0);
+      const v = RustVec.of(1, 2, 3, 4, 5).filterVec((n) => n % 2 === 0);
       expect(v.len()).toBe(2);
       expect(v.getUnchecked(0)).toBe(2);
       expect(v.getUnchecked(1)).toBe(4);
@@ -204,7 +205,9 @@ describe('RustVec<T>', () => {
     });
 
     it('collect creates vec from Iter', () => {
-      const iter = RustVec.of(1, 2, 3).iter().map(n => n + 1);
+      const iter = RustVec.of(1, 2, 3)
+        .iter()
+        .map((n) => n + 1);
       const v = RustVec.collect(iter);
       expect(v.len()).toBe(3);
       expect(v.getUnchecked(0)).toBe(2);

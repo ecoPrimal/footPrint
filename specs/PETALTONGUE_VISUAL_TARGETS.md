@@ -79,7 +79,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 | footPrint | petalTongue Target |
 |-----------|-------------------|
 | Gauss-Newton iterative solver | Same algorithm, Rust port (nalgebra) |
-| Constraint types: fixed-distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line (7 active) | Same + tangent, symmetric, setback |
+| Constraint types (10 active): fixed-distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line, tangent, symmetric, setback | Same |
 | Damped step (λ=1e-4) | Same |
 | Batch command updates | Same (via nestGate transactions) |
 
@@ -97,7 +97,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 | footPrint | petalTongue Target |
 |-----------|-------------------|
-| JSON files in `projects/` | nestGate CAS (content-addressed, provenance-traced) |
+| JSON files in `projects/` + dual-write to nestGate CAS | nestGate CAS (content-addressed, provenance-traced) |
 | Save/Load/New/Delete via REST | nestGate JSON-RPC + HTTP API |
 | GeoJSON round-trip serialization | Same format, CAS-backed |
 | ECS entity serialization | Serialized entities → nestGate families |
@@ -137,7 +137,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 | footPrint | petalTongue Target |
 |-----------|-------------------|
-| WebSocket to Express server | WebSocket to petalTongue Axum server |
+| JSON-RPC 2.0 domain.verb over `/ws/bridge` | WebSocket to petalTongue Axum server |
 | Shadow state (ECS snapshot over WS) | nestGate CAS live subscription |
 | REST command API (POST action) | nestGate JSON-RPC `coord.command` |
 | Agent panel UI | Overwatch coordination panel |

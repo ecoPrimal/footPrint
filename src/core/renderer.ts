@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { EntityId, ReadonlyEntity, ShapeEntity, DimensionEntity, AnnotationEntity } from './entity.js';
 import type { DeepReadonly } from '../rustscript/types.js';
@@ -15,10 +16,17 @@ export function initRenderer(leafletMap: L.Map): void {
 
   store.on((event: StoreEvent) => {
     switch (event.type) {
-      case 'add': onEntityAdded(event.entityId); break;
-      case 'remove': onEntityRemoved(event.entityId); break;
-      case 'update': onEntityUpdated(event.entityId, event.componentKey); break;
-      default: exhaustive(event.type);
+      case 'add':
+        onEntityAdded(event.entityId);
+        break;
+      case 'remove':
+        onEntityRemoved(event.entityId);
+        break;
+      case 'update':
+        onEntityUpdated(event.entityId, event.componentKey);
+        break;
+      default:
+        exhaustive(event.type);
     }
   });
 }
@@ -69,7 +77,8 @@ function onEntityAdded(id: EntityId): void {
     }
     case 'constraint':
       break;
-    default: exhaustive(entity);
+    default:
+      exhaustive(entity);
   }
 }
 
@@ -78,7 +87,9 @@ function onEntityRemoved(id: EntityId): void {
   if (leafletLayer && map) {
     map.removeLayer(leafletLayer);
     if (leafletLayer instanceof L.FeatureGroup) {
-      leafletLayer.eachLayer((sub: L.Layer) => { map?.removeLayer(sub); });
+      leafletLayer.eachLayer((sub: L.Layer) => {
+        map?.removeLayer(sub);
+      });
     }
   }
   layerMap.delete(id);
@@ -124,7 +135,8 @@ function onEntityUpdated(id: EntityId, componentKey?: string): void {
     case 'annotation':
     case 'constraint':
       break;
-    default: exhaustive(entity);
+    default:
+      exhaustive(entity);
   }
 }
 
@@ -150,11 +162,18 @@ function buildLeafletLayer(entity: DeepReadonly<ShapeEntity>): L.Layer | null {
   if (geo.shapeType === 'circlemarker' && geo.geojson.type === 'Point') {
     const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.circleMarker([lat, lng], {
-      radius: 6, color, fillColor: color, fillOpacity: 0.6,
+      radius: 6,
+      color,
+      fillColor: color,
+      fillOpacity: 0.6,
     });
   }
 
-  const feature: GeoJSON.Feature = { type: 'Feature', geometry: structuredClone(geo.geojson) as GeoJSON.Geometry, properties: {} };
+  const feature: GeoJSON.Feature = {
+    type: 'Feature',
+    geometry: structuredClone(geo.geojson) as GeoJSON.Geometry,
+    properties: {},
+  };
   let result: L.Layer | null = null;
   L.geoJSON(feature, {
     style: () => ({ color, weight, opacity, fillOpacity }),
@@ -181,9 +200,7 @@ function buildDimensionLayer(entity: DeepReadonly<DimensionEntity>): L.Layer | n
   const midLng = (from[0] + to[0]) / 2;
 
   const unitLabel = dim.unit === 'ft' ? 'ft' : 'm';
-  const valStr = dim.value >= 100
-    ? `${Math.round(dim.value)} ${unitLabel}`
-    : `${dim.value.toFixed(1)} ${unitLabel}`;
+  const valStr = dim.value >= 100 ? `${Math.round(dim.value)} ${unitLabel}` : `${dim.value.toFixed(1)} ${unitLabel}`;
 
   // Check if this dimension has a constraint (parametric)
   const hasConstraint = isConstrained(entity.id);
@@ -216,10 +233,7 @@ function isConstrained(dimensionEntityId: EntityId): boolean {
     if (!cRes.ok || cRes.value.kind !== 'constraint') continue;
     const comp = cRes.value.components.constraint;
 
-    if (
-      comp.type === 'fixed-distance' &&
-      comp.entityIds.includes(dimComp.targetEntityId)
-    ) {
+    if (comp.type === 'fixed-distance' && comp.entityIds.includes(dimComp.targetEntityId)) {
       const vi = comp.params.vertexIndices;
       if (vi?.[0] === dimComp.fromVertex && vi?.[1] === dimComp.toVertex) {
         return true;

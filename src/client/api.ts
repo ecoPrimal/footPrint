@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Backend abstraction layer for footPrint.
  *
@@ -21,10 +22,7 @@ export async function proxyGet<T = unknown>(externalUrl: string): Promise<T> {
   return (await resp.json()) as T;
 }
 
-export async function proxyPost<T = unknown>(
-  externalUrl: string,
-  body: string,
-): Promise<T> {
+export async function proxyPost<T = unknown>(externalUrl: string, body: string): Promise<T> {
   const resp = await fetch(proxyUrl(externalUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
@@ -48,10 +46,7 @@ export async function loadProject(name: string): Promise<ProjectFile> {
   return (await resp.json()) as ProjectFile;
 }
 
-export async function saveProject(
-  name: string,
-  data: ProjectFile,
-): Promise<SaveResponse> {
+export async function saveProject(name: string, data: ProjectFile): Promise<SaveResponse> {
   const resp = await fetch(`${PROJECTS_PATH}/${encodeURIComponent(name)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

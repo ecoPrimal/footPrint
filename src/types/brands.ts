@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Brand } from '../rustscript/types.js';
 import type { Result } from '../rustscript/result.js';
 import { Ok, Err } from '../rustscript/result.js';

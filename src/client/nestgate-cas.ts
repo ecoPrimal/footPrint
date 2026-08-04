@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * nestGate CAS (Content-Addressed Storage) client.
  *

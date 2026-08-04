@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * @protokarya/rustscript -- Rust safety primitives for TypeScript.
  *
@@ -28,7 +29,20 @@ export { Ok, Err, isOk, isErr, unwrap, unwrapOr, unwrapOrElse, map, mapErr, andT
 
 // Option<T>: Rust's Option
 export type { Option } from './option.js';
-export { Some, None, isSome, isNone, unwrapOption, unwrapOptionOr, unwrapOptionOrElse, mapOption, andThenOption, matchOption, fromNullable, toNullable } from './option.js';
+export {
+  Some,
+  None,
+  isSome,
+  isNone,
+  unwrapOption,
+  unwrapOptionOr,
+  unwrapOptionOrElse,
+  mapOption,
+  andThenOption,
+  matchOption,
+  fromNullable,
+  toNullable,
+} from './option.js';
 
 // RefCell<T>: runtime borrow checker with RAII
 export { RefCell, Ref, RefMut, BorrowError } from './refcell.js';

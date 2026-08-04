@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Exhaustive match helper -- Rust's exhaustive `match` as a TypeScript function.
  *
@@ -14,8 +15,6 @@
  *   }
  */
 export function exhaustive(value: never): never {
-  const repr = typeof value === 'object' && value !== null
-    ? JSON.stringify(value)
-    : String(value);
+  const repr = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
   throw new Error(`Unhandled case: ${repr}`);
 }

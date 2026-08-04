@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { EntityId, ComponentKey } from './entity.js';
 import type { StoreEvent } from './store.js';
 import { store } from './store.js';
@@ -76,4 +77,3 @@ function flush(): void {
     entry.dirty = false;
   }
 }
-

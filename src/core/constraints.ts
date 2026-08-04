@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * ECS-aware constraint management.
  *
@@ -14,11 +15,7 @@ import { execute } from './history.js';
 import { extractCoords, rebuildGeometry } from './geometry.js';
 import { exhaustive } from '../rustscript/exhaustive.js';
 import { isSome } from '../rustscript/option.js';
-import {
-  SOLVER_MAX_ITERATIONS,
-  SOLVER_TOLERANCE,
-  SOLVER_SATISFIED_THRESHOLD,
-} from '../constants.js';
+import { SOLVER_MAX_ITERATIONS, SOLVER_TOLERANCE, SOLVER_SATISFIED_THRESHOLD } from '../constants.js';
 import {
   fixedDistanceError,
   parallelError,
@@ -27,6 +24,10 @@ import {
   verticalError,
   coincidentError,
   pointOnLineError,
+  tangentError,
+  symmetricError,
+  symmetricErrorFixedAxis,
+  setbackError,
   gaussNewtonStep,
 } from './solver.js';
 import type { ConstraintError, SolverResult } from './solver.js';
@@ -86,6 +87,12 @@ function buildSolverState(): SolverState | null {
   return { constraintEntities, entityOrder, entityVertexOffsets, x };
 }
 
+function getEntityRadius(entityId: EntityId): number | undefined {
+  const eOpt = store.getEntity(entityId);
+  if (!isSome(eOpt)) return undefined;
+  return eOpt.value.components.geometry?.radius;
+}
+
 // ── Error evaluation per constraint ──────────────────
 
 function evaluateConstraintErrors(
@@ -103,8 +110,8 @@ function evaluateConstraintErrors(
 
     const vi = comp.params.vertexIndices ?? [0, 1];
     const e0 = comp.entityIds[0];
-    const e1 = comp.entityIds[1] ?? e0;
     if (!e0) continue;
+    const e1 = comp.entityIds[1] ?? e0;
     const off0 = entityVertexOffsets.get(e0) ?? 0;
     const off1 = e1 ? (entityVertexOffsets.get(e1) ?? 0) : off0;
 
@@ -135,11 +142,38 @@ function evaluateConstraintErrors(
       case 'point-on-line':
         errors.push(...pointOnLineError(x, v0, v1, v2));
         break;
-      case 'tangent':
-      case 'symmetric':
-      case 'setback':
+      case 'tangent': {
+        const r1 = getEntityRadius(e0) ?? comp.params.radius1 ?? comp.params.distance ?? 0;
+        const r2 = getEntityRadius(e1) ?? comp.params.radius2 ?? 0;
+        const internal = comp.params.internal ?? false;
+        const targetDist = internal ? Math.abs(r1 - r2) : r1 + r2;
+        errors.push(tangentError(x, v0, v1, targetDist));
         break;
-      default: exhaustive(comp.type);
+      }
+      case 'symmetric': {
+        if (comp.params.axisPoint && comp.params.axisDirection) {
+          errors.push(...symmetricErrorFixedAxis(x, v0, v1, comp.params.axisPoint, comp.params.axisDirection));
+        } else if (comp.entityIds.length > 1) {
+          const p1 = (vi[0] ?? 0) + off0;
+          const p2 = (vi[1] ?? 0) + off1;
+          const axisStart = (vi[2] ?? 0) + off0;
+          const axisEnd = (vi[3] ?? 1) + off0;
+          errors.push(...symmetricError(x, p1, p2, axisStart, axisEnd));
+        } else if (v2 != null && v3 != null) {
+          errors.push(...symmetricError(x, v0, v1, v2, v3));
+        }
+        break;
+      }
+      case 'setback': {
+        const edgeStart = (vi[0] ?? 0) + off0;
+        const edgeEnd = (vi[1] ?? 1) + off0;
+        const refStart = (vi[2] ?? 0) + (comp.entityIds.length > 1 ? off1 : off0);
+        const refEnd = (vi[3] ?? 1) + (comp.entityIds.length > 1 ? off1 : off0);
+        errors.push(...setbackError(x, edgeStart, edgeEnd, refStart, refEnd, comp.params.distance ?? 0));
+        break;
+      }
+      default:
+        exhaustive(comp.type);
     }
   }
 
@@ -148,10 +182,7 @@ function evaluateConstraintErrors(
 
 // ── Apply solved coordinates back to ECS ─────────────
 
-function applySolverResult(
-  state: SolverState,
-  residual: number,
-): void {
+function applySolverResult(state: SolverState, residual: number): void {
   const solverCommands: Command[] = [];
 
   for (const eId of state.entityOrder) {
@@ -162,15 +193,12 @@ function applySolverResult(
     const newCoords: [number, number][] = [];
 
     for (let i = 0; i < coords.length; i++) {
-      newCoords.push([
-        state.x[(offset + i) * 2] ?? 0,
-        state.x[(offset + i) * 2 + 1] ?? 0,
-      ]);
+      newCoords.push([state.x[(offset + i) * 2] ?? 0, state.x[(offset + i) * 2 + 1] ?? 0]);
     }
 
-    solverCommands.push(new UpdateComponentCommand(
-      eId, 'geometry', rebuildGeometry(eOpt.value.components.geometry, newCoords),
-    ));
+    solverCommands.push(
+      new UpdateComponentCommand(eId, 'geometry', rebuildGeometry(eOpt.value.components.geometry, newCoords)),
+    );
   }
 
   const satisfied = residual < SOLVER_SATISFIED_THRESHOLD;
@@ -198,9 +226,7 @@ export function solveConstraints(): SolverResult {
   let iter = 0;
 
   for (; iter < SOLVER_MAX_ITERATIONS; iter++) {
-    const errors = evaluateConstraintErrors(
-      state.constraintEntities, state.entityVertexOffsets, state.x,
-    );
+    const errors = evaluateConstraintErrors(state.constraintEntities, state.entityVertexOffsets, state.x);
     if (errors.length === 0) break;
 
     residual = Math.sqrt(errors.reduce((sum, e) => sum + e.error * e.error, 0));

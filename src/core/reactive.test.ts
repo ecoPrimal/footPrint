@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { registerComputation, initReactive } from './reactive.js';
 import type { DerivedComputation } from './reactive.js';
@@ -31,7 +32,14 @@ function makeComputation(
 describe('reactive', () => {
   it('runs computation on register after debounce', () => {
     const applied = vi.fn();
-    registerComputation(makeComputation('r-1', () => [], () => 42, applied));
+    registerComputation(
+      makeComputation(
+        'r-1',
+        () => [],
+        () => 42,
+        applied,
+      ),
+    );
     expect(applied).not.toHaveBeenCalled();
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
     expect(applied).toHaveBeenCalledWith(42);
@@ -42,12 +50,16 @@ describe('reactive', () => {
     store.add(entity);
 
     let callCount = 0;
-    const unregister = registerComputation(makeComputation(
-      'r-dep',
-      () => [entity.id],
-      () => ++callCount,
-      () => { /* no-op */ },
-    ));
+    const unregister = registerComputation(
+      makeComputation(
+        'r-dep',
+        () => [entity.id],
+        () => ++callCount,
+        () => {
+          /* no-op */
+        },
+      ),
+    );
 
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
     expect(callCount).toBe(1);
@@ -63,13 +75,17 @@ describe('reactive', () => {
     store.add(entity);
 
     let callCount = 0;
-    const unregister = registerComputation(makeComputation(
-      'r-watch',
-      () => [entity.id],
-      () => ++callCount,
-      () => { /* no-op */ },
-      ['style'],
-    ));
+    const unregister = registerComputation(
+      makeComputation(
+        'r-watch',
+        () => [entity.id],
+        () => ++callCount,
+        () => {
+          /* no-op */
+        },
+        ['style'],
+      ),
+    );
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
     expect(callCount).toBe(1);
 
@@ -81,7 +97,14 @@ describe('reactive', () => {
 
   it('unregister stops computation from running on future events', () => {
     const applied = vi.fn();
-    const unregister = registerComputation(makeComputation('r-unreg', () => [], () => 'val', applied));
+    const unregister = registerComputation(
+      makeComputation(
+        'r-unreg',
+        () => [],
+        () => 'val',
+        applied,
+      ),
+    );
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
     expect(applied).toHaveBeenCalledTimes(1);
 
@@ -92,8 +115,21 @@ describe('reactive', () => {
   });
 
   it('handles computation errors gracefully', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { /* no-op */ });
-    const unregister = registerComputation(makeComputation('r-err', () => [], () => { throw new Error('boom'); }, () => { /* no-op */ }));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* no-op */
+    });
+    const unregister = registerComputation(
+      makeComputation(
+        'r-err',
+        () => [],
+        () => {
+          throw new Error('boom');
+        },
+        () => {
+          /* no-op */
+        },
+      ),
+    );
     vi.advanceTimersByTime(REACTIVE_DEBOUNCE_MS + 1);
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();

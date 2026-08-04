@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import { ftToMeters } from '../types/snap.js';
 import { DEFAULT_GRID_SPACING_FT, GRID_MIN_ZOOM, GRID_COLOR, GRID_MAX_LINES } from '../constants.js';
@@ -8,10 +9,7 @@ let gridEnabled = false;
 const spacingFt = DEFAULT_GRID_SPACING_FT;
 let onGridChange: ((enabled: boolean, spacing: number) => void) | null = null;
 
-export function initGrid(
-  leafletMap: L.Map,
-  changeCallback?: (enabled: boolean, spacing: number) => void,
-): void {
+export function initGrid(leafletMap: L.Map, changeCallback?: (enabled: boolean, spacing: number) => void): void {
   map = leafletMap;
   onGridChange = changeCallback ?? null;
 
@@ -44,7 +42,6 @@ export function toggleGrid(): boolean {
   return gridEnabled;
 }
 
-
 function renderGrid(): void {
   gridLayer.clearLayers();
   if (!map) return;
@@ -59,7 +56,7 @@ function renderGrid(): void {
   const spacingM = ftToMeters(spacingFt);
   const spacingDegLat = spacingM / 111139;
   const midLat = (sw.lat + ne.lat) / 2;
-  const spacingDegLng = spacingM / (111139 * Math.cos(midLat * Math.PI / 180));
+  const spacingDegLng = spacingM / (111139 * Math.cos((midLat * Math.PI) / 180));
 
   const startLat = Math.floor(sw.lat / spacingDegLat) * spacingDegLat;
   const startLng = Math.floor(sw.lng / spacingDegLng) * spacingDegLng;
@@ -72,7 +69,10 @@ function renderGrid(): void {
     const isMajor = latIdx % 5 === 0;
 
     L.polyline(
-      [[lat, sw.lng], [lat, ne.lng]],
+      [
+        [lat, sw.lng],
+        [lat, ne.lng],
+      ],
       {
         color: GRID_COLOR,
         weight: isMajor ? 1 : 0.5,
@@ -91,7 +91,10 @@ function renderGrid(): void {
     const isMajor = lngIdx % 5 === 0;
 
     L.polyline(
-      [[sw.lat, lng], [ne.lat, lng]],
+      [
+        [sw.lat, lng],
+        [ne.lat, lng],
+      ],
       {
         color: GRID_COLOR,
         weight: isMajor ? 1 : 0.5,

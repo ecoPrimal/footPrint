@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { Owned, UseAfterMoveError, transfer, consume, take } from './owned.js';
 
@@ -44,7 +45,7 @@ describe('Owned<T>', () => {
   describe('consume', () => {
     it('applies function to value and invalidates', () => {
       const a = Owned.of(5);
-      const result = consume(a, v => v * 2);
+      const result = consume(a, (v) => v * 2);
       expect(result).toBe(10);
       expect(a.isAlive).toBe(false);
     });
@@ -52,7 +53,7 @@ describe('Owned<T>', () => {
     it('throws on already-moved value', () => {
       const a = Owned.of(1);
       take(a);
-      expect(() => consume(a, v => v)).toThrow(UseAfterMoveError);
+      expect(() => consume(a, (v) => v)).toThrow(UseAfterMoveError);
     });
   });
 

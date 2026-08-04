@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * petalTongue WebSocket JSON-RPC client.
  *
@@ -42,11 +43,11 @@ interface JsonRpcError {
   readonly data?: unknown;
 }
 
-type PendingCall = {
+interface PendingCall {
   resolve: (result: unknown) => void;
   reject: (err: Error) => void;
   timer: ReturnType<typeof setTimeout>;
-};
+}
 
 export type NotificationHandler = (method: string, params: unknown) => void;
 
@@ -84,7 +85,7 @@ export function isPetalTongueConnected(): boolean {
  */
 export function rpcCall<T = unknown>(method: string, params?: unknown): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
+    if (ws?.readyState !== WebSocket.OPEN) {
       reject(new Error('petalTongue not connected'));
       return;
     }
@@ -115,7 +116,7 @@ export function rpcCall<T = unknown>(method: string, params?: unknown): Promise<
  * Send a fire-and-forget notification (no response expected).
  */
 export function rpcNotify(method: string, params?: unknown): void {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  if (ws?.readyState !== WebSocket.OPEN) return;
   const msg = JSON.stringify({ jsonrpc: '2.0', method, params });
   ws.send(msg);
 }

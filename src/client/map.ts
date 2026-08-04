@@ -1,18 +1,26 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { NominatimResult } from '../types/nominatim.js';
-import {
-  DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL,
-  BASEMAP_SATELLITE_URL, BASEMAP_STREET_URL, BASEMAP_LABELS_URL,
-  GEOCODER_ZOOM, GEOCODER_ERROR_FLASH_MS, KNOWN_LOCATIONS,
-} from '../constants.js';
+import { GEOCODER_ZOOM, GEOCODER_ERROR_FLASH_MS } from '../constants.js';
+import { endpointKey, getEndpoint, getKnownLocations, resolveMapViewDefaults } from '../core/manifest.js';
 import { proxyGet } from './api.js';
 
 let map: L.Map;
 
 const tileLayers = {
-  satellite: L.tileLayer(BASEMAP_SATELLITE_URL, { attribution: 'Tiles &copy; Esri', maxZoom: 20 }),
-  street: L.tileLayer(BASEMAP_STREET_URL, { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }),
-  labels: L.tileLayer(BASEMAP_LABELS_URL, { attribution: 'Labels &copy; Esri', maxZoom: 20, opacity: 0.7 }),
+  satellite: L.tileLayer(getEndpoint(endpointKey('basemap-satellite')), {
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 20,
+  }),
+  street: L.tileLayer(getEndpoint(endpointKey('basemap-street')), {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  }),
+  labels: L.tileLayer(getEndpoint(endpointKey('basemap-labels')), {
+    attribution: 'Labels &copy; Esri',
+    maxZoom: 20,
+    opacity: 0.7,
+  }),
 } as const;
 
 export function initMap(): L.Map {
@@ -26,8 +34,8 @@ export function initMap(): L.Map {
   });
 
   const baseLayers: Record<string, L.TileLayer> = {
-    'Satellite': tileLayers.satellite,
-    'Street': tileLayers.street,
+    Satellite: tileLayers.satellite,
+    Street: tileLayers.street,
   };
   const overlays: Record<string, L.TileLayer> = {
     'Road Labels': tileLayers.labels,
@@ -42,17 +50,17 @@ export function initMap(): L.Map {
 function resolveStartLocation(): { center: readonly [number, number]; zoom: number } {
   const hash = location.hash.replace('#', '');
   if (hash) {
-    const loc = KNOWN_LOCATIONS.find(l => l.id === hash);
+    const loc = getKnownLocations().find((l) => l.id === hash);
     if (loc) return loc;
   }
-  return { center: DEFAULT_MAP_CENTER, zoom: DEFAULT_MAP_ZOOM };
+  return resolveMapViewDefaults();
 }
 
 function initLocationPicker(): void {
   const picker = document.getElementById('location-picker');
   if (!(picker instanceof HTMLSelectElement)) return;
 
-  for (const loc of KNOWN_LOCATIONS) {
+  for (const loc of getKnownLocations()) {
     const opt = document.createElement('option');
     opt.value = loc.id;
     opt.textContent = `${loc.name} — ${loc.description}`;
@@ -61,7 +69,7 @@ function initLocationPicker(): void {
   }
 
   picker.addEventListener('change', () => {
-    const loc = KNOWN_LOCATIONS.find(l => l.id === picker.value);
+    const loc = getKnownLocations().find((l) => l.id === picker.value);
     if (loc) {
       map.setView([...loc.center] as L.LatLngTuple, loc.zoom);
       location.hash = loc.id;
@@ -71,7 +79,7 @@ function initLocationPicker(): void {
 
   window.addEventListener('hashchange', () => {
     const hash = location.hash.replace('#', '');
-    const loc = KNOWN_LOCATIONS.find(l => l.id === hash);
+    const loc = getKnownLocations().find((l) => l.id === hash);
     if (loc) {
       map.setView([...loc.center] as L.LatLngTuple, loc.zoom);
     }
@@ -91,7 +99,7 @@ function initGeocoder(): void {
 
     try {
       const results = await proxyGet<readonly NominatimResult[]>(
-        `${NOMINATIM_SEARCH_URL}?format=json&q=${encodeURIComponent(q)}&limit=1`,
+        `${getEndpoint(endpointKey('nominatim'))}?format=json&q=${encodeURIComponent(q)}&limit=1`,
       );
       if (results.length > 0) {
         const first = results[0];
@@ -101,16 +109,19 @@ function initGeocoder(): void {
         }
       } else {
         input.style.borderColor = '#c0392b';
-        setTimeout(() => { input.style.borderColor = ''; }, GEOCODER_ERROR_FLASH_MS);
+        setTimeout(() => {
+          input.style.borderColor = '';
+        }, GEOCODER_ERROR_FLASH_MS);
       }
     } catch {
       console.error('Geocoder request failed');
     }
   }
 
-  btn.addEventListener('click', () => { void doSearch(); });
+  btn.addEventListener('click', () => {
+    void doSearch();
+  });
   input.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') void doSearch();
   });
 }
-

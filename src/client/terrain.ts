@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
-import type {
-  ElevationSample, TerrainGrid, ContourLine, SlopeAspect,
-} from '../types/terrain.js';
+import type { ElevationSample, TerrainGrid, ContourLine, SlopeAspect } from '../types/terrain.js';
 import { batchElevation } from './sources/usgs.js';
 import { METERS_PER_DEGREE_LAT, FEET_PER_METER, DEFAULT_CONTOUR_INTERVAL_FT } from '../constants.js';
 
@@ -45,10 +44,7 @@ export function getElevationAt(lat: number, lng: number): number | null {
   if (z00 == null || z01 == null || z10 == null || z11 == null) return null;
   if (isNaN(z00) || isNaN(z01) || isNaN(z10) || isNaN(z11)) return null;
 
-  return z00 * (1 - dr) * (1 - dc)
-       + z01 * (1 - dr) * dc
-       + z10 * dr * (1 - dc)
-       + z11 * dr * dc;
+  return z00 * (1 - dr) * (1 - dc) + z01 * (1 - dr) * dc + z10 * dr * (1 - dc) + z11 * dr * dc;
 }
 
 export async function buildTerrainGrid(bounds: L.LatLngBounds, density = 8): Promise<TerrainGrid> {
@@ -84,10 +80,22 @@ export async function buildTerrainGrid(bounds: L.LatLngBounds, density = 8): Pro
       const sample = samples[idx];
       if (sample && !isNaN(sample.elevation)) continue;
       const neighbors: number[] = [];
-      if (r > 0) { const n = samples[(r - 1) * density + c]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
-      if (r < density - 1) { const n = samples[(r + 1) * density + c]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
-      if (c > 0) { const n = samples[r * density + (c - 1)]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
-      if (c < density - 1) { const n = samples[r * density + (c + 1)]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
+      if (r > 0) {
+        const n = samples[(r - 1) * density + c];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
+      if (r < density - 1) {
+        const n = samples[(r + 1) * density + c];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
+      if (c > 0) {
+        const n = samples[r * density + (c - 1)];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
+      if (c < density - 1) {
+        const n = samples[r * density + (c + 1)];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
       if (neighbors.length > 0 && sample) {
         (samples[idx] as { elevation: number }).elevation = neighbors.reduce((a, b) => a + b, 0) / neighbors.length;
       }
@@ -190,15 +198,40 @@ function marchingSquares(
       const left = (): [number, number] => interp(r, c, r + 1, c);
 
       switch (idx) {
-        case 1: case 14: segments.push({ a: left(), b: bottom() }); break;
-        case 2: case 13: segments.push({ a: bottom(), b: right() }); break;
-        case 3: case 12: segments.push({ a: left(), b: right() }); break;
-        case 4: case 11: segments.push({ a: top(), b: right() }); break;
-        case 5: segments.push({ a: left(), b: top() }); segments.push({ a: bottom(), b: right() }); break;
-        case 6: case 9: segments.push({ a: bottom(), b: top() }); break;
-        case 7: case 8: segments.push({ a: left(), b: top() }); break;
-        case 10: segments.push({ a: top(), b: right() }); segments.push({ a: left(), b: bottom() }); break;
-        default: break;
+        case 1:
+        case 14:
+          segments.push({ a: left(), b: bottom() });
+          break;
+        case 2:
+        case 13:
+          segments.push({ a: bottom(), b: right() });
+          break;
+        case 3:
+        case 12:
+          segments.push({ a: left(), b: right() });
+          break;
+        case 4:
+        case 11:
+          segments.push({ a: top(), b: right() });
+          break;
+        case 5:
+          segments.push({ a: left(), b: top() });
+          segments.push({ a: bottom(), b: right() });
+          break;
+        case 6:
+        case 9:
+          segments.push({ a: bottom(), b: top() });
+          break;
+        case 7:
+        case 8:
+          segments.push({ a: left(), b: top() });
+          break;
+        case 10:
+          segments.push({ a: top(), b: right() });
+          segments.push({ a: left(), b: bottom() });
+          break;
+        default:
+          break;
       }
     }
   }
@@ -226,10 +259,16 @@ function chainSegments(segments: Segment[]): [number, number][][] {
     const ka = ptKey(seg.a);
     const kb = ptKey(seg.b);
     let listA = endpointMap.get(ka);
-    if (!listA) { listA = []; endpointMap.set(ka, listA); }
+    if (!listA) {
+      listA = [];
+      endpointMap.set(ka, listA);
+    }
     listA.push(i);
     let listB = endpointMap.get(kb);
-    if (!listB) { listB = []; endpointMap.set(kb, listB); }
+    if (!listB) {
+      listB = [];
+      endpointMap.set(kb, listB);
+    }
     listB.push(i);
   }
 
@@ -316,7 +355,7 @@ export function computeSlopeAspect(grid: TerrainGrid): SlopeAspect[] {
     for (let c = 1; c < cols - 1; c++) {
       const z = (ri: number, ci: number): number => {
         const sample = samples[ri * cols + ci];
-        return (sample && !isNaN(sample.elevation)) ? sample.elevation : 0;
+        return sample && !isNaN(sample.elevation) ? sample.elevation : 0;
       };
 
       // Horn's method: 3x3 neighborhood gradient, units: ft/ft (dimensionless)
@@ -388,10 +427,11 @@ export function renderSlopeArrows(grid: TerrainGrid): void {
     const endLng = pt.lng + Math.cos(rad) * len;
 
     L.polyline(
-      [[pt.lat, pt.lng], [endLat, endLng]],
+      [
+        [pt.lat, pt.lng],
+        [endLat, endLng],
+      ],
       { color: '#4FC3F7', weight: 1.5, opacity: 0.6 },
     ).addTo(slopeLayer);
   }
 }
-
-

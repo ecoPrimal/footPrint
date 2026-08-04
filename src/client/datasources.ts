@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback } from '../types/source.js';
 import { isTileSource, isVectorSource, isWmsSource } from '../types/source.js';
@@ -36,21 +37,24 @@ export function registerSource(def: DataSourceDef): DataSourceState {
   } else if (isVectorSource(def)) {
     const vecDef = def;
     layer = L.geoJSON(undefined, {
-      style: vecDef.style ?? (() => ({
-        color: vecDef.color,
-        weight: 2,
-        opacity: 0.8,
-        fillOpacity: 0.15,
-      })),
-      pointToLayer: vecDef.pointToLayer ?? ((_feat: GeoJSON.Feature, latlng: L.LatLng) =>
-        L.circleMarker(latlng, {
-          radius: 5,
+      style:
+        vecDef.style ??
+        (() => ({
           color: vecDef.color,
-          fillColor: vecDef.color,
-          fillOpacity: 0.5,
-          weight: 1,
-        })
-      ),
+          weight: 2,
+          opacity: 0.8,
+          fillOpacity: 0.15,
+        })),
+      pointToLayer:
+        vecDef.pointToLayer ??
+        ((_feat: GeoJSON.Feature, latlng: L.LatLng) =>
+          L.circleMarker(latlng, {
+            radius: 5,
+            color: vecDef.color,
+            fillColor: vecDef.color,
+            fillOpacity: 0.5,
+            weight: 1,
+          })),
       onEachFeature: (feature: GeoJSON.Feature, featureLayer: L.Layer) => {
         if (!(featureLayer instanceof L.Path)) return;
         const path = featureLayer;
@@ -64,10 +68,10 @@ export function registerSource(def: DataSourceDef): DataSourceState {
             .map(([k, v]) => `<tr><td>${escHtml(k)}</td><td>${escHtml(String(v ?? ''))}</td></tr>`)
             .join('');
           if (rows) {
-            path.bindPopup(
-              `<div class="data-popup-content"><table>${rows}</table></div>`,
-              { maxWidth: 300, className: 'data-popup' },
-            );
+            path.bindPopup(`<div class="data-popup-content"><table>${rows}</table></div>`, {
+              maxWidth: 300,
+              className: 'data-popup',
+            });
           }
         }
       },
@@ -102,7 +106,6 @@ export function registerSource(def: DataSourceDef): DataSourceState {
   notify();
   return state;
 }
-
 
 export function getAllSources(): SourceRegistry {
   return sources;

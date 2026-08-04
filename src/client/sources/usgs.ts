@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { USGSElevationResponse } from '../../types/terrain.js';
 import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { EPQS_BASE_URL, MAX_ELEVATION_CONCURRENT, ELEVATION_THROTTLE_MS } from '../../constants.js';
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
+import { MAX_ELEVATION_CONCURRENT, ELEVATION_THROTTLE_MS } from '../../constants.js';
 import { proxyUrl } from '../api.js';
 
 interface ElevationProps {
@@ -45,7 +47,7 @@ async function batchElevation(
     const batchResults = await Promise.allSettled(
       batch.map(async (pt) => {
         const url = proxyUrl(
-          `${EPQS_BASE_URL}?x=${pt.lng}&y=${pt.lat}&wkid=4326&units=Feet&includeDate=false`
+          `${getEndpoint(endpointKey('epqs'))}?x=${pt.lng}&y=${pt.lat}&wkid=4326&units=Feet&includeDate=false`,
         );
         const elev = await throttledFetch(url);
         return { lat: pt.lat, lng: pt.lng, elevation: elev };
@@ -55,7 +57,9 @@ async function batchElevation(
       results.push(r.status === 'fulfilled' ? r.value : { lat: 0, lng: 0, elevation: null });
     }
     if (queue.length > 0) {
-      await new Promise((resolve) => { setTimeout(resolve, ELEVATION_THROTTLE_MS); });
+      await new Promise((resolve) => {
+        setTimeout(resolve, ELEVATION_THROTTLE_MS);
+      });
     }
   }
   return results;

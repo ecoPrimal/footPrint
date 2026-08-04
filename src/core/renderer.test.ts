@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * @vitest-environment jsdom
  */
@@ -20,7 +21,7 @@ let store: EntityStore;
 
 async function getStore(): Promise<EntityStore> {
   const mod = await import('./store.js');
-  return mod.store as unknown as EntityStore;
+  return mod.store;
 }
 
 function makeLayerEntity(s: EntityStore, name = 'TestLayer', visible = true): MutableEntity {
@@ -31,12 +32,27 @@ function makeLayerEntity(s: EntityStore, name = 'TestLayer', visible = true): Mu
   return entity;
 }
 
-function makeShapeEntity(s: EntityStore, parentId: EntityId, shapeType: 'polygon' | 'polyline' | 'marker' | 'circle' | 'circlemarker' = 'polygon'): MutableEntity {
+function makeShapeEntity(
+  s: EntityStore,
+  parentId: EntityId,
+  shapeType: 'polygon' | 'polyline' | 'marker' | 'circle' | 'circlemarker' = 'polygon',
+): MutableEntity {
   const entity = createEntity('shape', parentId);
 
   if (shapeType === 'polygon') {
     entity.components.geometry = {
-      geojson: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
+      geojson: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0],
+          ],
+        ],
+      },
       shapeType: 'polygon',
     };
   } else if (shapeType === 'marker') {
@@ -57,7 +73,13 @@ function makeShapeEntity(s: EntityStore, parentId: EntityId, shapeType: 'polygon
     };
   } else {
     entity.components.geometry = {
-      geojson: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
+      geojson: {
+        type: 'LineString',
+        coordinates: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
       shapeType: 'polyline',
     };
   }

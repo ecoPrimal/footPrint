@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rust's Option<T> -- explicit presence/absence.
  * Unlike `T | undefined`, you must destructure to access the value.
  * No silent propagation through optional chaining.
  */
-export type Option<T> =
-  | { readonly some: true; readonly value: T }
-  | { readonly some: false };
+export type Option<T> = { readonly some: true; readonly value: T } | { readonly some: false };
 
 export function Some<T>(value: T): Option<T> {
   return { some: true, value };
@@ -57,10 +56,7 @@ export function fromNullable<T>(value: T | null | undefined): Option<T> {
  * Pattern match on an Option, handling both branches.
  * Equivalent to Rust's `match opt { Some(v) => ..., None => ... }`.
  */
-export function matchOption<T, R>(
-  opt: Option<T>,
-  handlers: { some: (value: T) => R; none: () => R },
-): R {
+export function matchOption<T, R>(opt: Option<T>, handlers: { some: (value: T) => R; none: () => R }): R {
   return opt.some ? handlers.some(opt.value) : handlers.none();
 }
 

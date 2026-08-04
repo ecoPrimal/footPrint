@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * First-run welcome overlay.
  *
@@ -5,7 +6,7 @@
  * Guides new users through the key features and known locations.
  */
 
-import { KNOWN_LOCATIONS } from '../constants.js';
+import { getKnownLocations } from '../core/manifest.js';
 
 const STORAGE_KEY = 'footprint_welcome_seen';
 
@@ -18,9 +19,9 @@ export function initWelcome(): void {
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-labelledby', 'welcome-title');
 
-  const locationList = KNOWN_LOCATIONS.map(
-    (loc) => `<li><strong>${loc.name}</strong> — ${loc.description}</li>`,
-  ).join('');
+  const locationList = getKnownLocations()
+    .map((loc) => `<li><strong>${loc.name}</strong> — ${loc.description}</li>`)
+    .join('');
 
   overlay.innerHTML = `
     <div class="welcome-card">

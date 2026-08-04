@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { channel, boundedChannel } from './channel.js';
 import { Owned, take } from './owned.js';

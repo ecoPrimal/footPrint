@@ -4,6 +4,14 @@
 
 ---
 
+## Status Update (2026-08-03)
+
+- **P1 Source Registry: Partially complete** — `src/core/manifest.ts` provides runtime endpoint registry, source capability manifests, and known location registry. Bootstrap pack in `manifest-defaults.ts`. Declarative JSON manifest not yet implemented.
+- **P1 Municipality Discovery: Not started**
+- URLs are now runtime-configurable via `getEndpoint(endpointKey(...))` — no longer hardcoded in source modules
+
+---
+
 ## Current Architecture
 
 footPrint's data layer has 3 concerns that collapse into 2 primals:

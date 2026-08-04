@@ -1,8 +1,18 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import {
-  Some, None, isSome, isNone,
-  unwrapOption, unwrapOptionOr, unwrapOptionOrElse,
-  mapOption, andThenOption, fromNullable, matchOption, toNullable,
+  Some,
+  None,
+  isSome,
+  isNone,
+  unwrapOption,
+  unwrapOptionOr,
+  unwrapOptionOrElse,
+  mapOption,
+  andThenOption,
+  fromNullable,
+  matchOption,
+  toNullable,
 } from './option.js';
 
 describe('Option<T>', () => {
@@ -73,7 +83,9 @@ describe('Option<T>', () => {
 
   describe('unwrapOptionOrElse', () => {
     it('returns value for Some without calling fn', () => {
-      const fn = () => { throw new Error('should not be called'); };
+      const fn = () => {
+        throw new Error('should not be called');
+      };
       expect(unwrapOptionOrElse(Some(5), fn)).toBe(5);
     });
 
@@ -84,31 +96,31 @@ describe('Option<T>', () => {
 
   describe('mapOption', () => {
     it('transforms value in Some', () => {
-      const result = mapOption(Some(3), n => n * 2);
+      const result = mapOption(Some(3), (n) => n * 2);
       expect(isSome(result)).toBe(true);
       if (isSome(result)) expect(result.value).toBe(6);
     });
 
     it('returns None for None', () => {
-      const result = mapOption(None<number>(), n => n * 2);
+      const result = mapOption(None<number>(), (n) => n * 2);
       expect(isNone(result)).toBe(true);
     });
   });
 
   describe('andThenOption', () => {
     it('chains on Some', () => {
-      const result = andThenOption(Some(5), n => n > 3 ? Some(n * 2) : None());
+      const result = andThenOption(Some(5), (n) => (n > 3 ? Some(n * 2) : None()));
       expect(isSome(result)).toBe(true);
       if (isSome(result)) expect(result.value).toBe(10);
     });
 
     it('returns None when fn returns None', () => {
-      const result = andThenOption(Some(1), n => n > 3 ? Some(n) : None());
+      const result = andThenOption(Some(1), (n) => (n > 3 ? Some(n) : None()));
       expect(isNone(result)).toBe(true);
     });
 
     it('returns None for input None', () => {
-      const result = andThenOption(None<number>(), n => Some(n));
+      const result = andThenOption(None<number>(), (n) => Some(n));
       expect(isNone(result)).toBe(true);
     });
   });
@@ -140,7 +152,7 @@ describe('Option<T>', () => {
   describe('matchOption', () => {
     it('calls some handler for Some', () => {
       const result = matchOption(Some(10), {
-        some: v => v + 1,
+        some: (v) => v + 1,
         none: () => -1,
       });
       expect(result).toBe(11);
@@ -148,7 +160,7 @@ describe('Option<T>', () => {
 
     it('calls none handler for None', () => {
       const result = matchOption(None<number>(), {
-        some: v => v + 1,
+        some: (v) => v + 1,
         none: () => -1,
       });
       expect(result).toBe(-1);
