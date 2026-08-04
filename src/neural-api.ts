@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * JSON-RPC 2.0 over Unix Domain Socket (NDJSON framing).
- * Connects to NUCLEUS membrane sockets with riboCipher transport signal.
+ * JSON-RPC 2.0 client for NUCLEUS primal communication.
  *
- * riboCipher prefix: [0xEC, 0x01] = cleartext JSON-RPC (per RIBOCIPHER_TRANSPORT_SIGNAL_STANDARD).
- * All NUCLEUS primals require this 2-byte prefix before JSON-RPC payload on UDS.
+ * Supports two transports:
+ * - TCP (host:port) — for same-gate services (no BTSP required, local-trust)
+ * - UDS (socket path) — for inter-primal IPC (requires riboCipher prefix [0xEC, 0x01])
+ *
+ * Default resolution order: NESTGATE_RPC_URL env → TCP localhost:8080 (same-gate local-trust)
+ * UDS path via MEMBRANE_SOCKET env (requires BTSP — future: biomeOS capability routing)
  */
 
-import { connect } from 'node:net';
+import { connect, type Socket } from 'node:net';
 import { NEURAL_API_TIMEOUT_MS } from './constants.js';
 
 const RIBOCIPHER_CLEAR_JSONRPC = Buffer.from([0xec, 0x01]);
 
 export interface NeuralApiConfig {
-  readonly socketPath: string;
+  readonly transport: 'tcp' | 'uds';
+  readonly host?: string;
+  readonly port?: number;
+  readonly socketPath?: string;
   readonly timeoutMs?: number;
 }
 
@@ -32,22 +38,27 @@ export interface JsonRpcResponse<T = unknown> {
 
 export interface ContentPutParams {
   readonly family: string;
-  readonly key: string;
-  readonly data: unknown;
+  readonly content_base64: string;
 }
 
 export interface ContentPutResult {
   readonly hash: string;
+  readonly size: number;
+  readonly stored: boolean;
+  readonly deduplicated: boolean;
+  readonly family_id: string;
 }
 
 export interface ContentGetParams {
-  readonly family?: string;
-  readonly key: string;
+  readonly family: string;
+  readonly hash: string;
 }
 
 export interface ContentGetResult {
-  readonly data?: unknown;
-  readonly error?: string;
+  readonly data: string;
+  readonly hash: string;
+  readonly size: number;
+  readonly family_id: string;
 }
 
 export interface ContentListParams {
@@ -55,7 +66,9 @@ export interface ContentListParams {
 }
 
 export interface ContentListResult {
-  readonly objects: readonly unknown[];
+  readonly count: number;
+  readonly family_id: string;
+  readonly hashes: readonly { readonly hash: string; readonly size: number }[];
 }
 
 /** Thrown when the Neural API socket is unreachable (triggers HTTP fallback). */
@@ -89,16 +102,23 @@ export function resetRequestIdForTests(): void {
 }
 
 export class NeuralApiClient {
-  private readonly socketPath: string;
+  private readonly config: NeuralApiConfig;
   private readonly timeoutMs: number;
 
   constructor(config: NeuralApiConfig) {
-    this.socketPath = config.socketPath;
+    this.config = config;
     this.timeoutMs = config.timeoutMs ?? NEURAL_API_TIMEOUT_MS;
   }
 
   get socket(): string {
-    return this.socketPath;
+    if (this.config.transport === 'uds') {
+      return this.config.socketPath ?? '/run/membrane/nestgate.sock';
+    }
+    return `${this.config.host ?? '127.0.0.1'}:${String(this.config.port ?? 8080)}`;
+  }
+
+  get transport(): 'tcp' | 'uds' {
+    return this.config.transport;
   }
 
   async isAvailable(): Promise<boolean> {
@@ -117,17 +137,15 @@ export class NeuralApiClient {
   async contentPut(params: ContentPutParams): Promise<ContentPutResult> {
     return this.call<ContentPutResult>('content.put', {
       family: params.family,
-      key: params.key,
-      data: params.data,
+      content_base64: params.content_base64,
     });
   }
 
   async contentGet(params: ContentGetParams): Promise<ContentGetResult> {
-    const rpcParams: Record<string, unknown> = { key: params.key };
-    if (params.family !== undefined) {
-      rpcParams['family'] = params.family;
-    }
-    return this.call<ContentGetResult>('content.get', rpcParams);
+    return this.call<ContentGetResult>('content.get', {
+      family: params.family,
+      hash: params.hash,
+    });
   }
 
   async contentList(params: ContentListParams): Promise<ContentListResult> {
@@ -155,7 +173,17 @@ export class NeuralApiClient {
 
   private exchange(requestLine: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const socket = connect(this.socketPath);
+      let socket: Socket;
+
+      if (this.config.transport === 'uds') {
+        socket = connect(this.config.socketPath ?? '/run/membrane/nestgate.sock');
+      } else {
+        socket = connect({
+          host: this.config.host ?? '127.0.0.1',
+          port: this.config.port ?? 8080,
+        });
+      }
+
       let responseData = '';
       let settled = false;
 
@@ -168,7 +196,11 @@ export class NeuralApiClient {
       socket.setTimeout(this.timeoutMs);
 
       socket.on('connect', () => {
-        const payload = Buffer.concat([RIBOCIPHER_CLEAR_JSONRPC, Buffer.from(requestLine, 'utf8')]);
+        const lineBuffer = Buffer.from(requestLine, 'utf8');
+        const payload =
+          this.config.transport === 'uds'
+            ? Buffer.concat([RIBOCIPHER_CLEAR_JSONRPC, lineBuffer])
+            : lineBuffer;
         socket.write(payload, (writeErr) => {
           if (writeErr) {
             finish(() => {
@@ -221,12 +253,45 @@ export class NeuralApiClient {
 
 /**
  * Create a client for CAS operations.
- * Default: MEMBRANE_SOCKET env → /run/membrane/nestgate.sock
- * (biomeOS only proxies capability.call/graph.execute; CAS goes direct to nestGate)
+ *
+ * Resolution order:
+ * 1. NESTGATE_RPC_URL env (e.g. "tcp://127.0.0.1:8080") — explicit TCP endpoint
+ * 2. NESTGATE_RPC_PORT env → TCP localhost on that port
+ * 3. MEMBRANE_SOCKET env → UDS path (requires BTSP on production NUCLEUS)
+ * 4. Default: TCP localhost:8080 (same-gate local-trust, no BTSP needed)
+ *
+ * TCP is preferred for same-gate services because BTSP is enforced on UDS
+ * when FAMILY_ID is set. TCP on loopback provides process-level local-trust.
  */
 export function createNeuralApiClient(socketPath?: string): NeuralApiClient {
-  const resolvedPath = socketPath ?? process.env['MEMBRANE_SOCKET'] ?? '/run/membrane/nestgate.sock';
-  return new NeuralApiClient({ socketPath: resolvedPath });
+  if (socketPath) {
+    return new NeuralApiClient({ transport: 'uds', socketPath });
+  }
+
+  const rpcUrl = process.env['NESTGATE_RPC_URL'];
+  if (rpcUrl) {
+    const url = new URL(rpcUrl);
+    if (url.protocol === 'unix:' || url.protocol === 'uds:') {
+      return new NeuralApiClient({ transport: 'uds', socketPath: url.pathname });
+    }
+    return new NeuralApiClient({
+      transport: 'tcp',
+      host: url.hostname || '127.0.0.1',
+      port: Number(url.port) || 8080,
+    });
+  }
+
+  const rpcPort = process.env['NESTGATE_RPC_PORT'];
+  if (rpcPort) {
+    return new NeuralApiClient({ transport: 'tcp', port: Number(rpcPort) });
+  }
+
+  const membraneSocket = process.env['MEMBRANE_SOCKET'];
+  if (membraneSocket) {
+    return new NeuralApiClient({ transport: 'uds', socketPath: membraneSocket });
+  }
+
+  return new NeuralApiClient({ transport: 'tcp', port: 8080 });
 }
 
 export function isNeuralApiUnavailable(err: unknown): boolean {

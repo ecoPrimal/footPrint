@@ -29,6 +29,7 @@ import {
   PROXY_PATH,
   CACHE_PATH,
   CAS_PATH,
+  CAS_FAMILY,
   AGENT_PATH,
   HEALTH_PATH,
   AGENT_BRIDGE_PATH,
@@ -310,8 +311,8 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
 
   type CasRoute =
     | { readonly type: 'health' }
-    | { readonly type: 'put'; readonly family: string; readonly key: string; readonly data: unknown }
-    | { readonly type: 'get'; readonly key: string; readonly family?: string }
+    | { readonly type: 'put'; readonly family: string; readonly data: unknown }
+    | { readonly type: 'get'; readonly family: string; readonly hash: string }
     | { readonly type: 'list'; readonly family: string };
 
   function parseCasRoute(req: Request): CasRoute | null {
@@ -322,15 +323,14 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
     }
 
     if (subPath === 'store' && req.method === 'PUT') {
-      const family = req.get('X-CAS-Family');
-      const key = req.get('X-CAS-Name');
-      if (!family || !key) return null;
-      return { type: 'put', family, key, data: req.body };
+      const family = req.get('X-CAS-Family') ?? CAS_FAMILY;
+      return { type: 'put', family, data: req.body };
     }
 
-    const fetchMatch = /^fetch\/(.+)$/.exec(subPath);
+    const fetchMatch = /^fetch\/([a-f0-9]{64})$/.exec(subPath);
     if (fetchMatch && req.method === 'GET') {
-      return { type: 'get', key: decodeURIComponent(fetchMatch[1] ?? '') };
+      const family = req.get('X-CAS-Family') ?? CAS_FAMILY;
+      return { type: 'get', family, hash: fetchMatch[1] ?? '' };
     }
 
     const indexMatch = /^index\/(.+)$/.exec(subPath);
@@ -345,21 +345,16 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
 
     if (segments.length === 2) {
       const family = decodeURIComponent(segments[0] ?? '');
-      const key = decodeURIComponent(segments[1] ?? '');
+      const hashOrKey = decodeURIComponent(segments[1] ?? '');
       if (req.method === 'GET') {
-        return { type: 'get', family, key };
+        return { type: 'get', family, hash: hashOrKey };
       }
       if (req.method === 'PUT') {
-        return { type: 'put', family, key, data: req.body };
+        return { type: 'put', family, data: req.body };
       }
     }
 
     return null;
-  }
-
-  function casPayloadSize(data: unknown): number {
-    if (typeof data === 'string') return data.length;
-    return JSON.stringify(data).length;
   }
 
   async function handleCasViaNeuralApi(req: Request, res: Response): Promise<boolean> {
@@ -376,38 +371,35 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
           return true;
         }
         case 'put': {
+          const jsonData = JSON.stringify(route.data);
+          const content_base64 = Buffer.from(jsonData, 'utf8').toString('base64');
           const result = await neuralApi.contentPut({
             family: route.family,
-            key: route.key,
-            data: route.data,
+            content_base64,
           });
           res.status(200).json({
             hash: result.hash,
-            size: casPayloadSize(route.data),
-            stored: true,
+            size: result.size,
+            stored: result.stored,
           });
           return true;
         }
         case 'get': {
-          const getParams: { key: string; family?: string } = { key: route.key };
-          if (route.family !== undefined) {
-            getParams.family = route.family;
+          const result = await neuralApi.contentGet({
+            family: route.family,
+            hash: route.hash,
+          });
+          const decoded = Buffer.from(result.data, 'base64').toString('utf8');
+          try {
+            res.status(200).json(JSON.parse(decoded));
+          } catch {
+            res.status(200).send(decoded);
           }
-          const result = await neuralApi.contentGet(getParams);
-          if (result.error) {
-            res.status(404).json({ error: result.error } satisfies ErrorResponse);
-            return true;
-          }
-          if (result.data === undefined) {
-            res.status(404).json({ error: 'Content not found' } satisfies ErrorResponse);
-            return true;
-          }
-          res.status(200).json(result.data);
           return true;
         }
         case 'list': {
           const result = await neuralApi.contentList({ family: route.family });
-          res.status(200).json(result.objects);
+          res.status(200).json(result);
           return true;
         }
       }

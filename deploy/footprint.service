@@ -17,10 +17,12 @@ Group=membrane
 WorkingDirectory=/opt/ecoPrimals/protists/footPrint
 Environment=PORT=3002
 Environment=NODE_ENV=production
-Environment=MEMBRANE_SOCKET=/run/membrane/nestgate.sock
-# CAS routing: UDS with riboCipher [0xEC,0x01] prefix to nestgate.sock
-# Fallback if socket unavailable:
-# Environment=NESTGATE_URL=http://127.0.0.1:7700
+# CAS routing: TCP JSON-RPC to nestGate (same-gate local-trust, no BTSP needed)
+Environment=NESTGATE_RPC_PORT=8080
+# Alternative: explicit URL format
+# Environment=NESTGATE_RPC_URL=tcp://127.0.0.1:8080
+# UDS (requires BTSP when FAMILY_ID set — for future biomeOS capability routing):
+# Environment=MEMBRANE_SOCKET=/run/membrane/nestgate.sock
 ExecStart=/usr/bin/node dist/server.js
 Restart=on-failure
 RestartSec=5
