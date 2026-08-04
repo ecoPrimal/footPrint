@@ -55,14 +55,9 @@ async function saveProject(): Promise<void> {
   };
 
   try {
-    const result = await apiSaveProject(currentProject, data);
+    const result = await saveProjectWithCas(currentProject, data);
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Saved: ${result.saved}`);
-
-    // Dual-write to nestGate CAS (non-blocking, best-effort)
-    casStoreProject(data).catch(() => {
-      // CAS unavailable — local save still succeeded
-    });
   } catch {
     void modalAlert('Error', 'Failed to save project.');
   }
@@ -76,12 +71,7 @@ async function showLoadModal(): Promise<void> {
   title.textContent = 'Load Project';
 
   try {
-    const [localProjects, casProjects] = await Promise.all([
-      apiListProjects().catch(() => [] as string[]),
-      casListProjects().catch(() => [] as CasIndexEntry[]),
-    ]);
-
-    const entries = mergeProjectEntries(localProjects, casProjects);
+    const entries = await listMergedProjects();
 
     if (entries.length === 0) {
       body.innerHTML = '<p class="hint">No saved projects yet.</p>';
@@ -129,13 +119,13 @@ async function showLoadModal(): Promise<void> {
   overlay.classList.remove('hidden');
 }
 
-interface ProjectEntry {
+export interface ProjectEntry {
   readonly name: string;
   readonly hash?: string;
   readonly casOnly: boolean;
 }
 
-function mergeProjectEntries(local: readonly string[], cas: readonly CasIndexEntry[]): ProjectEntry[] {
+export function mergeProjectEntries(local: readonly string[], cas: readonly CasIndexEntry[]): ProjectEntry[] {
   const byName = new Map<string, ProjectEntry>();
 
   for (const name of local) {
@@ -154,19 +144,43 @@ function mergeProjectEntries(local: readonly string[], cas: readonly CasIndexEnt
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Persist locally and dual-write to CAS (CAS failure is non-fatal). */
+export async function saveProjectWithCas(name: string, data: ProjectFile): Promise<{ saved: string }> {
+  const result = await apiSaveProject(name, data);
+  casStoreProject(data).catch(() => {
+    // CAS unavailable — local save still succeeded
+  });
+  return result;
+}
+
+/** Load from local API, falling back to CAS when a hash is provided. */
+export async function loadProjectFromServer(name: string, hash?: string): Promise<ProjectFile> {
+  if (hash) {
+    try {
+      return await apiLoadProject(name);
+    } catch {
+      return await casFetchProject(hash);
+    }
+  }
+  return await apiLoadProject(name);
+}
+
+/** Merge local project names with CAS index entries. */
+export async function listMergedProjects(): Promise<readonly ProjectEntry[]> {
+  const [localProjects, casProjects] = await Promise.all([
+    apiListProjects().catch(() => [] as string[]),
+    casListProjects().catch(() => [] as CasIndexEntry[]),
+  ]);
+  return mergeProjectEntries(localProjects, casProjects);
+}
+
+export async function deleteStoredProject(name: string): Promise<{ deleted: string }> {
+  return apiDeleteProject(name);
+}
+
 async function loadProject(name: string, hash?: string): Promise<void> {
   try {
-    let data: ProjectFile;
-
-    if (hash) {
-      try {
-        data = await apiLoadProject(name);
-      } catch {
-        data = await casFetchProject(hash);
-      }
-    } else {
-      data = await apiLoadProject(name);
-    }
+    const data = await loadProjectFromServer(name, hash);
 
     deselectShape();
     clearHistory();

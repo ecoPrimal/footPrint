@@ -16,14 +16,7 @@ import { initMeasurement } from './measurement.js';
 import { initStorage } from './storage.js';
 import { escHtml } from './html.js';
 import { initDataSources, getAllSources, toggleSource } from './datasources.js';
-import { registerOSMSources } from './sources/osm.js';
-import { registerParcelSource } from './sources/parcels.js';
-import { registerFemaSource } from './sources/fema.js';
-import { registerZoningSource } from './sources/zoning.js';
-import { registerUSGSSource } from './sources/usgs.js';
-import { registerSoilsSource } from './sources/soils.js';
-import { registerMichiganSources } from './sources/michigan.js';
-import { registerInfrastructureSources } from './sources/infrastructure.js';
+import { registerAllSources } from './source-registry.js';
 import { initTerrain } from './terrain.js';
 import { initSnap, toggleSnap, getSnapConfig } from './snap.js';
 import { initDimensions } from './dimensions.js';
@@ -132,14 +125,7 @@ document.getElementById('btn-add-layer')?.addEventListener('click', () => {
 
 initDataSources(map, renderDataSourceList);
 
-registerOSMSources();
-registerParcelSource();
-registerFemaSource();
-registerZoningSource();
-registerUSGSSource();
-registerSoilsSource();
-registerMichiganSources();
-registerInfrastructureSources();
+registerAllSources();
 
 renderDataSourceList(getAllSources());
 

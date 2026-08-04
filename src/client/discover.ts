@@ -5,7 +5,7 @@ import { area } from '@turf/area';
 import { distance } from '@turf/distance';
 import { centroid } from '@turf/centroid';
 import type { ScoredSource, DiscoveryReport } from '../types/spatial.js';
-import { DEFAULT_CATEGORY_BOOSTS } from '../types/spatial.js';
+import { deriveCategoryBoosts } from '../types/spatial.js';
 import { getAllSources, fetchSource, enableSource, fetchAllEnabled } from './datasources.js';
 import { buildTerrainGrid, renderContours, renderSlopeArrows } from './terrain.js';
 import { boundedChannel } from '../rustscript/channel.js';
@@ -26,7 +26,7 @@ import {
   DISCOVERY_COUNT_DIVISOR,
   DISCOVERY_NO_DATA_DISTANCE,
 } from '../constants.js';
-import { getSourceIdsByCapability } from '../core/manifest.js';
+import { getSourceIdsByCapability, listSourceManifests, type SourceCapability } from '../core/manifest.js';
 import { store } from '../core/store.js';
 import { entityIdFrom } from '../core/entity.js';
 import { extractCoords } from '../core/geometry.js';
@@ -86,13 +86,7 @@ export function initDiscover(leafletMap: L.Map, discoveryCallback?: (report: Dis
 async function runDiscovery(shapeBounds: L.LatLngBounds, propertyGeom: GeoJSON.Feature | null): Promise<void> {
   if (!map) return;
 
-  const allSrc = getAllSources();
-  for (const id of getSourceIdsByCapability('discovery:auto-enable')) {
-    const src = allSrc[id];
-    if (src && !src.enabled) {
-      await enableSource(id);
-    }
-  }
+  await enableSourcesWithCapability('discovery:auto-enable');
 
   let propertyArea = 0;
   if (propertyGeom) {
@@ -106,6 +100,7 @@ async function runDiscovery(shapeBounds: L.LatLngBounds, propertyGeom: GeoJSON.F
     DISCOVERY_BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001);
   const buffered = shapeBounds.pad(padRatio);
   const sources = getAllSources();
+  const categoryBoosts = deriveCategoryBoosts(sources, listSourceManifests());
 
   const sourceEntries = Object.entries(sources).filter(([, src]) => src.type === 'vector' && src.fetch);
   const [tx, rx] = boundedChannel<ScoredSource>(sourceEntries.length || 1);
@@ -130,44 +125,8 @@ async function runDiscovery(shapeBounds: L.LatLngBounds, propertyGeom: GeoJSON.F
 
           if (features.length === 0) return;
 
-          let totalDist = 0;
-          let nearestDist = Infinity;
-
-          if (propertyGeom && propertyGeom.geometry.type !== 'Point') {
-            for (const f of features.slice(0, DISCOVERY_MAX_FEATURE_SAMPLE)) {
-              try {
-                const dist = distance(centroid(f), centroid(propertyGeom), { units: 'meters' });
-                totalDist += dist;
-                if (dist < nearestDist) nearestDist = dist;
-              } catch {
-                // skip malformed features
-              }
-            }
-          }
-
-          const avgDist =
-            features.length > 0
-              ? totalDist / Math.min(features.length, DISCOVERY_MAX_FEATURE_SAMPLE)
-              : DISCOVERY_NO_DATA_DISTANCE;
-          const categoryBoost = DEFAULT_CATEGORY_BOOSTS[src.category] ?? DISCOVERY_DEFAULT_BOOST;
-          const countScore = Math.min(features.length / DISCOVERY_COUNT_DIVISOR, 1.0);
-          const proximityScore =
-            nearestDist < Infinity ? Math.max(0, 1 - nearestDist / DISCOVERY_PROXIMITY_RADIUS_M) : 0;
-          const relevance =
-            DISCOVERY_COUNT_WEIGHT * countScore +
-            DISCOVERY_PROXIMITY_WEIGHT * proximityScore +
-            DISCOVERY_CATEGORY_WEIGHT * categoryBoost;
-
-          const result: ScoredSource = {
-            sourceId: id,
-            sourceName: src.name,
-            category: src.category,
-            featureCount: features.length,
-            relevanceScore: Math.round(relevance * 100) / 100,
-            nearestDistance: Math.round(nearestDist * 10) / 10,
-            avgDistance: Math.round(avgDist * 10) / 10,
-            samples: features.slice(0, 5),
-          };
+          const result = scoreDiscoverySource(id, src, features, propertyGeom, categoryBoosts);
+          if (!result) return;
 
           const sendResult = tx.send(Owned.of(result));
           if (!isOk(sendResult)) {
@@ -210,6 +169,78 @@ async function runDiscovery(shapeBounds: L.LatLngBounds, propertyGeom: GeoJSON.F
 
   if (onDiscovery) onDiscovery(report);
   renderDiscoveryPanel(report);
+}
+
+/** Enable registered sources that declare the given capability. */
+export async function enableSourcesWithCapability(capability: SourceCapability): Promise<readonly string[]> {
+  const allSrc = getAllSources();
+  const enabled: string[] = [];
+  for (const id of getSourceIdsByCapability(capability)) {
+    const src = allSrc[id];
+    if (src && !src.enabled) {
+      await enableSource(id);
+      enabled.push(id);
+    }
+  }
+  return enabled;
+}
+
+interface SourceScoreInput {
+  readonly name: string;
+  readonly category: string;
+}
+
+/**
+ * Score a vector source by feature count, proximity to property, and category boost.
+ * Returns null when there are no features to score.
+ */
+export function scoreDiscoverySource(
+  sourceId: string,
+  src: SourceScoreInput,
+  features: readonly GeoJSON.Feature[],
+  propertyGeom: GeoJSON.Feature | null,
+  categoryBoosts?: Record<string, number>,
+): ScoredSource | null {
+  if (features.length === 0) return null;
+
+  let totalDist = 0;
+  let nearestDist = Infinity;
+
+  if (propertyGeom && propertyGeom.geometry.type !== 'Point') {
+    for (const f of features.slice(0, DISCOVERY_MAX_FEATURE_SAMPLE)) {
+      try {
+        const dist = distance(centroid(f), centroid(propertyGeom), { units: 'meters' });
+        totalDist += dist;
+        if (dist < nearestDist) nearestDist = dist;
+      } catch {
+        // skip malformed features
+      }
+    }
+  }
+
+  const avgDist =
+    features.length > 0
+      ? totalDist / Math.min(features.length, DISCOVERY_MAX_FEATURE_SAMPLE)
+      : DISCOVERY_NO_DATA_DISTANCE;
+  const boosts = categoryBoosts ?? deriveCategoryBoosts(getAllSources() ?? {}, listSourceManifests());
+  const categoryBoost = boosts[src.category] ?? DISCOVERY_DEFAULT_BOOST;
+  const countScore = Math.min(features.length / DISCOVERY_COUNT_DIVISOR, 1.0);
+  const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / DISCOVERY_PROXIMITY_RADIUS_M) : 0;
+  const relevance =
+    DISCOVERY_COUNT_WEIGHT * countScore +
+    DISCOVERY_PROXIMITY_WEIGHT * proximityScore +
+    DISCOVERY_CATEGORY_WEIGHT * categoryBoost;
+
+  return {
+    sourceId,
+    sourceName: src.name,
+    category: src.category,
+    featureCount: features.length,
+    relevanceScore: Math.round(relevance * 100) / 100,
+    nearestDistance: Math.round(nearestDist * 10) / 10,
+    avgDistance: Math.round(avgDist * 10) / 10,
+    samples: features.slice(0, 5),
+  };
 }
 
 function renderDiscoveryPanel(report: DiscoveryReport): void {

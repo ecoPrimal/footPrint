@@ -52,7 +52,6 @@ interface QueuedMessage {
 }
 
 const userMessages: QueuedMessage[] = [];
-const agentMessages: QueuedMessage[] = [];
 
 export function getUserMessages(flush: boolean): readonly QueuedMessage[] {
   const copy = [...userMessages];
@@ -236,7 +235,6 @@ export async function sendCommand(payload: CommandPayload): Promise<CommandResul
 
 export function sendAgentMessage(text: string): boolean {
   const timestamp = Date.now();
-  agentMessages.push({ text, timestamp });
 
   if (activeClient?.readyState === WebSocket.OPEN) {
     sendFrame(activeClient, {
@@ -261,4 +259,21 @@ export function sendAgentAction(description: string, entityId?: string): boolean
     return true;
   }
   return false;
+}
+
+/** @internal Reset module state — for tests only. */
+export function resetAgentBridgeForTests(): void {
+  shadowEntities = [];
+  browserConnected = false;
+  userMessages.length = 0;
+  pendingCommands.clear();
+  commandSeq = 0;
+  if (activeClient) {
+    activeClient.close();
+    activeClient = null;
+  }
+  if (wss) {
+    wss.close();
+    wss = null;
+  }
 }

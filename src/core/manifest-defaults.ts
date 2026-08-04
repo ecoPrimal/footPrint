@@ -46,6 +46,7 @@ export function registerDefaultManifests(): void {
     endpointKey('mi-framework'),
     'https://gisagocss.state.mi.us/arcgis/rest/services/OpenData/michigan_geographic_framework/MapServer',
   );
+  registerEndpointIfAbsent(endpointKey('mi-gisp'), 'https://gisp.mcgi.state.mi.us/arcgis/rest/services');
   registerEndpointIfAbsent(
     endpointKey('zoning'),
     'https://gis2.cityofeastlansing.com/arcgis/rest/services/ZoningDistricts/FeatureServer/0',

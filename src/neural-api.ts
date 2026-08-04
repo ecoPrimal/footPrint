@@ -8,6 +8,7 @@
  */
 
 import { connect } from 'node:net';
+import { NEURAL_API_TIMEOUT_MS } from './constants.js';
 
 const RIBOCIPHER_CLEAR_JSONRPC = Buffer.from([0xec, 0x01]);
 
@@ -93,7 +94,7 @@ export class NeuralApiClient {
 
   constructor(config: NeuralApiConfig) {
     this.socketPath = config.socketPath;
-    this.timeoutMs = config.timeoutMs ?? 5000;
+    this.timeoutMs = config.timeoutMs ?? NEURAL_API_TIMEOUT_MS;
   }
 
   get socket(): string {

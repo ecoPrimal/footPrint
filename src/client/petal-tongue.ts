@@ -13,7 +13,7 @@
  */
 
 import { petalTongueWsUrl } from './api.js';
-import { AGENT_RECONNECT_MS, AGENT_RECONNECT_MAX_MS } from '../constants.js';
+import { AGENT_RECONNECT_MS, AGENT_RECONNECT_MAX_MS, RPC_TIMEOUT_MS } from '../constants.js';
 
 // ── Types ────────────────────────────────────────────
 
@@ -61,8 +61,6 @@ let callId = 0;
 const pendingCalls = new Map<number, PendingCall>();
 let notificationHandler: NotificationHandler | null = null;
 let statusCallback: ((connected: boolean) => void) | null = null;
-
-const RPC_TIMEOUT_MS = 15_000;
 
 // ── Public API ───────────────────────────────────────
 
@@ -229,4 +227,22 @@ function rejectAllPending(reason: string): void {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** @internal Reset module state — for tests only. */
+export function resetPetalTongueForTests(): void {
+  if (reconnectTimer !== null) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  connected = false;
+  reconnectDelay = AGENT_RECONNECT_MS;
+  callId = 0;
+  pendingCalls.clear();
+  notificationHandler = null;
+  statusCallback = null;
 }

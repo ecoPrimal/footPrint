@@ -272,9 +272,3 @@ function handleProjectCommand(id: number, payload: CommandPayload): void {
     sendFrame(jsonRpcError(id, AGENT_COMMAND_ERROR, message));
   }
 }
-
-// ── Outbound: user messages ─────────────────────────────────────
-
-export function sendUserMessage(text: string): void {
-  sendFrame(jsonRpcNotify(AGENT_METHODS.AGENT_QUERY, { text, timestamp: Date.now() }));
-}

@@ -28,16 +28,14 @@ import {
   PROJECTS_PATH,
   PROXY_PATH,
   CACHE_PATH,
+  CAS_PATH,
   AGENT_PATH,
   HEALTH_PATH,
   AGENT_BRIDGE_PATH,
   APP_VERSION,
+  CACHE_KEY_HASH_LENGTH,
 } from './constants.js';
-import {
-  createNeuralApiClient,
-  isNeuralApiUnavailable,
-  NeuralApiRpcError,
-} from './neural-api.js';
+import { createNeuralApiClient, isNeuralApiUnavailable, NeuralApiRpcError } from './neural-api.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = join(__dirname, '..');
@@ -159,7 +157,7 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
     return createHash('sha256')
       .update(url + body)
       .digest('hex')
-      .slice(0, 16);
+      .slice(0, CACHE_KEY_HASH_LENGTH);
   }
 
   function ttlForUrl(url: string): number {
@@ -307,9 +305,8 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
     }
   });
 
-  const MEMBRANE_SOCKET = process.env['MEMBRANE_SOCKET'] ?? '/run/membrane/biomeos.sock';
   const NESTGATE_URL = process.env['NESTGATE_URL'] ?? '';
-  const neuralApi = createNeuralApiClient(MEMBRANE_SOCKET);
+  const neuralApi = createNeuralApiClient();
 
   type CasRoute =
     | { readonly type: 'health' }
@@ -318,7 +315,7 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
     | { readonly type: 'list'; readonly family: string };
 
   function parseCasRoute(req: Request): CasRoute | null {
-    const subPath = req.path.replace(/^\/api\/cas\/?/, '');
+    const subPath = req.path.replace(new RegExp(`^${CAS_PATH}/?`), '');
 
     if (subPath === 'health' && req.method === 'GET') {
       return { type: 'health' };
@@ -429,7 +426,7 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
   }
 
   async function handleCasViaHttp(req: Request, res: Response): Promise<void> {
-    const casPath = req.path.replace('/api/cas', '/cas');
+    const casPath = req.path.replace(CAS_PATH, '/cas');
     const upstream = `${NESTGATE_URL}${casPath}`;
 
     const headers: Record<string, string> = { 'Content-Type': req.get('Content-Type') ?? 'application/json' };
@@ -457,18 +454,16 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
     }
   }
 
-  app.all('/api/cas/{*path}', async (req: Request, res: Response) => {
+  app.all(`${CAS_PATH}/{*path}`, async (req: Request, res: Response) => {
     const handledByNeural = await handleCasViaNeuralApi(req, res);
     if (handledByNeural) {
       return;
     }
 
     if (!NESTGATE_URL) {
-      res
-        .status(503)
-        .json({
-          error: 'CAS not configured (Neural API unavailable and NESTGATE_URL not set)',
-        } satisfies ErrorResponse);
+      res.status(503).json({
+        error: 'CAS not configured (Neural API unavailable and NESTGATE_URL not set)',
+      } satisfies ErrorResponse);
       return;
     }
 

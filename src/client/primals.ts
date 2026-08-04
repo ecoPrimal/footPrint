@@ -10,7 +10,7 @@ import { Primal, registerPrimal } from '../core/primal.js';
 import { Ok, Err } from '../rustscript/result.js';
 import { solveConstraints } from '../core/constraints.js';
 import { getSourceIdsByCapability, listSourceManifests, type SourceCapability } from '../core/manifest.js';
-import { PROJECTS_PATH } from '../constants.js';
+import { CAS_PATH, PROJECTS_PATH } from '../constants.js';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -31,7 +31,7 @@ export function initFootPrintPrimals(): void {
     handle: () =>
       Ok({
         localPath: PROJECTS_PATH,
-        casPath: '/api/cas',
+        casPath: CAS_PATH,
         operations: ['list', 'load', 'save', 'delete'],
       }),
   });

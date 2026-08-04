@@ -131,6 +131,8 @@ export const KNOWN_LOCATIONS: readonly KnownLocation[] = getKnownLocations();
 export const PROXY_PATH = '/ext';
 export const PROJECTS_PATH = '/api/projects';
 export const CACHE_PATH = '/api/cache';
+export const CAS_PATH = '/api/cas' as const;
+export const CAS_FAMILY = 'footprint-projects' as const;
 export const AGENT_PATH = '/api/agent';
 export const HEALTH_PATH = '/api/health';
 export const WS_PATH = '/ws';
@@ -140,7 +142,6 @@ export const ALLOWED_HOSTS: readonly string[] = [
   ...endpointHosts(),
   'services1.arcgis.com',
   'services2.arcgis.com',
-  'gisp.mcgi.state.mi.us',
 ] as const;
 
 // ── Cache TTLs (milliseconds) ────────────────────────
@@ -156,6 +157,9 @@ export const CACHE_TTLS = {
 
 // ── Timing & limits ──────────────────────────────────
 
+export const RPC_TIMEOUT_MS = 15_000;
+export const NEURAL_API_TIMEOUT_MS = 5_000;
+export const CACHE_KEY_HASH_LENGTH = 16;
 export const DISCOVERY_DEBOUNCE_MS = 800;
 export const REACTIVE_DEBOUNCE_MS = 16;
 export const AGENT_RECONNECT_MS = 1000;

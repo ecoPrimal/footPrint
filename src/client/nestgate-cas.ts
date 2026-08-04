@@ -20,11 +20,10 @@
  */
 
 import type { ProjectFile } from '../types/project.js';
+import { CAS_PATH, CAS_FAMILY } from '../constants.js';
 
 // REST paths exposed by footPrint server (proxied to Neural API or nestGate HTTP).
 // Path convention: /api/cas/store (PUT), /api/cas/fetch/{hash} (GET), /api/cas/index/{family} (GET)
-const CAS_BASE = '/api/cas';
-const CAS_FAMILY = 'footprint-projects';
 
 export interface CasStoreResult {
   readonly hash: string;
@@ -44,7 +43,7 @@ export interface CasIndexEntry {
  */
 export async function casStoreProject(project: ProjectFile): Promise<CasStoreResult> {
   const payload = JSON.stringify(project);
-  const resp = await fetch(`${CAS_BASE}/store`, {
+  const resp = await fetch(`${CAS_PATH}/store`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -61,7 +60,7 @@ export async function casStoreProject(project: ProjectFile): Promise<CasStoreRes
  * Fetch a project by its content hash from nestGate CAS.
  */
 export async function casFetchProject(hash: string): Promise<ProjectFile> {
-  const resp = await fetch(`${CAS_BASE}/fetch/${encodeURIComponent(hash)}`);
+  const resp = await fetch(`${CAS_PATH}/fetch/${encodeURIComponent(hash)}`);
   if (!resp.ok) throw new Error(`CAS fetch failed: ${resp.status}`);
   return (await resp.json()) as ProjectFile;
 }
@@ -71,7 +70,7 @@ export async function casFetchProject(hash: string): Promise<ProjectFile> {
  * Returns an index of content hashes with metadata.
  */
 export async function casListProjects(): Promise<readonly CasIndexEntry[]> {
-  const resp = await fetch(`${CAS_BASE}/index/${encodeURIComponent(CAS_FAMILY)}`);
+  const resp = await fetch(`${CAS_PATH}/index/${encodeURIComponent(CAS_FAMILY)}`);
   if (!resp.ok) throw new Error(`CAS index failed: ${resp.status}`);
   return (await resp.json()) as CasIndexEntry[];
 }
@@ -81,7 +80,7 @@ export async function casListProjects(): Promise<readonly CasIndexEntry[]> {
  */
 export async function casHealthCheck(): Promise<boolean> {
   try {
-    const resp = await fetch(`${CAS_BASE}/health`, { method: 'GET' });
+    const resp = await fetch(`${CAS_PATH}/health`, { method: 'GET' });
     return resp.ok;
   } catch {
     return false;
