@@ -40,7 +40,7 @@ Browser (Vite)
        └── Interactive tutorial (11-step guided walkthrough)
 
 CSS: 5 modules (base, controls, map, panels, tutorial) — public/css/
-628 tests in 43 files, all SPDX-headered
+708 tests in 53 files, all SPDX-headered
 
 Express (:3002 on ironGate) — src/server.ts [DISAPPEARS]
   ├── Project CRUD      → absorbed by nestGate CAS

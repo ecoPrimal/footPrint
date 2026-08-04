@@ -51,7 +51,7 @@ Built as a single-page web application with a Node.js backend. The frontend uses
 
 **Source registration**: Manifest-driven via `src/client/source-registry.ts` — sources only register when required endpoints exist in the registry. Dynamic category boosts derived from coverage areas.
 
-**Quality**: 628 tests across 43 files (Vitest, strict TypeScript). 48% statement coverage (core/rustscript 89-99%, client UI layer needs E2E).
+**Quality**: 708 tests across 53 files (Vitest, strict TypeScript). 59% statement coverage (core/rustscript 89-99%, agent 78%, client UI layer 38% — remaining DOM-heavy modules need E2E).
 
 ## Core Design Decisions
 
