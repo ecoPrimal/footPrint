@@ -2,7 +2,7 @@
 
 GIS home improvement planner — satellite map overlays, CAD-like drawing tools, and parametric constraint solving for property planning.
 
-**Maturity:** `research-ready` — Last measured: 2026-08-03
+**Maturity:** `research-ready` — Last measured: 2026-08-04
 
 **footPrint is a [protist](../../infra/wateringHole/handoffs/FRAGO_PROTISTS_CATEGORY_136b.md)** — a browser-based product served BY ecoPrimals primals, not a primal itself. The Express backend disappears into a primal composition.
 
@@ -30,17 +30,19 @@ Browser (Vite)
        ├── Data source overlays (8 source modules, 15 sources)
        ├── Intelligence (proximity, conflicts, elevation)
        ├── Terrain (DEM grid, contours, slope/aspect)
-       ├── Discovery (auto-enables sources on property draw)
+       ├── Discovery (auto-enables sources on property draw, dynamic category boosts)
        ├── SourceManifest registry (runtime endpoint + capability discovery)
+       ├── Manifest-driven source registration (source-registry.ts)
        ├── Two JSON-RPC 2.0 WebSocket bridges: petalTongue (/ws) + Agent (domain.verb /ws/bridge)
        ├── nestGate CAS client (dual-write project persistence + health monitoring)
+       ├── Neural API client (UDS + riboCipher transport to NUCLEUS primals)
        ├── Primal capability registry (src/core/primal.ts, src/client/primals.ts)
        └── Interactive tutorial (11-step guided walkthrough)
 
 CSS: 5 modules (base, controls, map, panels, tutorial) — public/css/
-563 tests in 35 files, all SPDX-headered
+628 tests in 43 files, all SPDX-headered
 
-Express (:3000) — src/server.ts [DISAPPEARS]
+Express (:3002 on ironGate) — src/server.ts [DISAPPEARS]
   ├── Project CRUD      → absorbed by nestGate CAS
   ├── Proxy + cache     → absorbed by songBird drawbridge
   ├── CAS proxy (/api/cas/*) → absorbed when nestGate is direct
@@ -117,7 +119,7 @@ Open `http://localhost:5173/footprint/` — the map loads centered on East Lansi
 
 ## Deployment
 
-See `deploy/README.md` for Express server deployment on sporeGate (systemd + Caddy).
+See `deploy/README.md` for Express server deployment on ironGate (systemd + Caddy, port 3002).
 
 ## Inter-Primal Wiring
 

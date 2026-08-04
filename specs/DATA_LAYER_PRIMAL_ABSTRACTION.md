@@ -4,11 +4,15 @@
 
 ---
 
-## Status Update (2026-08-03)
+## Status Update (2026-08-04)
 
-- **P1 Source Registry: Partially complete** — `src/core/manifest.ts` provides runtime endpoint registry, source capability manifests, and known location registry. Bootstrap pack in `manifest-defaults.ts`. Declarative JSON manifest not yet implemented.
-- **P1 Municipality Discovery: Not started**
-- URLs are now runtime-configurable via `getEndpoint(endpointKey(...))` — no longer hardcoded in source modules
+- **P1 Source Registry: Complete (runtime)** — `src/core/manifest.ts` provides endpoint registry, capability manifests, and known location registry. Bootstrap in `manifest-defaults.ts`. `src/client/source-registry.ts` drives all registration from manifest — sources only register when their required endpoints exist. Declarative JSON manifest (file-backed) deferred to P2 (CAS-stored).
+- **P1 Municipality Discovery: Not started** — blocked on reverse geocode integration and CAS-stored municipality manifests.
+- All URLs runtime-configurable via `getEndpoint(endpointKey(...))` — no hardcoded URLs in source modules
+- `ALLOWED_HOSTS` now fully derived from registered endpoints via `endpointHosts()`
+- Category boosts (`Lansing`, `Michigan`) dynamically derived from manifest coverage areas
+- CAS constants (`CAS_PATH`, `CAS_FAMILY`) centralized in `constants.ts`
+- Neural API client (`src/neural-api.ts`) handles UDS communication with NUCLEUS primals via riboCipher transport
 
 ---
 
@@ -40,19 +44,15 @@ Client (sources/*.ts)             Server (server.ts)           Primals (target)
 | `zoning.ts` | 1 (zoning districts) | ArcGIS REST | East Lansing only | songBird drawbridge |
 | **Total** | **15** | | | |
 
-### Hardcoded Locality
+### Locality Handling (current)
 
-Two source modules are municipality-specific:
+Two source modules are locality-scoped but now manifest-driven:
 
-1. **`zoning.ts`** — `ZONING_URL` points to `gis2.cityofeastlansing.com`. Other
-   municipalities would need different ArcGIS endpoints. The zoning overlay API
-   pattern is the same (ArcGIS REST query with bbox), but the URL, field names,
-   and zone color mappings vary per city.
+1. **`zoning.ts`** — endpoint registered via `manifest-defaults.ts` as `zoning`. Only registers when the endpoint exists. Other municipalities would register different endpoints.
 
-2. **`michigan.ts`** — `MI_FRAMEWORK_BASE` points to Michigan's GIS framework.
-   Other states have their own GIS portals with different URLs and layer IDs.
+2. **`michigan.ts`** — endpoint registered as `mi-framework` and `mi-gisp`. Only registers when Michigan endpoints exist in the registry.
 
-Everything else (OSM, FEMA, Regrid, NRCS, USGS) is US-nationwide or global.
+Everything else (OSM, FEMA, Regrid, NRCS, USGS) is US-nationwide or global. All endpoints are resolved via `getEndpoint(endpointKey(...))` — no hardcoded URLs in source modules.
 
 ---
 
@@ -164,33 +164,29 @@ distinct API protocols, but each source module handles fetch/parse inline.
 
 ## Phasing
 
-| Phase | Item | Dependency | Gate |
-|-------|------|-----------|------|
-| P1 | Source definition registry (JSON manifest) | None | footPrint |
-| P1 | Municipality discovery (reverse geocode → source lookup) | Source registry | footPrint |
-| P2 | Protocol handlers (shared fetch/parse) | Source registry | footPrint |
-| P2 | Warm cache (preset radii pre-fetch) | nestGate CAS wiring | nestGate |
-| P2 | songBird drawbridge absorption | songBird drawbridge ready | songBird |
-| P3 | coralReef GPU terrain batch | coralReef GPU pipeline | coralReef |
+| Phase | Item | Dependency | Status |
+|-------|------|-----------|--------|
+| P1 | Source definition registry (runtime) | None | **Done** — `manifest.ts` + `source-registry.ts` |
+| P1 | Municipality discovery (reverse geocode) | Source registry | Not started |
+| P2 | Declarative JSON source manifests (CAS-stored) | P1 runtime registry | Not started |
+| P2 | Protocol handlers (shared fetch/parse) | Source registry | Not started |
+| P2 | Warm cache (preset radii pre-fetch) | nestGate CAS wiring | Blocked (BTSP) |
+| P2 | songBird drawbridge absorption | songBird drawbridge ready | Blocked (songBird) |
+| P3 | coralReef GPU terrain batch | coralReef GPU pipeline | Not started |
 
 ---
 
-## Files Affected
+## Key Files (current state)
 
-| File | Lines | Role | Action |
-|------|-------|------|--------|
-| `src/constants.ts` | 222 | Hardcoded URLs, locations | Extract source URLs to manifest |
-| `src/client/datasources.ts` | 200 | Registry + fetch engine | Add manifest loader |
-| `src/client/discover.ts` | 261 | Auto-discovery | Add municipality lookup |
-| `src/client/sources/osm.ts` | 226 | 5 OSM sources | Extract to manifest entries |
-| `src/client/sources/infrastructure.ts` | 111 | 4 infra sources | Extract to manifest entries |
-| `src/client/sources/fema.ts` | 74 | Flood zones | Extract to manifest entry |
-| `src/client/sources/zoning.ts` | 83 | East Lansing zoning | Make municipal-scoped |
-| `src/client/sources/michigan.ts` | 47 | MI roads | Make state-scoped |
-| `src/client/sources/usgs.ts` | 125 | Elevation + batch | Extract protocol handler |
-| `src/client/sources/parcels.ts` | 16 | Parcel tiles | Extract to manifest entry |
-| `src/client/sources/soils.ts` | 19 | Soil WMS | Extract to manifest entry |
-| `src/server.ts` | 412 | Proxy + cache | → songBird drawbridge |
+| File | Role | Status |
+|------|------|--------|
+| `src/core/manifest.ts` | Runtime endpoint + capability registry | Complete |
+| `src/core/manifest-defaults.ts` | Michigan bootstrap pack | Complete |
+| `src/client/source-registry.ts` | Manifest-gated source registration | Complete |
+| `src/client/discover.ts` | Auto-discovery with dynamic boosts | Complete |
+| `src/constants.ts` | Centralized constants (CAS, timeouts, hosts) | Complete |
+| `src/neural-api.ts` | UDS/riboCipher client for NUCLEUS primals | Complete |
+| `src/server.ts` | Proxy + cache (→ songBird drawbridge) | Active, awaiting absorption |
 
 ---
 
