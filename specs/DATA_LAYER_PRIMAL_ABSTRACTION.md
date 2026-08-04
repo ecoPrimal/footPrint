@@ -12,7 +12,7 @@
 - `ALLOWED_HOSTS` now fully derived from registered endpoints via `endpointHosts()`
 - Category boosts (`Lansing`, `Michigan`) dynamically derived from manifest coverage areas
 - CAS constants (`CAS_PATH`, `CAS_FAMILY`) centralized in `constants.ts`
-- Neural API client (`src/neural-api.ts`) handles UDS communication with NUCLEUS primals via riboCipher transport
+- Neural API client (`src/neural-api.ts`) handles dual-transport (TCP local-trust + UDS/riboCipher) JSON-RPC to nestGate for CAS ops
 
 ---
 
@@ -170,7 +170,7 @@ distinct API protocols, but each source module handles fetch/parse inline.
 | P1 | Municipality discovery (reverse geocode) | Source registry | Not started |
 | P2 | Declarative JSON source manifests (CAS-stored) | P1 runtime registry | Not started |
 | P2 | Protocol handlers (shared fetch/parse) | Source registry | Not started |
-| P2 | Warm cache (preset radii pre-fetch) | nestGate CAS wiring | Blocked (BTSP) |
+| P2 | Warm cache (preset radii pre-fetch) | nestGate CAS wiring | Unblocked (TCP local-trust) |
 | P2 | songBird drawbridge absorption | songBird drawbridge ready | Blocked (songBird) |
 | P3 | coralReef GPU terrain batch | coralReef GPU pipeline | Not started |
 
@@ -185,7 +185,7 @@ distinct API protocols, but each source module handles fetch/parse inline.
 | `src/client/source-registry.ts` | Manifest-gated source registration | Complete |
 | `src/client/discover.ts` | Auto-discovery with dynamic boosts | Complete |
 | `src/constants.ts` | Centralized constants (CAS, timeouts, hosts) | Complete |
-| `src/neural-api.ts` | UDS/riboCipher client for NUCLEUS primals | Complete |
+| `src/neural-api.ts` | TCP + UDS dual-transport JSON-RPC client (CAS ops) | Complete |
 | `src/server.ts` | Proxy + cache (→ songBird drawbridge) | Active, awaiting absorption |
 
 ---

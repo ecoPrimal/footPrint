@@ -35,7 +35,7 @@ Browser (Vite)
        ├── Manifest-driven source registration (source-registry.ts)
        ├── Two JSON-RPC 2.0 WebSocket bridges: petalTongue (/ws) + Agent (domain.verb /ws/bridge)
        ├── nestGate CAS client (dual-write project persistence + health monitoring)
-       ├── Neural API client (UDS + riboCipher transport to NUCLEUS primals)
+       ├── Neural API client (TCP local-trust + UDS/riboCipher dual-transport)
        ├── Primal capability registry (src/core/primal.ts, src/client/primals.ts)
        └── Interactive tutorial (11-step guided walkthrough)
 
