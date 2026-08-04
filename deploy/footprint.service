@@ -2,6 +2,7 @@
 # Install: cp deploy/footprint.service /etc/systemd/system/
 #          systemctl daemon-reload && systemctl enable --now footprint
 #
+# Deploy on ironGate downstream host (10.13.37.7).
 # Expects: npm ci && npm run build completed in WorkingDirectory
 
 [Unit]
@@ -14,10 +15,12 @@ Type=simple
 User=membrane
 Group=membrane
 WorkingDirectory=/opt/ecoPrimals/protists/footPrint
-Environment=PORT=3000
+Environment=PORT=3002
 Environment=NODE_ENV=production
-# Set NESTGATE_URL to enable CAS proxy (e.g. http://10.13.37.2:7700)
-# Environment=NESTGATE_URL=http://10.13.37.2:7700
+Environment=MEMBRANE_SOCKET=/run/membrane/nestgate.sock
+# CAS routing: UDS with riboCipher [0xEC,0x01] prefix to nestgate.sock
+# Fallback if socket unavailable:
+# Environment=NESTGATE_URL=http://127.0.0.1:7700
 ExecStart=/usr/bin/node dist/server.js
 Restart=on-failure
 RestartSec=5
@@ -25,6 +28,7 @@ TimeoutStopSec=10
 
 ReadWritePaths=/opt/ecoPrimals/protists/footPrint/projects
 ReadWritePaths=/opt/ecoPrimals/protists/footPrint/cache
+ReadOnlyPaths=/run/membrane
 
 ProtectSystem=strict
 ProtectHome=true

@@ -8,7 +8,11 @@
  *
  * Architecture:
  *   footPrint client → Express /api/projects (existing, local FS)
- *   footPrint client → nestGate CAS (content-addressed, distributed)
+ *   footPrint client → /api/cas/* (server-side routing, transparent to browser)
+ *
+ * The Express server routes /api/cas/* through biomeOS Neural API (UDS) when
+ * available, falling back to direct HTTP to nestGate (NESTGATE_URL). This client
+ * always calls same-origin /api/cas — the transport choice is server-side only.
  *
  * The CAS layer is additive — projects saved locally are also pushed
  * to CAS for integrity and distribution. Loading can fall back to
@@ -17,8 +21,8 @@
 
 import type { ProjectFile } from '../types/project.js';
 
-// nestGate CAS serves on the same origin via Caddy reverse proxy.
-// Path convention: /cas/store (PUT), /cas/fetch/{hash} (GET), /cas/index/{family} (GET)
+// REST paths exposed by footPrint server (proxied to Neural API or nestGate HTTP).
+// Path convention: /api/cas/store (PUT), /api/cas/fetch/{hash} (GET), /api/cas/index/{family} (GET)
 const CAS_BASE = '/api/cas';
 const CAS_FAMILY = 'footprint-projects';
 

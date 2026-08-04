@@ -33,6 +33,11 @@ import {
   AGENT_BRIDGE_PATH,
   APP_VERSION,
 } from './constants.js';
+import {
+  createNeuralApiClient,
+  isNeuralApiUnavailable,
+  NeuralApiRpcError,
+} from './neural-api.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = join(__dirname, '..');
@@ -302,41 +307,173 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
     }
   });
 
+  const MEMBRANE_SOCKET = process.env['MEMBRANE_SOCKET'] ?? '/run/membrane/biomeos.sock';
   const NESTGATE_URL = process.env['NESTGATE_URL'] ?? '';
+  const neuralApi = createNeuralApiClient(MEMBRANE_SOCKET);
 
-  app.all('/api/cas/{*path}', async (req: Request, res: Response) => {
-    if (!NESTGATE_URL) {
-      res.status(503).json({ error: 'CAS not configured (NESTGATE_URL not set)' } satisfies ErrorResponse);
-      return;
+  type CasRoute =
+    | { readonly type: 'health' }
+    | { readonly type: 'put'; readonly family: string; readonly key: string; readonly data: unknown }
+    | { readonly type: 'get'; readonly key: string; readonly family?: string }
+    | { readonly type: 'list'; readonly family: string };
+
+  function parseCasRoute(req: Request): CasRoute | null {
+    const subPath = req.path.replace(/^\/api\/cas\/?/, '');
+
+    if (subPath === 'health' && req.method === 'GET') {
+      return { type: 'health' };
     }
 
+    if (subPath === 'store' && req.method === 'PUT') {
+      const family = req.get('X-CAS-Family');
+      const key = req.get('X-CAS-Name');
+      if (!family || !key) return null;
+      return { type: 'put', family, key, data: req.body };
+    }
+
+    const fetchMatch = /^fetch\/(.+)$/.exec(subPath);
+    if (fetchMatch && req.method === 'GET') {
+      return { type: 'get', key: decodeURIComponent(fetchMatch[1] ?? '') };
+    }
+
+    const indexMatch = /^index\/(.+)$/.exec(subPath);
+    if (indexMatch && req.method === 'GET') {
+      return { type: 'list', family: decodeURIComponent(indexMatch[1] ?? '') };
+    }
+
+    const segments = subPath.split('/').filter((segment) => segment.length > 0);
+    if (segments.length === 1 && req.method === 'GET') {
+      return { type: 'list', family: decodeURIComponent(segments[0] ?? '') };
+    }
+
+    if (segments.length === 2) {
+      const family = decodeURIComponent(segments[0] ?? '');
+      const key = decodeURIComponent(segments[1] ?? '');
+      if (req.method === 'GET') {
+        return { type: 'get', family, key };
+      }
+      if (req.method === 'PUT') {
+        return { type: 'put', family, key, data: req.body };
+      }
+    }
+
+    return null;
+  }
+
+  function casPayloadSize(data: unknown): number {
+    if (typeof data === 'string') return data.length;
+    return JSON.stringify(data).length;
+  }
+
+  async function handleCasViaNeuralApi(req: Request, res: Response): Promise<boolean> {
+    const route = parseCasRoute(req);
+    if (!route) {
+      return false;
+    }
+
+    try {
+      switch (route.type) {
+        case 'health': {
+          const result = await neuralApi.healthCheck();
+          res.status(200).json(result ?? { status: 'ok' });
+          return true;
+        }
+        case 'put': {
+          const result = await neuralApi.contentPut({
+            family: route.family,
+            key: route.key,
+            data: route.data,
+          });
+          res.status(200).json({
+            hash: result.hash,
+            size: casPayloadSize(route.data),
+            stored: true,
+          });
+          return true;
+        }
+        case 'get': {
+          const getParams: { key: string; family?: string } = { key: route.key };
+          if (route.family !== undefined) {
+            getParams.family = route.family;
+          }
+          const result = await neuralApi.contentGet(getParams);
+          if (result.error) {
+            res.status(404).json({ error: result.error } satisfies ErrorResponse);
+            return true;
+          }
+          if (result.data === undefined) {
+            res.status(404).json({ error: 'Content not found' } satisfies ErrorResponse);
+            return true;
+          }
+          res.status(200).json(result.data);
+          return true;
+        }
+        case 'list': {
+          const result = await neuralApi.contentList({ family: route.family });
+          res.status(200).json(result.objects);
+          return true;
+        }
+      }
+    } catch (err: unknown) {
+      if (isNeuralApiUnavailable(err)) {
+        return false;
+      }
+      if (err instanceof NeuralApiRpcError) {
+        res.status(502).json({ error: 'CAS Neural API error', detail: err.message } satisfies ErrorResponse);
+        return true;
+      }
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      res.status(502).json({ error: 'CAS Neural API failed', detail: message } satisfies ErrorResponse);
+      return true;
+    }
+  }
+
+  async function handleCasViaHttp(req: Request, res: Response): Promise<void> {
     const casPath = req.path.replace('/api/cas', '/cas');
     const upstream = `${NESTGATE_URL}${casPath}`;
 
+    const headers: Record<string, string> = { 'Content-Type': req.get('Content-Type') ?? 'application/json' };
+    const casFamily = req.get('X-CAS-Family');
+    const casName = req.get('X-CAS-Name');
+    if (casFamily) headers['X-CAS-Family'] = casFamily;
+    if (casName) headers['X-CAS-Name'] = casName;
+
+    const fetchOpts: RequestInit = {
+      method: req.method,
+      headers,
+    };
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      fetchOpts.body = JSON.stringify(req.body);
+    }
+
+    const resp = await fetch(upstream, fetchOpts);
+    const ct = resp.headers.get('content-type') ?? '';
+    if (ct.includes('json')) {
+      const data: unknown = await resp.json();
+      res.status(resp.status).json(data);
+    } else {
+      const text = await resp.text();
+      res.status(resp.status).type('text/plain').send(text);
+    }
+  }
+
+  app.all('/api/cas/{*path}', async (req: Request, res: Response) => {
+    const handledByNeural = await handleCasViaNeuralApi(req, res);
+    if (handledByNeural) {
+      return;
+    }
+
+    if (!NESTGATE_URL) {
+      res
+        .status(503)
+        .json({
+          error: 'CAS not configured (Neural API unavailable and NESTGATE_URL not set)',
+        } satisfies ErrorResponse);
+      return;
+    }
+
     try {
-      const headers: Record<string, string> = { 'Content-Type': req.get('Content-Type') ?? 'application/json' };
-      const casFamily = req.get('X-CAS-Family');
-      const casName = req.get('X-CAS-Name');
-      if (casFamily) headers['X-CAS-Family'] = casFamily;
-      if (casName) headers['X-CAS-Name'] = casName;
-
-      const fetchOpts: RequestInit = {
-        method: req.method,
-        headers,
-      };
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        fetchOpts.body = JSON.stringify(req.body);
-      }
-
-      const resp = await fetch(upstream, fetchOpts);
-      const ct = resp.headers.get('content-type') ?? '';
-      if (ct.includes('json')) {
-        const data: unknown = await resp.json();
-        res.status(resp.status).json(data);
-      } else {
-        const text = await resp.text();
-        res.status(resp.status).type('text/plain').send(text);
-      }
+      await handleCasViaHttp(req, res);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       res.status(502).json({ error: 'CAS proxy failed', detail: message } satisfies ErrorResponse);
