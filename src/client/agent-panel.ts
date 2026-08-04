@@ -119,7 +119,7 @@ async function setupPetalTongueBridge(): Promise<void> {
     appendEntry('action', `Agent status: ${formatBrief(status)}`);
     appendEntry('action', `Capabilities: ${formatBrief(capabilities)}`);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'petalTongue bridge unavailable';
+    const message = err instanceof Error ? err.message : 'RPC bridge unavailable';
     appendEntry('action', message);
   }
 }
@@ -138,7 +138,7 @@ export function onPetalTongueStatusChange(connected: boolean): void {
     dotEl.className = connected ? 'agent-dot-connected' : 'agent-dot-disconnected';
   }
   if (connected) {
-    appendEntry('action', 'Connected to petalTongue');
+    appendEntry('action', 'RPC bridge connected');
     void setupPetalTongueBridge();
   } else {
     activeRequestId = undefined;

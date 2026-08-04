@@ -9,7 +9,7 @@ import {
   saveProject as apiSaveProject,
   deleteProject as apiDeleteProject,
 } from './api.js';
-import { casStoreProject, casListProjects, casFetchProject, type CasIndexEntry } from './nestgate-cas.js';
+import { casStoreProject, casListProjects, casFetchProject, type CasHashEntry } from './nestgate-cas.js';
 import { escHtml } from './html.js';
 import { TOAST_DURATION_MS } from '../constants.js';
 import { modalPrompt, modalAlert, modalConfirm } from './modal.js';
@@ -125,7 +125,7 @@ export interface ProjectEntry {
   readonly casOnly: boolean;
 }
 
-export function mergeProjectEntries(local: readonly string[], cas: readonly CasIndexEntry[]): ProjectEntry[] {
+export function mergeProjectEntries(local: readonly string[], cas: readonly CasHashEntry[]): ProjectEntry[] {
   const byName = new Map<string, ProjectEntry>();
 
   for (const name of local) {
@@ -133,11 +133,9 @@ export function mergeProjectEntries(local: readonly string[], cas: readonly CasI
   }
 
   for (const entry of cas) {
-    const existing = byName.get(entry.name);
-    if (existing) {
-      byName.set(entry.name, { name: entry.name, hash: entry.hash, casOnly: false });
-    } else {
-      byName.set(entry.name, { name: entry.name, hash: entry.hash, casOnly: true });
+    const label = `${entry.hash.slice(0, 12)}…`;
+    if (!byName.has(label)) {
+      byName.set(label, { name: label, hash: entry.hash, casOnly: true });
     }
   }
 
@@ -167,11 +165,11 @@ export async function loadProjectFromServer(name: string, hash?: string): Promis
 
 /** Merge local project names with CAS index entries. */
 export async function listMergedProjects(): Promise<readonly ProjectEntry[]> {
-  const [localProjects, casProjects] = await Promise.all([
+  const [localProjects, casIndex] = await Promise.all([
     apiListProjects().catch(() => [] as string[]),
-    casListProjects().catch(() => [] as CasIndexEntry[]),
+    casListProjects().catch(() => ({ count: 0, hashes: [] as CasHashEntry[] })),
   ]);
-  return mergeProjectEntries(localProjects, casProjects);
+  return mergeProjectEntries(localProjects, casIndex.hashes);
 }
 
 export async function deleteStoredProject(name: string): Promise<{ deleted: string }> {

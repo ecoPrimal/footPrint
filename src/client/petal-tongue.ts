@@ -84,7 +84,7 @@ export function isPetalTongueConnected(): boolean {
 export function rpcCall<T = unknown>(method: string, params?: unknown): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     if (ws?.readyState !== WebSocket.OPEN) {
-      reject(new Error('petalTongue not connected'));
+      reject(new Error('RPC bridge not connected'));
       return;
     }
 

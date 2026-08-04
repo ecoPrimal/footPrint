@@ -43,19 +43,20 @@ beforeEach(() => {
 });
 
 describe('mergeProjectEntries', () => {
-  it('merges local names with CAS metadata', () => {
+  it('merges local names with CAS hash entries', () => {
     const result = mergeProjectEntries(
       ['alpha', 'beta'],
       [
-        { hash: 'h1', name: 'alpha', savedAt: '2026-01-01' },
-        { hash: 'h2', name: 'gamma', savedAt: '2026-01-02' },
+        { hash: 'h1abcdef1234567890', size: 100 },
+        { hash: 'h2fedcba0987654321', size: 200 },
       ],
     );
 
     expect(result).toEqual([
-      { name: 'alpha', hash: 'h1', casOnly: false },
+      { name: 'alpha', casOnly: false },
       { name: 'beta', casOnly: false },
-      { name: 'gamma', hash: 'h2', casOnly: true },
+      { name: 'h1abcdef1234…', hash: 'h1abcdef1234567890', casOnly: true },
+      { name: 'h2fedcba0987…', hash: 'h2fedcba0987654321', casOnly: true },
     ]);
   });
 
@@ -128,15 +129,19 @@ describe('loadProjectFromServer', () => {
 describe('listMergedProjects', () => {
   it('merges local and CAS project lists', async () => {
     vi.mocked(api.listProjects).mockResolvedValueOnce(['local-only']);
-    vi.mocked(cas.casListProjects).mockResolvedValueOnce([
-      { hash: 'h1', name: 'local-only', savedAt: '2026-01-01' },
-      { hash: 'h2', name: 'cas-only', savedAt: '2026-01-02' },
-    ]);
+    vi.mocked(cas.casListProjects).mockResolvedValueOnce({
+      count: 2,
+      hashes: [
+        { hash: 'h1abcdef1234567890', size: 100 },
+        { hash: 'h2fedcba0987654321', size: 200 },
+      ],
+    });
 
     const result = await listMergedProjects();
     expect(result).toEqual([
-      { name: 'cas-only', hash: 'h2', casOnly: true },
-      { name: 'local-only', hash: 'h1', casOnly: false },
+      { name: 'h1abcdef1234…', hash: 'h1abcdef1234567890', casOnly: true },
+      { name: 'h2fedcba0987…', hash: 'h2fedcba0987654321', casOnly: true },
+      { name: 'local-only', casOnly: false },
     ]);
   });
 
@@ -150,10 +155,13 @@ describe('listMergedProjects', () => {
 
   it('returns CAS-only projects when local listing fails', async () => {
     vi.mocked(api.listProjects).mockRejectedValueOnce(new Error('server down'));
-    vi.mocked(cas.casListProjects).mockResolvedValueOnce([{ hash: 'h1', name: 'remote', savedAt: '2026-01-01' }]);
+    vi.mocked(cas.casListProjects).mockResolvedValueOnce({
+      count: 1,
+      hashes: [{ hash: 'h1abcdef1234567890', size: 100 }],
+    });
 
     const result = await listMergedProjects();
-    expect(result).toEqual([{ name: 'remote', hash: 'h1', casOnly: true }]);
+    expect(result).toEqual([{ name: 'h1abcdef1234…', hash: 'h1abcdef1234567890', casOnly: true }]);
   });
 });
 

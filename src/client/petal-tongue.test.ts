@@ -99,7 +99,7 @@ describe('rpcCall', () => {
   });
 
   it('rejects when not connected', async () => {
-    await expect(petal.rpcCall('agent.status')).rejects.toThrow('petalTongue not connected');
+    await expect(petal.rpcCall('agent.status')).rejects.toThrow('RPC bridge not connected');
   });
 
   it('rejects on RPC timeout', async () => {

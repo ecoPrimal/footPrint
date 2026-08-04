@@ -26,7 +26,7 @@ export function initFootPrintPrimals(): void {
 
   footprint.expose({
     name: 'project.describe',
-    description: 'Self-knowledge of project persistence (local FS + nestGate CAS)',
+    description: 'Self-knowledge of project persistence (local FS + CAS)',
     version: '1.0.0',
     handle: () =>
       Ok({

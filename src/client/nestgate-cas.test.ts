@@ -35,7 +35,6 @@ describe('casStoreProject', () => {
       headers: {
         'Content-Type': 'application/json',
         'X-CAS-Family': 'footprint-projects',
-        'X-CAS-Name': 'test-project',
       },
       body: JSON.stringify(sampleProject),
     });
@@ -76,18 +75,22 @@ describe('casFetchProject', () => {
 });
 
 describe('casListProjects', () => {
-  it('returns the CAS index array', async () => {
-    const entries = [
-      { hash: 'h1', name: 'alpha', savedAt: '2026-01-01' },
-      { hash: 'h2', name: 'beta', savedAt: '2026-01-02' },
-    ];
+  it('returns the CAS index response', async () => {
+    const index = {
+      count: 2,
+      family_id: 'footprint-projects',
+      hashes: [
+        { hash: 'h1', size: 100 },
+        { hash: 'h2', size: 200 },
+      ],
+    };
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(entries),
+      json: () => Promise.resolve(index),
     });
 
     const result = await casListProjects();
-    expect(result).toEqual(entries);
+    expect(result).toEqual(index);
     expect(mockFetch).toHaveBeenCalledWith('/api/cas/index/footprint-projects');
   });
 

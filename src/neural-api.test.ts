@@ -162,9 +162,9 @@ describe('NeuralApiClient (UDS transport)', () => {
 
   it('content.get throws on missing hash', async () => {
     const client = new NeuralApiClient({ transport: 'uds', socketPath });
-    await expect(
-      client.contentGet({ family: 'footprint-projects', hash: '0'.repeat(64) }),
-    ).rejects.toBeInstanceOf(NeuralApiRpcError);
+    await expect(client.contentGet({ family: 'footprint-projects', hash: '0'.repeat(64) })).rejects.toBeInstanceOf(
+      NeuralApiRpcError,
+    );
   });
 
   it('content.list returns hashes array', async () => {

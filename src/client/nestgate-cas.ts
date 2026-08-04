@@ -1,29 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * nestGate CAS (Content-Addressed Storage) client.
+ * CAS (Content-Addressed Storage) client.
  *
- * Provides content-addressed project persistence through nestGate.
- * Projects are stored by their BLAKE3 hash, enabling deduplication,
- * integrity verification, and distributed retrieval.
+ * Provides content-addressed project persistence. Projects are stored by their
+ * BLAKE3 hash, enabling deduplication, integrity verification, and distributed
+ * retrieval.
  *
- * Architecture:
- *   footPrint client → Express /api/projects (existing, local FS)
- *   footPrint client → /api/cas/* (server-side routing, transparent to browser)
- *
- * The Express server routes /api/cas/* through biomeOS Neural API (UDS) when
- * available, falling back to direct HTTP to nestGate (NESTGATE_URL). This client
- * always calls same-origin /api/cas — the transport choice is server-side only.
- *
- * The CAS layer is additive — projects saved locally are also pushed
- * to CAS for integrity and distribution. Loading can fall back to
- * either source.
+ * The CAS layer is additive — projects saved locally are also pushed to CAS for
+ * integrity and distribution. Loading can fall back to either source.
  */
 
 import type { ProjectFile } from '../types/project.js';
 import { CAS_PATH, CAS_FAMILY } from '../constants.js';
-
-// REST paths exposed by footPrint server (proxied to Neural API or nestGate HTTP).
-// Path convention: /api/cas/store (PUT), /api/cas/fetch/{hash} (GET), /api/cas/index/{family} (GET)
 
 export interface CasStoreResult {
   readonly hash: string;
@@ -31,14 +19,18 @@ export interface CasStoreResult {
   readonly stored: boolean;
 }
 
-export interface CasIndexEntry {
+export interface CasHashEntry {
   readonly hash: string;
-  readonly name: string;
-  readonly savedAt: string;
+  readonly size: number;
+}
+
+export interface CasListResult {
+  readonly count: number;
+  readonly hashes: readonly CasHashEntry[];
 }
 
 /**
- * Store a project in nestGate CAS. Returns the content hash.
+ * Store a project in CAS. Returns the content hash.
  * The project is stored content-addressed — same content = same hash.
  */
 export async function casStoreProject(project: ProjectFile): Promise<CasStoreResult> {
@@ -48,7 +40,6 @@ export async function casStoreProject(project: ProjectFile): Promise<CasStoreRes
     headers: {
       'Content-Type': 'application/json',
       'X-CAS-Family': CAS_FAMILY,
-      'X-CAS-Name': project.name,
     },
     body: payload,
   });
@@ -57,7 +48,7 @@ export async function casStoreProject(project: ProjectFile): Promise<CasStoreRes
 }
 
 /**
- * Fetch a project by its content hash from nestGate CAS.
+ * Fetch a decoded project by its content hash from CAS.
  */
 export async function casFetchProject(hash: string): Promise<ProjectFile> {
   const resp = await fetch(`${CAS_PATH}/fetch/${encodeURIComponent(hash)}`);
@@ -66,17 +57,16 @@ export async function casFetchProject(hash: string): Promise<ProjectFile> {
 }
 
 /**
- * List all projects in the footPrint CAS family.
- * Returns an index of content hashes with metadata.
+ * List all content hashes in the footPrint CAS family.
  */
-export async function casListProjects(): Promise<readonly CasIndexEntry[]> {
+export async function casListProjects(): Promise<CasListResult> {
   const resp = await fetch(`${CAS_PATH}/index/${encodeURIComponent(CAS_FAMILY)}`);
   if (!resp.ok) throw new Error(`CAS index failed: ${resp.status}`);
-  return (await resp.json()) as CasIndexEntry[];
+  return (await resp.json()) as CasListResult;
 }
 
 /**
- * Check if CAS is reachable. Returns false if nestGate is unavailable.
+ * Check if CAS is reachable. Returns false when the storage backend is unavailable.
  */
 export async function casHealthCheck(): Promise<boolean> {
   try {

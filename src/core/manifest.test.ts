@@ -15,6 +15,7 @@ import {
   setManifestDefaultsInitializer,
   coversPoint,
   sourcesCoveringPoint,
+  cspImgSrcHosts,
 } from './manifest.js';
 import { registerDefaultManifests } from './manifest-defaults.js';
 
@@ -100,5 +101,13 @@ describe('manifest registry', () => {
       capabilities: ['discovery:auto-enable'],
     });
     expect(getSourceIdsByCapability('discovery:auto-enable')).toContain('custom-layer');
+  });
+
+  it('derives CSP img-src hosts from tile endpoints', () => {
+    const hosts = cspImgSrcHosts();
+    expect(hosts).toContain('https://*.arcgisonline.com');
+    expect(hosts).toContain('https://*.tile.openstreetmap.org');
+    expect(hosts).toContain('https://tiles.arcgis.com');
+    expect(hosts).not.toContain('https://overpass-api.de');
   });
 });

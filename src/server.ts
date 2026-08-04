@@ -37,6 +37,7 @@ import {
   CACHE_KEY_HASH_LENGTH,
 } from './constants.js';
 import { createNeuralApiClient, isNeuralApiUnavailable, NeuralApiRpcError } from './neural-api.js';
+import { cspImgSrcHosts } from './core/manifest.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = join(__dirname, '..');
@@ -63,13 +64,14 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
   app.use(express.text({ limit: JSON_BODY_LIMIT, type: 'text/plain' }));
 
   app.use((_req: Request, res: Response, next: () => void) => {
+    const imgSrc = ["'self'", 'data:', 'blob:', ...cspImgSrcHosts()].join(' ');
     res.setHeader(
       'Content-Security-Policy',
       [
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: blob: https://*.arcgisonline.com https://*.tile.openstreetmap.org https://tiles.arcgis.com https://server.arcgisonline.com",
+        `img-src ${imgSrc}`,
         "connect-src 'self' ws: wss:",
         "font-src 'self'",
         "frame-src 'none'",

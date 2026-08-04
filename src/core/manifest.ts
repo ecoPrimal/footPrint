@@ -134,6 +134,45 @@ export function endpointHosts(): readonly string[] {
   return [...hosts];
 }
 
+const TILE_ENDPOINT_KEY_PREFIXES = ['basemap-', 'parcels-'] as const;
+
+function tileEndpointUrlHostname(url: string): string | null {
+  try {
+    return new URL(url.replace('{s}', 'a')).hostname;
+  } catch {
+    return null;
+  }
+}
+
+function cspHostFromTileHostname(hostname: string): string {
+  if (hostname.includes('openstreetmap.org')) {
+    return 'https://*.tile.openstreetmap.org';
+  }
+  if (hostname.endsWith('.arcgisonline.com') || hostname === 'arcgisonline.com') {
+    return 'https://*.arcgisonline.com';
+  }
+  return `https://${hostname}`;
+}
+
+/** Derive img-src CSP host entries from registered tile/imagery endpoints. */
+export function cspImgSrcHosts(): readonly string[] {
+  ensureDefaults();
+  const hosts = new Set<string>();
+  for (const key of endpoints.keys()) {
+    const keyStr = String(key);
+    if (!TILE_ENDPOINT_KEY_PREFIXES.some((prefix) => keyStr.startsWith(prefix))) {
+      continue;
+    }
+    const url = endpoints.get(key);
+    if (!url) continue;
+    const hostname = tileEndpointUrlHostname(url);
+    if (hostname) {
+      hosts.add(cspHostFromTileHostname(hostname));
+    }
+  }
+  return [...hosts].sort();
+}
+
 // ── Source manifests ───────────────────────────────
 
 export function registerSourceManifest(manifest: SourceManifest): void {

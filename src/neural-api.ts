@@ -7,7 +7,7 @@
  * - UDS (socket path) — for inter-primal IPC (requires riboCipher prefix [0xEC, 0x01])
  *
  * Default resolution order: NESTGATE_RPC_URL env → TCP localhost:8080 (same-gate local-trust)
- * UDS path via MEMBRANE_SOCKET env (requires BTSP — future: biomeOS capability routing)
+ * UDS path via MEMBRANE_SOCKET env (requires BTSP — future: capability routing)
  */
 
 import { connect, type Socket } from 'node:net';
@@ -198,9 +198,7 @@ export class NeuralApiClient {
       socket.on('connect', () => {
         const lineBuffer = Buffer.from(requestLine, 'utf8');
         const payload =
-          this.config.transport === 'uds'
-            ? Buffer.concat([RIBOCIPHER_CLEAR_JSONRPC, lineBuffer])
-            : lineBuffer;
+          this.config.transport === 'uds' ? Buffer.concat([RIBOCIPHER_CLEAR_JSONRPC, lineBuffer]) : lineBuffer;
         socket.write(payload, (writeErr) => {
           if (writeErr) {
             finish(() => {
