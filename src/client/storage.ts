@@ -16,6 +16,27 @@ import { modalPrompt, modalAlert, modalConfirm } from './modal.js';
 
 let currentProject: string | null = null;
 
+/**
+ * Auto-load the first available project if the canvas is empty.
+ * Called once after all init completes — fails silently.
+ */
+export async function autoLoadDefaultProject(): Promise<void> {
+  try {
+    const projects = await apiListProjects();
+    if (projects.length === 0) return;
+    const name = projects[0];
+    if (!name) return;
+    const data = await apiLoadProject(name);
+    deselectShape();
+    clearHistory();
+    deserializeLayers(data.layers);
+    currentProject = data.name || name;
+    document.title = `FootPrint \u2014 ${currentProject}`;
+  } catch {
+    // No project available or server unreachable — silent
+  }
+}
+
 export function initStorage(): void {
   document.getElementById('btn-new')?.addEventListener('click', () => {
     void newProject();

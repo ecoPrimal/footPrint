@@ -18,6 +18,7 @@ import {
   sendAgentAction,
   getUserMessages,
 } from './agent/server-bridge.js';
+import { initPetalBridge } from './petal-bridge.js';
 import {
   ALLOWED_HOSTS,
   CACHE_TTLS,
@@ -63,21 +64,24 @@ export async function createApp(options: ServerOptions = {}): Promise<express.Ap
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(express.text({ limit: JSON_BODY_LIMIT, type: 'text/plain' }));
 
+  const skipCsp = process.env['SKIP_CSP'] === '1';
   app.use((_req: Request, res: Response, next: () => void) => {
-    const imgSrc = ["'self'", 'data:', 'blob:', ...cspImgSrcHosts()].join(' ');
-    res.setHeader(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline'",
-        `img-src ${imgSrc}`,
-        "connect-src 'self' ws: wss:",
-        "font-src 'self'",
-        "frame-src 'none'",
-        "object-src 'none'",
-      ].join('; '),
-    );
+    if (!skipCsp) {
+      const imgSrc = ["'self'", 'data:', 'blob:', ...cspImgSrcHosts()].join(' ');
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'self'",
+          "script-src 'self'",
+          "style-src 'self' 'unsafe-inline'",
+          `img-src ${imgSrc}`,
+          "connect-src 'self' ws: wss:",
+          "font-src 'self'",
+          "frame-src 'none'",
+          "object-src 'none'",
+        ].join('; '),
+      );
+    }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -560,6 +564,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Ser
   if (options.enableAgentBridge !== false) {
     initAgentBridge(server);
   }
+  initPetalBridge(server);
 
   console.log(`FootPrint server running at http://localhost:${String(port)}`);
   console.log(`  Agent WebSocket: ws://localhost:${String(port)}${AGENT_BRIDGE_PATH}`);

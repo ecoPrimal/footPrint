@@ -13,7 +13,7 @@ import { initLayers, addCustomLayer } from './layers.js';
 import { initDrawing, setActiveLayerEntity } from './drawing.js';
 import { initProperties, showShapeProperties } from './properties.js';
 import { initMeasurement } from './measurement.js';
-import { initStorage } from './storage.js';
+import { initStorage, autoLoadDefaultProject } from './storage.js';
 import { escHtml } from './html.js';
 import { initDataSources, getAllSources, toggleSource } from './datasources.js';
 import { registerAllSources } from './source-registry.js';
@@ -168,6 +168,7 @@ initAgentBridge(onAgentMessage, setAgentConnectionStatus);
 initPetalTongue(onPetalTongueNotification, onPetalTongueStatusChange);
 
 void casHealthCheck().then(updateCasStatus);
+void autoLoadDefaultProject();
 
 // First-run welcome
 initWelcome();

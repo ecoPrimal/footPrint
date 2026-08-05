@@ -79,7 +79,15 @@ function sendFrame(ws: WebSocket, frame: unknown): void {
 }
 
 export function initAgentBridge(httpServer: HttpServer): void {
-  wss = new WebSocketServer({ server: httpServer, path: AGENT_BRIDGE_PATH });
+  wss = new WebSocketServer({ noServer: true });
+
+  httpServer.on('upgrade', (req, socket, head) => {
+    const pathname = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`).pathname;
+    if (pathname !== AGENT_BRIDGE_PATH) return;
+    wss?.handleUpgrade(req, socket, head, (ws) => {
+      wss?.emit('connection', ws, req);
+    });
+  });
 
   wss.on('connection', (ws: WebSocket) => {
     activeClient = ws;

@@ -1,9 +1,13 @@
-# footPrint Express server — systemd unit
+# footPrint Express server — systemd unit (ironGate Phase 2)
 # Install: cp deploy/footprint.service /etc/systemd/system/
 #          systemctl daemon-reload && systemctl enable --now footprint
 #
 # Deploy on ironGate downstream host (10.13.37.7).
 # Expects: npm ci && npm run build completed in WorkingDirectory
+#
+# Socket access: petalTongue UDS requires group `biomeos` ACL.
+# Ensure petalTongue.service sets SocketGroup=biomeos, or:
+#   setfacl -m g:biomeos:rwx /run/membrane/petaltongue.sock
 
 [Unit]
 Description=footPrint Express server (project persistence + agent bridge)
@@ -12,28 +16,25 @@ Documentation=https://git.primals.eco/protoKarya/footPrint
 
 [Service]
 Type=simple
-User=membrane
-Group=membrane
+User=irongate
+Group=irongate
 WorkingDirectory=/opt/ecoPrimals/protists/footPrint
 Environment=PORT=3002
 Environment=NODE_ENV=production
-# CAS routing: TCP JSON-RPC to nestGate (same-gate local-trust, no BTSP needed)
+# CAS routing: TCP JSON-RPC to nestGate (same-gate local-trust, no BTSP)
 Environment=NESTGATE_RPC_PORT=8080
-# Alternative: explicit URL format
-# Environment=NESTGATE_RPC_URL=tcp://127.0.0.1:8080
-# UDS (requires BTSP when FAMILY_ID set — for future biomeOS capability routing):
-# Environment=MEMBRANE_SOCKET=/run/membrane/nestgate.sock
+# petalTongue WebSocket bridge: relays /ws → petalTongue UDS (NDJSON)
+Environment=PETALTONGUE_SOCKET=/run/membrane/petaltongue.sock
+# Skip CSP when Caddy handles it upstream
+Environment=SKIP_CSP=1
 ExecStart=/usr/bin/node dist/server.js
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=10
 
-ReadWritePaths=/opt/ecoPrimals/protists/footPrint/projects
-ReadWritePaths=/opt/ecoPrimals/protists/footPrint/cache
 ReadOnlyPaths=/run/membrane
 
 ProtectSystem=strict
-ProtectHome=true
 NoNewPrivileges=true
 PrivateTmp=true
 
