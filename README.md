@@ -2,7 +2,7 @@
 
 GIS home improvement planner — satellite map overlays, CAD-like drawing tools, and parametric constraint solving for property planning.
 
-**Maturity:** `research-ready` — Last measured: 2026-08-04
+**Maturity:** `research-ready` — Last measured: 2026-08-05
 
 **footPrint is a [protist](../../infra/wateringHole/handoffs/FRAGO_PROTISTS_CATEGORY_136b.md)** — a browser-based product served BY ecoPrimals primals, not a primal itself. The Express backend disappears into a primal composition.
 
@@ -33,7 +33,8 @@ Browser (Vite)
        ├── Discovery (auto-enables sources on property draw, dynamic category boosts)
        ├── SourceManifest registry (runtime endpoint + capability discovery)
        ├── Manifest-driven source registration (source-registry.ts)
-       ├── Two JSON-RPC 2.0 WebSocket bridges: petalTongue (/ws) + Agent (domain.verb /ws/bridge)
+       ├── petalTongue JSON-RPC 2.0 client (/ws → server-side UDS relay)
+       ├── Agent JSON-RPC 2.0 bridge (domain.verb /ws/bridge)
        ├── nestGate CAS client (dual-write project persistence + health monitoring)
        ├── Neural API client (TCP local-trust + UDS/riboCipher dual-transport)
        ├── Primal capability registry (src/core/primal.ts, src/client/primals.ts)
@@ -46,6 +47,7 @@ Express (:3002 on ironGate) — src/server.ts [DISAPPEARS]
   ├── Project CRUD      → absorbed by nestGate CAS
   ├── Proxy + cache     → absorbed by songBird drawbridge
   ├── CAS proxy (/api/cas/*) → absorbed when nestGate is direct
+  ├── petalTongue relay (/ws) → WS↔UDS bridge (NDJSON to petaltongue.sock)
   └── Agent REST + WS   → absorbed by agent bridge primal
       (deep per-variant field validation via protocol.ts)
 ```
@@ -123,12 +125,13 @@ See `deploy/README.md` for Express server deployment on ironGate (systemd + Cadd
 
 ## Inter-Primal Wiring
 
-footPrint connects to the ecosystem through two client-side bridges:
+footPrint connects to the ecosystem through bridges relayed by the Express server:
 
-| Bridge | Module | Protocol | Purpose |
-|--------|--------|----------|---------|
-| petalTongue | `src/client/petal-tongue.ts` | JSON-RPC 2.0 over WebSocket (`/ws`) | Scene rendering, agent queries, capabilities |
-| nestGate CAS | `src/client/nestgate-cas.ts` | REST via server proxy (`/api/cas/*`) | Content-addressed project persistence |
+| Bridge | Client | Server relay | Protocol | Purpose |
+|--------|--------|--------------|----------|---------|
+| petalTongue | `src/client/petal-tongue.ts` | `src/petal-bridge.ts` (WS↔UDS) | JSON-RPC 2.0 NDJSON over WebSocket (`/ws`) | Viz rendering, capabilities |
+| Agent | `src/client/agent-bridge.ts` | `src/agent/server-bridge.ts` | JSON-RPC 2.0 over WebSocket (`/ws/bridge`) | Commands, sync, messages |
+| nestGate CAS | `src/client/nestgate-cas.ts` | `src/neural-api.ts` (TCP) | REST → TCP JSON-RPC (`/api/cas/*`) | Content-addressed persistence |
 
 Projects are dual-written: local filesystem (Express) + nestGate CAS (best-effort). When the Express server is absorbed, CAS becomes the sole persistence layer.
 
@@ -143,7 +146,7 @@ footPrint's Express server is replaced by primal services:
 | Proxy + cache (`/ext`) | songBird drawbridge routing | `PROXY_PATH` |
 | Agent REST (`/api/agent/*`) | Agent bridge | `AGENT_PATH` |
 | Agent WebSocket (`/ws/bridge`) | WebSocket bridge | `AGENT_BRIDGE_PATH` |
-| petalTongue WebSocket (`/ws`) | JSON-RPC bridge | `WS_PATH` |
+| petalTongue WebSocket (`/ws`) | JSON-RPC bridge (WS↔UDS relay) | `WS_PATH` |
 | Cache clear (`/api/cache`) | Admin | `CACHE_PATH` |
 | Health check (`/api/health`) | Monitoring | `HEALTH_PATH` |
 | Static files | cellMembrane / Axum | — |

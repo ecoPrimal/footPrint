@@ -39,7 +39,7 @@ sudo systemctl enable --now footprint
 sudo journalctl -u footprint -f
 ```
 
-The unit runs as `membrane` (needs read access to `/run/membrane/` for Neural API UDS routing).
+The unit runs as `irongate` (needs `biomeos` group ACL on `/run/membrane/petaltongue.sock` for the petalTongue bridge).
 
 ## Caddy (golgi)
 
@@ -55,7 +55,9 @@ use explicit upgrade headers. SPA fallback is handled server-side. Import
 | `PORT` | `3000` | No (use `3002` on ironGate — 3000 reserved, 3001 = petalTongue) |
 | `NESTGATE_RPC_PORT` | `8080` | No (TCP JSON-RPC to nestGate, same-gate local-trust) |
 | `NESTGATE_RPC_URL` | — | No (explicit URL, e.g. `tcp://127.0.0.1:8080`) |
+| `PETALTONGUE_SOCKET` | `/run/membrane/petaltongue.sock` | No (petalTongue UDS for /ws bridge) |
 | `MEMBRANE_SOCKET` | — | No (UDS+riboCipher for biomeOS routing; requires BTSP for data ops) |
+| `SKIP_CSP` | — | No (set `1` when Caddy handles CSP upstream) |
 | `NODE_ENV` | — | Optional |
 
 **CAS routing order:** TCP JSON-RPC (`NESTGATE_RPC_PORT`/`NESTGATE_RPC_URL`, local-trust, no BTSP) → UDS (`MEMBRANE_SOCKET`, requires BTSP) → disabled.

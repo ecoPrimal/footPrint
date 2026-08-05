@@ -47,11 +47,11 @@ Built as a single-page web application with a Node.js backend. The frontend uses
 
 **Runtime registries**: `SourceManifest` endpoint and capability discovery (`src/core/manifest.ts`, bootstrap pack in `manifest-defaults.ts`); Primal capability registry (`src/core/primal.ts`, client wiring in `src/client/primals.ts`).
 
-**Persistence & bridges**: nestGate CAS dual-write with health monitoring (local JSON + CAS best-effort); petalTongue JSON-RPC 2.0 over `/ws`; Agent bridge JSON-RPC 2.0 with `domain.verb` semantics over `/ws/bridge`; Neural API client for UDS/riboCipher to NUCLEUS primals.
+**Persistence & bridges**: nestGate CAS dual-write with health monitoring (local JSON + CAS best-effort); petalTongue JSON-RPC 2.0 over `/ws` (server-side WS↔UDS NDJSON relay to `petaltongue.sock`); Agent bridge JSON-RPC 2.0 with `domain.verb` semantics over `/ws/bridge`; Neural API client (TCP local-trust + UDS dual-transport) for CAS ops.
 
 **Source registration**: Manifest-driven via `src/client/source-registry.ts` — sources only register when required endpoints exist in the registry. Dynamic category boosts derived from coverage areas.
 
-**Quality**: 708 tests across 53 files (Vitest, strict TypeScript). 59% statement coverage (core/rustscript 89-99%, agent 78%, client UI layer 38% — remaining DOM-heavy modules need E2E).
+**Quality**: 708 tests across 53 files (Vitest, strict TypeScript). 59% statement coverage (core/rustscript 89-99%, agent 78%, client UI layer 38% — remaining DOM-heavy modules need E2E). Auto-load default project on first visit.
 
 ## Core Design Decisions
 
