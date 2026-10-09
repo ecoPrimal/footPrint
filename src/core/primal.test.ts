@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   Primal,
@@ -23,7 +24,9 @@ function makeTestCapability(name: string) {
 }
 
 describe('Primal', () => {
-  beforeEach(() => { clearPrimals(); });
+  beforeEach(() => {
+    clearPrimals();
+  });
 
   it('exposes and invokes capabilities', () => {
     const p = new Primal('test', 'TestPrimal', '1.0.0');
@@ -51,7 +54,9 @@ describe('Primal', () => {
 });
 
 describe('Registry', () => {
-  beforeEach(() => { clearPrimals(); });
+  beforeEach(() => {
+    clearPrimals();
+  });
 
   it('registers and discovers by ID', () => {
     const p = new Primal('foo', 'Foo', '1.0');
@@ -121,7 +126,9 @@ describe('Registry', () => {
 
   it('onRegistryChange fires on register/unregister', () => {
     const events: string[] = [];
-    const unsub = onRegistryChange((e) => { events.push(e.type); });
+    const unsub = onRegistryChange((e) => {
+      events.push(e.type);
+    });
 
     registerPrimal(new Primal('x', 'X', '1.0'));
     unregisterPrimal('x');

@@ -27,6 +27,13 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', '*.config.*', 'coverage/'],
+    files: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+    },
+  },
+  {
+    ignores: ['dist/', 'node_modules/', '*.config.*', 'coverage/', 'src/rustscript/dist/'],
   },
 );

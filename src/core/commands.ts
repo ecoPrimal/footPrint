@@ -1,8 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Entity, MutableEntity, EntityId, ComponentKey, ComponentMap } from './entity.js';
 import { createEntity } from './entity.js';
 import { hexColorUnchecked } from '../types/brands.js';
-import { exhaustive, isSome, None, Cow } from '@protokarya/rustscript';
+import { exhaustive } from '@protokarya/rustscript';
+import { isSome } from '@protokarya/rustscript';
 import type { Option } from '@protokarya/rustscript';
+import { None } from '@protokarya/rustscript';
+import { Cow } from '@protokarya/rustscript';
 import type { EntityStore } from './store.js';
 
 export interface Command {
@@ -68,13 +72,15 @@ export class RemoveEntityCommand implements Command {
     if (!isSome(opt)) return;
     const entity = opt.value;
 
-    this.subtreeSnapshot.push(Cow.borrowed({
-      id: entity.id,
-      kind: entity.kind,
-      parentId: entity.parentId,
-      children: new Set(entity.children),
-      components: structuredClone(entity.components),
-    }));
+    this.subtreeSnapshot.push(
+      Cow.borrowed({
+        id: entity.id,
+        kind: entity.kind,
+        parentId: entity.parentId,
+        children: new Set(entity.children),
+        components: structuredClone(entity.components),
+      }),
+    );
 
     for (const childId of entity.children) {
       this.snapshotSubtree(store, childId);
@@ -99,9 +105,7 @@ export class UpdateComponentCommand<K extends ComponentKey> implements Command {
     const opt = store.getEntity(this.entityId);
     if (isSome(opt)) {
       const comp = opt.value.components[this.key];
-      this.oldValue = comp != null
-        ? { some: true as const, value: structuredClone(comp) as ComponentMap[K] }
-        : None();
+      this.oldValue = comp != null ? { some: true as const, value: structuredClone(comp) } : None();
     }
     store.setComponent(this.entityId, this.key, this.newValue);
   }
@@ -203,7 +207,8 @@ function translateGeometry(geojson: GeoJSON.Geometry, dx: number, dy: number): v
     case 'GeometryCollection':
       for (const g of geojson.geometries) translateGeometry(g, dx, dy);
       break;
-    default: exhaustive(geojson);
+    default:
+      exhaustive(geojson);
   }
 }
 

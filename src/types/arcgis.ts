@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export interface ArcGISFeatureResponse {
-  readonly features?: ReadonlyArray<GeoJSON.Feature>;
+  readonly features?: readonly GeoJSON.Feature[];
   readonly exceededTransferLimit?: boolean;
 }
 
@@ -8,6 +9,11 @@ export interface FemaFloodProperties {
   readonly ZONE_SUBTY?: string;
   readonly STATIC_BFE?: number;
   readonly SFHA_TF?: string;
+}
+
+export interface MichiganRoadProperties {
+  readonly NME?: string;
+  readonly LABEL?: string;
 }
 
 export interface ZoningProperties {

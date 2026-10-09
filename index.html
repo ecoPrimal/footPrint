@@ -4,28 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FootPrint — Home Planner</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body>
 
   <!-- Top Toolbar -->
-  <header id="toolbar">
+  <header id="toolbar" role="toolbar" aria-label="Main toolbar">
     <div class="toolbar-left">
-      <span class="logo">FootPrint</span>
+      <button id="btn-toggle-layers" class="sidebar-toggle" title="Toggle layers panel" aria-label="Toggle layers panel" aria-expanded="false" aria-controls="layer-panel">&#9776;</button>
+      <span class="logo" aria-hidden="true">FootPrint</span>
     </div>
     <div class="toolbar-center">
-      <input type="text" id="geocoder-input" placeholder="Search address…" autocomplete="off" />
-      <button id="geocoder-btn" title="Search">&#128269;</button>
+      <label for="location-picker" class="sr-only">Known location</label>
+      <select id="location-picker" title="Jump to known location" aria-label="Jump to known location">
+        <option value="">Known Locations…</option>
+      </select>
+      <label for="geocoder-input" class="sr-only">Search address</label>
+      <input type="text" id="geocoder-input" placeholder="Search address…" autocomplete="off" aria-label="Search address" />
+      <button id="geocoder-btn" title="Search" aria-label="Search address">&#128269;</button>
     </div>
     <div class="toolbar-right">
-      <button id="btn-new" title="New Project">New</button>
-      <button id="btn-save" title="Save Project">Save</button>
-      <button id="btn-load" title="Load Project">Load</button>
-      <span class="separator"></span>
-      <button id="btn-grid" title="Toggle engineering grid">Grid</button>
-      <button id="btn-snap" title="Toggle snap">Snap</button>
-      <span class="separator"></span>
-      <button id="btn-measure" title="Measure distance/area">Measure</button>
+      <button id="btn-new" title="New Project" aria-label="New project">New</button>
+      <button id="btn-save" title="Save Project" aria-label="Save project">Save</button>
+      <button id="btn-load" title="Load Project" aria-label="Load project">Load</button>
+      <span class="separator" aria-hidden="true"></span>
+      <button id="btn-grid" title="Toggle engineering grid" aria-label="Toggle engineering grid" aria-pressed="false">Grid</button>
+      <button id="btn-snap" title="Toggle snap" aria-label="Toggle snap to grid" aria-pressed="false">Snap</button>
+      <span class="separator" aria-hidden="true"></span>
+      <button id="btn-measure" title="Measure distance/area" aria-label="Measure distance or area" aria-pressed="false">Measure</button>
+      <span class="separator" aria-hidden="true"></span>
+      <button id="btn-tutorial" title="Start guided tutorial" aria-label="Start guided tutorial">Guide</button>
     </div>
   </header>
 
@@ -33,35 +42,35 @@
   <div id="app">
 
     <!-- Left Sidebar: Layers + Data Sources -->
-    <aside id="layer-panel">
+    <aside id="layer-panel" role="complementary" aria-label="Layers and data sources">
       <div class="panel-header">
-        <h3>Layers</h3>
-        <button id="btn-add-layer" title="Add custom layer">+</button>
+        <h3 id="layer-panel-title">Layers</h3>
+        <button id="btn-add-layer" title="Add custom layer" aria-label="Add custom layer">+</button>
       </div>
-      <ul id="layer-list"></ul>
+      <ul id="layer-list" role="listbox" aria-labelledby="layer-panel-title"></ul>
 
       <div class="panel-header data-header">
-        <h3>Data Sources</h3>
+        <h3 id="data-sources-title">Data Sources</h3>
       </div>
-      <ul id="data-source-list"></ul>
+      <ul id="data-source-list" role="list" aria-labelledby="data-sources-title"></ul>
 
       <div id="discovery-panel" class="hidden">
         <div class="panel-header">
           <h3>Discovery</h3>
-          <button id="btn-dismiss-discover" title="Dismiss">&times;</button>
+          <button id="btn-dismiss-discover" title="Dismiss" aria-label="Dismiss discovery panel">&times;</button>
         </div>
-        <ul id="discovery-list"></ul>
+        <ul id="discovery-list" role="list"></ul>
       </div>
     </aside>
 
     <!-- Map Container -->
-    <div id="map"></div>
+    <main id="map" role="application" aria-label="Interactive map"></main>
 
     <!-- Right Sidebar: Properties -->
-    <aside id="props-panel" class="collapsed">
+    <aside id="props-panel" class="collapsed" role="complementary" aria-label="Shape properties">
       <div class="panel-header">
         <h3>Properties</h3>
-        <button id="btn-close-props" title="Close">&times;</button>
+        <button id="btn-close-props" title="Close" aria-label="Close properties panel">&times;</button>
       </div>
       <div id="props-content">
         <p class="hint">Select a shape to view properties.</p>
@@ -71,35 +80,36 @@
   </div>
 
   <!-- Load Modal (hidden) -->
-  <div id="modal-overlay" class="hidden">
+  <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div id="modal">
       <div class="modal-header">
         <h3 id="modal-title">Load Project</h3>
-        <button id="modal-close">&times;</button>
+        <button id="modal-close" aria-label="Close dialog">&times;</button>
       </div>
       <div id="modal-body"></div>
     </div>
   </div>
 
   <!-- Agent Panel -->
-  <div id="agent-panel" class="agent-collapsed">
+  <div id="agent-panel" class="agent-collapsed" role="complementary" aria-label="AI Agent">
     <div id="agent-panel-header">
-      <span id="agent-status-dot" class="agent-dot-disconnected"></span>
+      <span id="agent-status-dot" class="agent-dot-disconnected" aria-hidden="true"></span>
       <span class="agent-title">Agent</span>
-      <span id="agent-badge" class="agent-badge hidden">0</span>
-      <button id="btn-toggle-agent" title="Toggle agent panel">&#9650;</button>
+      <span id="agent-badge" class="agent-badge hidden" aria-live="polite">0</span>
+      <button id="btn-toggle-agent" title="Toggle agent panel" aria-label="Toggle agent panel" aria-expanded="false">&#9650;</button>
     </div>
     <div id="agent-panel-body">
-      <ul id="agent-log"></ul>
+      <ul id="agent-log" role="log" aria-live="polite" aria-label="Agent messages"></ul>
       <div id="agent-input-row">
-        <input type="text" id="agent-input" placeholder="Message the AI..." autocomplete="off" />
-        <button id="agent-send">Send</button>
+        <label for="agent-input" class="sr-only">Message the AI</label>
+        <input type="text" id="agent-input" placeholder="Message the AI..." autocomplete="off" aria-label="Message the AI" />
+        <button id="agent-send" aria-label="Send message">Send</button>
       </div>
     </div>
   </div>
 
   <!-- Status Bar -->
-  <footer id="status-bar">
+  <footer id="status-bar" role="status" aria-label="Map status" aria-live="polite">
     <span id="status-coords">Lat: --  Lng: --</span>
     <span class="status-sep">|</span>
     <span id="status-zoom">Zoom: --</span>
@@ -111,6 +121,8 @@
     <span id="status-grid">Grid: OFF</span>
     <span class="status-sep">|</span>
     <span id="status-elev">Elev: --</span>
+    <span class="status-sep">|</span>
+    <span id="status-cas">CAS: --</span>
   </footer>
 
   <!-- Measurement tooltip container -->

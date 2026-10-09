@@ -1,7 +1,9 @@
 node_modules/
 dist/
 coverage/
+src/rustscript/dist/
 projects/*.json
+!projects/lansing-scuffle.json
 cache/*.json
 .env
 .env.*
@@ -9,3 +11,5 @@ cache/*.json
 npm-debug.log*
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
+.eslintcache

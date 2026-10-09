@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { DEFAULT_SNAP_DISTANCE, METERS_PER_FOOT, DEFAULT_GRID_SPACING_FT } from '../constants.js';
+
 export interface SnapConfig {
   enabled: boolean;
   snapDistance: number;
@@ -10,16 +13,14 @@ export interface SnapConfig {
 
 export const DEFAULT_SNAP_CONFIG: Readonly<SnapConfig> = {
   enabled: true,
-  snapDistance: 20,
+  snapDistance: DEFAULT_SNAP_DISTANCE,
   snapToGrid: false,
   snapToFeatures: true,
   snapToVertices: true,
   snapToMidpoints: true,
-  gridSpacing: 3.048,
+  gridSpacing: METERS_PER_FOOT * DEFAULT_GRID_SPACING_FT,
 };
 
-export const GRID_SPACINGS_FT: readonly number[] = [1, 5, 10, 25, 50, 100];
-
 export function ftToMeters(ft: number): number {
-  return ft * 0.3048;
+  return ft * METERS_PER_FOOT;
 }

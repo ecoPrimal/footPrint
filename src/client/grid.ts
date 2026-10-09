@@ -1,18 +1,15 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import { ftToMeters } from '../types/snap.js';
+import { DEFAULT_GRID_SPACING_FT, GRID_MIN_ZOOM, GRID_COLOR, GRID_MAX_LINES } from '../constants.js';
 
 let map: L.Map | null = null;
-let gridLayer: L.LayerGroup = L.layerGroup();
+const gridLayer: L.LayerGroup = L.layerGroup();
 let gridEnabled = false;
-let spacingFt = 10;
+const spacingFt = DEFAULT_GRID_SPACING_FT;
 let onGridChange: ((enabled: boolean, spacing: number) => void) | null = null;
 
-const MIN_ZOOM = 17;
-
-export function initGrid(
-  leafletMap: L.Map,
-  changeCallback?: (enabled: boolean, spacing: number) => void,
-): void {
+export function initGrid(leafletMap: L.Map, changeCallback?: (enabled: boolean, spacing: number) => void): void {
   map = leafletMap;
   onGridChange = changeCallback ?? null;
 
@@ -34,8 +31,8 @@ export function getGridSpacing(): number {
 
 export function toggleGrid(): boolean {
   gridEnabled = !gridEnabled;
-  if (gridEnabled) {
-    gridLayer.addTo(map!);
+  if (gridEnabled && map) {
+    gridLayer.addTo(map);
     renderGrid();
   } else {
     gridLayer.clearLayers();
@@ -45,18 +42,12 @@ export function toggleGrid(): boolean {
   return gridEnabled;
 }
 
-export function setGridSpacing(ft: number): void {
-  spacingFt = ft;
-  if (gridEnabled) renderGrid();
-  if (onGridChange) onGridChange(gridEnabled, spacingFt);
-}
-
 function renderGrid(): void {
   gridLayer.clearLayers();
   if (!map) return;
 
   const zoom = map.getZoom();
-  if (zoom < MIN_ZOOM) return;
+  if (zoom < GRID_MIN_ZOOM) return;
 
   const bounds = map.getBounds().pad(0.1);
   const sw = bounds.getSouthWest();
@@ -65,7 +56,7 @@ function renderGrid(): void {
   const spacingM = ftToMeters(spacingFt);
   const spacingDegLat = spacingM / 111139;
   const midLat = (sw.lat + ne.lat) / 2;
-  const spacingDegLng = spacingM / (111139 * Math.cos(midLat * Math.PI / 180));
+  const spacingDegLng = spacingM / (111139 * Math.cos((midLat * Math.PI) / 180));
 
   const startLat = Math.floor(sw.lat / spacingDegLat) * spacingDegLat;
   const startLng = Math.floor(sw.lng / spacingDegLng) * spacingDegLng;
@@ -78,16 +69,19 @@ function renderGrid(): void {
     const isMajor = latIdx % 5 === 0;
 
     L.polyline(
-      [[lat, sw.lng], [lat, ne.lng]],
+      [
+        [lat, sw.lng],
+        [lat, ne.lng],
+      ],
       {
-        color: '#4FC3F7',
+        color: GRID_COLOR,
         weight: isMajor ? 1 : 0.5,
         opacity: isMajor ? 0.3 : 0.12,
         interactive: false,
       },
     ).addTo(gridLayer);
 
-    if (lineCount > 500) break;
+    if (lineCount > GRID_MAX_LINES) break;
   }
 
   lineCount = 0;
@@ -97,15 +91,18 @@ function renderGrid(): void {
     const isMajor = lngIdx % 5 === 0;
 
     L.polyline(
-      [[sw.lat, lng], [ne.lat, lng]],
+      [
+        [sw.lat, lng],
+        [ne.lat, lng],
+      ],
       {
-        color: '#4FC3F7',
+        color: GRID_COLOR,
         weight: isMajor ? 1 : 0.5,
         opacity: isMajor ? 0.3 : 0.12,
         interactive: false,
       },
     ).addTo(gridLayer);
 
-    if (lineCount > 500) break;
+    if (lineCount > GRID_MAX_LINES) break;
   }
 }

@@ -1,22 +1,60 @@
-import type { ProjectFile, SaveResponse } from '../types/project.js';
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { ProjectFile } from '../types/project.js';
 import { serializeLayers, deserializeLayers } from './layers.js';
 import { deselectShape } from './drawing.js';
 import { clearHistory } from '../core/history.js';
+import {
+  listProjects as apiListProjects,
+  loadProject as apiLoadProject,
+  saveProject as apiSaveProject,
+  deleteProject as apiDeleteProject,
+} from './api.js';
+import { casStoreProject, casListProjects, casFetchProject, type CasHashEntry } from './nestgate-cas.js';
+import { escHtml } from './html.js';
+import { TOAST_DURATION_MS } from '../constants.js';
+import { modalPrompt, modalAlert, modalConfirm } from './modal.js';
 
 let currentProject: string | null = null;
 
+/**
+ * Auto-load the first available project if the canvas is empty.
+ * Called once after all init completes — fails silently.
+ */
+export async function autoLoadDefaultProject(): Promise<void> {
+  try {
+    const projects = await apiListProjects();
+    if (projects.length === 0) return;
+    const name = projects[0];
+    if (!name) return;
+    const data = await apiLoadProject(name);
+    deselectShape();
+    clearHistory();
+    deserializeLayers(data.layers);
+    currentProject = data.name || name;
+    document.title = `FootPrint \u2014 ${currentProject}`;
+  } catch {
+    // No project available or server unreachable — silent
+  }
+}
+
 export function initStorage(): void {
-  document.getElementById('btn-new')?.addEventListener('click', () => { void newProject(); });
-  document.getElementById('btn-save')?.addEventListener('click', () => { void saveProject(); });
-  document.getElementById('btn-load')?.addEventListener('click', () => { void showLoadModal(); });
+  document.getElementById('btn-new')?.addEventListener('click', () => {
+    void newProject();
+  });
+  document.getElementById('btn-save')?.addEventListener('click', () => {
+    void saveProject();
+  });
+  document.getElementById('btn-load')?.addEventListener('click', () => {
+    void showLoadModal();
+  });
   document.getElementById('modal-close')?.addEventListener('click', hideModal);
   document.getElementById('modal-overlay')?.addEventListener('click', (e: MouseEvent) => {
-    if ((e.target as HTMLElement).id === 'modal-overlay') hideModal();
+    if (e.target instanceof HTMLElement && e.target.id === 'modal-overlay') hideModal();
   });
 }
 
 async function newProject(): Promise<void> {
-  const name = prompt('New project name:');
+  const name = await modalPrompt('New Project', 'Enter project name:');
   if (!name) return;
   currentProject = name;
   deselectShape();
@@ -26,7 +64,7 @@ async function newProject(): Promise<void> {
 
 async function saveProject(): Promise<void> {
   if (!currentProject) {
-    const name = prompt('Project name:');
+    const name = await modalPrompt('Save Project', 'Enter project name:');
     if (!name) return;
     currentProject = name;
   }
@@ -38,16 +76,11 @@ async function saveProject(): Promise<void> {
   };
 
   try {
-    const resp = await fetch(`/api/projects/${encodeURIComponent(currentProject)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const result = (await resp.json()) as SaveResponse;
+    const result = await saveProjectWithCas(currentProject, data);
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Saved: ${result.saved}`);
   } catch {
-    alert('Failed to save project');
+    void modalAlert('Error', 'Failed to save project.');
   }
 }
 
@@ -59,33 +92,44 @@ async function showLoadModal(): Promise<void> {
   title.textContent = 'Load Project';
 
   try {
-    const resp = await fetch('/api/projects');
-    const projects = (await resp.json()) as ReadonlyArray<string>;
+    const entries = await listMergedProjects();
 
-    if (projects.length === 0) {
+    if (entries.length === 0) {
       body.innerHTML = '<p class="hint">No saved projects yet.</p>';
     } else {
-      body.innerHTML = projects.map((name) => `
-        <div class="project-item" data-name="${escHtml(name)}">
-          <span>${escHtml(name)}</span>
-          <button class="project-delete" data-name="${escHtml(name)}" title="Delete">&times;</button>
+      body.innerHTML = entries
+        .map(
+          (entry) => `
+        <div class="project-item" data-name="${escHtml(entry.name)}"${entry.hash ? ` data-hash="${escHtml(entry.hash)}"` : ''}>
+          <span>${escHtml(entry.name)}${entry.casOnly ? ' <span class="hint">(CAS)</span>' : ''}</span>
+          <button class="project-delete" data-name="${escHtml(entry.name)}" title="Delete">&times;</button>
         </div>
-      `).join('');
+      `,
+        )
+        .join('');
 
       body.querySelectorAll('.project-item').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
         el.addEventListener('click', (e: Event) => {
-          if ((e.target as HTMLElement).classList.contains('project-delete')) return;
-          void loadProject((el as HTMLElement).dataset['name'] ?? '').then(hideModal);
+          if (e.target instanceof HTMLElement && e.target.classList.contains('project-delete')) return;
+          const name = el.dataset['name'] ?? '';
+          const hash = el.dataset['hash'];
+          void loadProject(name, hash).then(hideModal);
         });
       });
 
       body.querySelectorAll('.project-delete').forEach((btn) => {
+        if (!(btn instanceof HTMLElement)) return;
         btn.addEventListener('click', (e: Event) => {
           e.stopPropagation();
-          const name = (btn as HTMLElement).dataset['name'];
-          if (!name || !confirm(`Delete project "${name}"?`)) return;
-          void fetch(`/api/projects/${encodeURIComponent(name)}`, { method: 'DELETE' })
-            .then(() => { void showLoadModal(); });
+          const name = btn.dataset['name'];
+          if (!name) return;
+          void modalConfirm('Delete Project', `Delete project "${name}"?`).then((yes) => {
+            if (yes)
+              void apiDeleteProject(name).then(() => {
+                void showLoadModal();
+              });
+          });
         });
       });
     }
@@ -96,11 +140,66 @@ async function showLoadModal(): Promise<void> {
   overlay.classList.remove('hidden');
 }
 
-async function loadProject(name: string): Promise<void> {
+export interface ProjectEntry {
+  readonly name: string;
+  readonly hash?: string;
+  readonly casOnly: boolean;
+}
+
+export function mergeProjectEntries(local: readonly string[], cas: readonly CasHashEntry[]): ProjectEntry[] {
+  const byName = new Map<string, ProjectEntry>();
+
+  for (const name of local) {
+    byName.set(name, { name, casOnly: false });
+  }
+
+  for (const entry of cas) {
+    const label = `${entry.hash.slice(0, 12)}…`;
+    if (!byName.has(label)) {
+      byName.set(label, { name: label, hash: entry.hash, casOnly: true });
+    }
+  }
+
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Persist locally and dual-write to CAS (CAS failure is non-fatal). */
+export async function saveProjectWithCas(name: string, data: ProjectFile): Promise<{ saved: string }> {
+  const result = await apiSaveProject(name, data);
+  casStoreProject(data).catch(() => {
+    // CAS unavailable — local save still succeeded
+  });
+  return result;
+}
+
+/** Load from local API, falling back to CAS when a hash is provided. */
+export async function loadProjectFromServer(name: string, hash?: string): Promise<ProjectFile> {
+  if (hash) {
+    try {
+      return await apiLoadProject(name);
+    } catch {
+      return await casFetchProject(hash);
+    }
+  }
+  return await apiLoadProject(name);
+}
+
+/** Merge local project names with CAS index entries. */
+export async function listMergedProjects(): Promise<readonly ProjectEntry[]> {
+  const [localProjects, casIndex] = await Promise.all([
+    apiListProjects().catch(() => [] as string[]),
+    casListProjects().catch(() => ({ count: 0, hashes: [] as CasHashEntry[] })),
+  ]);
+  return mergeProjectEntries(localProjects, casIndex.hashes);
+}
+
+export async function deleteStoredProject(name: string): Promise<{ deleted: string }> {
+  return apiDeleteProject(name);
+}
+
+async function loadProject(name: string, hash?: string): Promise<void> {
   try {
-    const resp = await fetch(`/api/projects/${encodeURIComponent(name)}`);
-    if (!resp.ok) throw new Error('Not found');
-    const data = (await resp.json()) as ProjectFile;
+    const data = await loadProjectFromServer(name, hash);
 
     deselectShape();
     clearHistory();
@@ -109,7 +208,7 @@ async function loadProject(name: string): Promise<void> {
     document.title = `FootPrint \u2014 ${currentProject}`;
     showToast(`Loaded: ${currentProject}`);
   } catch {
-    alert('Failed to load project');
+    void modalAlert('Error', 'Failed to load project.');
   }
 }
 
@@ -127,11 +226,7 @@ function showToast(msg: string): void {
   `;
   toast.textContent = msg;
   document.body.appendChild(toast);
-  setTimeout(() => { toast.remove(); }, 2000);
-}
-
-function escHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  setTimeout(() => {
+    toast.remove();
+  }, TOAST_DURATION_MS);
 }

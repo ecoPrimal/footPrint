@@ -1,0 +1,23 @@
+# footPrint reverse proxy — Caddy snippet for golgi
+# With subdomain routing (footprint.primals.eco), Caddy reverse-proxies
+# everything to the Express server. SPA fallback is handled server-side.
+#
+# footPrint Express runs on ironGate downstream host at 10.13.37.7:3002.
+# (3000 reserved, 3001 = petalTongue)
+
+footprint.primals.eco {
+	# WebSocket bridges (JSON-RPC 2.0)
+	@ws path /ws /ws/bridge
+	reverse_proxy @ws 10.13.37.7:3002 {
+		header_up Connection {>Connection}
+		header_up Upgrade {>Upgrade}
+	}
+
+	# All other traffic
+	reverse_proxy 10.13.37.7:3002 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Client-side WebSocket bridge for the agent system.
  *
@@ -8,8 +9,8 @@
 
 import { store } from '../core/store.js';
 import type { StoreEvent } from '../core/store.js';
-import type { Entity, EntityKind, ComponentKey, ComponentMap, SerializedEntity } from '../core/entity.js';
-import { createEntity, entityIdFrom } from '../core/entity.js';
+import type { Entity, SerializedEntity } from '../core/entity.js';
+import { createEntity, entityIdFrom, ENTITY_KINDS, isValidComponentValue } from '../core/entity.js';
 import { execute, undo, redo } from '../core/history.js';
 import {
   AddEntityCommand,
@@ -18,15 +19,30 @@ import {
   MoveGeometryCommand,
 } from '../core/commands.js';
 import type {
-  AgentWireMessage,
-  CommandMessage,
-  CommandResultMessage,
   AgentTextMessage,
   AgentActionMessage,
-  StateSyncMessage,
-  StateDeltaMessage,
+  CommandPayload,
   DeltaEvent,
+  JsonRpcFrame,
+  JsonRpcRequest,
 } from '../agent/protocol.js';
+import {
+  AGENT_COMMAND_ERROR,
+  AGENT_METHODS,
+  JSONRPC_INVALID_PARAMS,
+  JSONRPC_METHOD_NOT_FOUND,
+  isJsonRpcNotification,
+  isJsonRpcRequest,
+  jsonRpcError,
+  jsonRpcNotify,
+  jsonRpcSuccess,
+  parseAgentActionParams,
+  parseAgentMessageParams,
+  parseJsonRpcFrame,
+  parseProjectCommandParams,
+} from '../agent/protocol.js';
+import { agentWsUrl } from './api.js';
+import { AGENT_RECONNECT_MS, AGENT_RECONNECT_MAX_MS } from '../constants.js';
 
 type AgentPanelCallback = (msg: AgentTextMessage | AgentActionMessage) => void;
 
@@ -34,8 +50,8 @@ let ws: WebSocket | null = null;
 let panelCallback: AgentPanelCallback | null = null;
 let statusCallback: ((connected: boolean) => void) | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let reconnectDelay = 1000;
-const MAX_RECONNECT_DELAY = 16000;
+let reconnectDelay = AGENT_RECONNECT_MS;
+const MAX_RECONNECT_DELAY = AGENT_RECONNECT_MAX_MS;
 let suppressSync = false;
 
 export function initAgentBridge(
@@ -49,28 +65,28 @@ export function initAgentBridge(
   connect();
 }
 
-function getWsUrl(): string {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${location.host}/ws`;
-}
-
 function connect(): void {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
     return;
   }
 
-  ws = new WebSocket(getWsUrl());
+  ws = new WebSocket(agentWsUrl());
 
   ws.addEventListener('open', () => {
-    reconnectDelay = 1000;
+    reconnectDelay = AGENT_RECONNECT_MS;
     statusCallback?.(true);
     sendFullSync();
   });
 
   ws.addEventListener('message', (event: MessageEvent) => {
     try {
-      const msg = JSON.parse(event.data as string) as AgentWireMessage;
-      handleServerMessage(msg);
+      const raw: unknown = JSON.parse(String(event.data));
+      const frame = parseJsonRpcFrame(raw);
+      if (!frame) {
+        console.error('[agent-bridge] Invalid JSON-RPC frame from server');
+        return;
+      }
+      handleServerFrame(frame);
     } catch {
       console.error('[agent-bridge] Failed to parse server message');
     }
@@ -95,9 +111,9 @@ function scheduleReconnect(): void {
   }, reconnectDelay);
 }
 
-function send(msg: AgentWireMessage): void {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
+function sendFrame(frame: JsonRpcFrame | ReturnType<typeof jsonRpcNotify>): void {
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(frame));
   }
 }
 
@@ -105,8 +121,7 @@ function send(msg: AgentWireMessage): void {
 
 function sendFullSync(): void {
   const entities = store.serialize();
-  const msg: StateSyncMessage = { type: 'state-sync', entities };
-  send(msg);
+  sendFrame(jsonRpcNotify(AGENT_METHODS.PROJECT_SYNC, { entities }));
 }
 
 function serializeEntity(entity: Entity): SerializedEntity {
@@ -136,35 +151,70 @@ function handleStoreEvent(event: StoreEvent): void {
     }
   }
 
-  const msg: StateDeltaMessage = { type: 'state-delta', event: deltaEvent, entity };
-  send(msg);
+  sendFrame(jsonRpcNotify(AGENT_METHODS.PROJECT_DELTA, { event: deltaEvent, entity }));
 }
 
 // ── Inbound: server --> store ───────────────────────────────────
 
-function handleServerMessage(msg: AgentWireMessage): void {
-  switch (msg.type) {
-    case 'command':
-      handleCommand(msg);
-      break;
-    case 'agent-message':
-    case 'agent-action':
-      panelCallback?.(msg);
-      break;
-    default:
-      break;
+function handleServerFrame(frame: JsonRpcFrame): void {
+  if (isJsonRpcRequest(frame)) {
+    handleServerRequest(frame);
+    return;
+  }
+
+  if (isJsonRpcNotification(frame)) {
+    switch (frame.method) {
+      case AGENT_METHODS.AGENT_MESSAGE: {
+        const params = parseAgentMessageParams(frame.params);
+        if (params) {
+          panelCallback?.({ type: 'agent-message', text: params.text, timestamp: params.timestamp });
+        }
+        break;
+      }
+      case AGENT_METHODS.AGENT_ACTION: {
+        const params = parseAgentActionParams(frame.params);
+        if (params) {
+          panelCallback?.({
+            type: 'agent-action',
+            description: params.description,
+            entityId: params.entityId,
+            timestamp: params.timestamp,
+          });
+        }
+        break;
+      }
+      default:
+        break;
+    }
   }
 }
 
-function handleCommand(msg: CommandMessage): void {
-  const { id, payload } = msg;
+function handleServerRequest(req: JsonRpcRequest): void {
+  if (req.method !== AGENT_METHODS.PROJECT_COMMAND) {
+    sendFrame(jsonRpcError(req.id, JSONRPC_METHOD_NOT_FOUND, `Method not found: ${req.method}`));
+    return;
+  }
+
+  const params = parseProjectCommandParams(req.params);
+  if (!params) {
+    sendFrame(jsonRpcError(req.id, JSONRPC_INVALID_PARAMS, 'Invalid project.command params'));
+    return;
+  }
+
+  handleProjectCommand(req.id, params.payload);
+}
+
+function handleProjectCommand(id: number, payload: CommandPayload): void {
   try {
     suppressSync = true;
     let resultData: unknown;
 
     switch (payload.action) {
       case 'add-entity': {
-        const kind = payload.kind as EntityKind;
+        if (!payload.kind || !ENTITY_KINDS.includes(payload.kind)) {
+          throw new Error(`Invalid entity kind: ${payload.kind}`);
+        }
+        const kind = payload.kind;
         const parentId = payload.parentId ? entityIdFrom(payload.parentId) : null;
         const entity = createEntity(kind, parentId);
         if (payload.components) {
@@ -183,8 +233,11 @@ function handleCommand(msg: CommandMessage): void {
       }
       case 'update-component': {
         const eid = entityIdFrom(payload.entityId);
-        const key = payload.componentKey as ComponentKey;
-        execute(new UpdateComponentCommand(eid, key, payload.value as ComponentMap[typeof key]));
+        const key = payload.componentKey;
+        if (!isValidComponentValue(key, payload.value)) {
+          throw new Error(`Invalid value for component "${key}"`);
+        }
+        execute(new UpdateComponentCommand(eid, key, payload.value));
         resultData = { updated: payload.entityId, component: key };
         break;
       }
@@ -204,24 +257,18 @@ function handleCommand(msg: CommandMessage): void {
         resultData = { redone: true };
         break;
       }
+      default: {
+        const _exhaustive: never = payload;
+        throw new Error(`Unknown command action: ${(_exhaustive as { action: string }).action}`);
+      }
     }
 
     suppressSync = false;
     sendFullSync();
-
-    const result: CommandResultMessage = { type: 'command-result', id, ok: true, data: resultData };
-    send(result);
+    sendFrame(jsonRpcSuccess(id, { ok: true, data: resultData }));
   } catch (err: unknown) {
     suppressSync = false;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    const result: CommandResultMessage = { type: 'command-result', id, ok: false, error: message };
-    send(result);
+    sendFrame(jsonRpcError(id, AGENT_COMMAND_ERROR, message));
   }
 }
-
-// ── Outbound: user messages ─────────────────────────────────────
-
-export function sendUserMessage(text: string): void {
-  send({ type: 'user-message', text, timestamp: Date.now() });
-}
-

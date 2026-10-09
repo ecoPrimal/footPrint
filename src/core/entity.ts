@@ -1,10 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { HexColor } from '../types/brands.js';
 import type { ShapeStatus } from '../types/shape.js';
 import type { DeepReadonly } from '@protokarya/rustscript';
 import type { EntityId } from '../types/brands.js';
 import { entityId } from '../types/brands.js';
 
-// Re-export for consumers
 export type { EntityId } from '../types/brands.js';
 export { entityId, entityIdUnchecked as entityIdFrom } from '../types/brands.js';
 
@@ -15,7 +15,7 @@ export { entityId, entityIdUnchecked as entityIdFrom } from '../types/brands.js'
 export type ReadonlyEntity = DeepReadonly<TypedEntity>;
 
 export const ENTITY_KINDS = ['shape', 'layer', 'dimension', 'constraint', 'annotation'] as const;
-export type EntityKind = typeof ENTITY_KINDS[number];
+export type EntityKind = (typeof ENTITY_KINDS)[number];
 
 export interface GeometryComponent {
   geojson: GeoJSON.Geometry;
@@ -58,16 +58,24 @@ export interface ConstraintComponent {
 }
 
 export interface ElevationComponent {
-  vertices: ReadonlyArray<{ index: number; elevation: number }>;
+  vertices: readonly { index: number; elevation: number }[];
   min: number;
   max: number;
 }
 
 export const CONSTRAINT_TYPES = [
-  'fixed-distance', 'parallel', 'perpendicular', 'point-on-line',
-  'coincident', 'horizontal', 'vertical', 'tangent', 'symmetric', 'setback',
+  'fixed-distance',
+  'parallel',
+  'perpendicular',
+  'point-on-line',
+  'coincident',
+  'horizontal',
+  'vertical',
+  'tangent',
+  'symmetric',
+  'setback',
 ] as const;
-export type ConstraintType = typeof CONSTRAINT_TYPES[number];
+export type ConstraintType = (typeof CONSTRAINT_TYPES)[number];
 
 export interface ConstraintParams {
   distance?: number;
@@ -75,6 +83,11 @@ export interface ConstraintParams {
   axisPoint?: [number, number];
   axisDirection?: [number, number];
   vertexIndices?: number[];
+  /** Tangent: use internal (difference of radii) vs external (sum of radii). */
+  internal?: boolean;
+  /** Tangent: fallback radii when not stored on geometry. */
+  radius1?: number;
+  radius2?: number;
 }
 
 export interface ComponentMap {
@@ -167,6 +180,45 @@ export interface MutableEntity {
   parentId: EntityId | null;
   readonly children: Set<EntityId>;
   components: ComponentMap;
+}
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+const SHAPE_TYPES: ReadonlySet<string> = new Set([
+  'polygon',
+  'polyline',
+  'rectangle',
+  'circle',
+  'marker',
+  'circlemarker',
+]);
+
+/**
+ * Runtime check that a value is a plausible component for the given key.
+ * Validates top-level field types; does NOT deep-clone.
+ */
+export function isValidComponentValue(key: ComponentKey, value: unknown): boolean {
+  if (!isObj(value)) return false;
+  switch (key) {
+    case 'geometry':
+      return isObj(value['geojson']) && typeof value['shapeType'] === 'string' && SHAPE_TYPES.has(value['shapeType']);
+    case 'style':
+      return typeof value['color'] === 'string' && typeof value['weight'] === 'number';
+    case 'meta':
+      return typeof value['label'] === 'string' && typeof value['status'] === 'string';
+    case 'layer':
+      return typeof value['layerName'] === 'string' && typeof value['visible'] === 'boolean';
+    case 'dimension':
+      return typeof value['targetEntityId'] === 'string' && typeof value['value'] === 'number';
+    case 'constraint':
+      return typeof value['type'] === 'string' && Array.isArray(value['entityIds']);
+    case 'elevation':
+      return Array.isArray(value['vertices']) && typeof value['min'] === 'number';
+    default:
+      return false;
+  }
 }
 
 export function createEntity(kind: EntityKind, parentId: EntityId | null = null): MutableEntity {

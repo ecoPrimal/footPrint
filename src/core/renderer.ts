@@ -1,24 +1,32 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { EntityId, ReadonlyEntity, ShapeEntity, DimensionEntity, AnnotationEntity } from './entity.js';
 import type { DeepReadonly } from '@protokarya/rustscript';
 import type { StoreEvent } from './store.js';
 import { store } from './store.js';
-import { extractCoords } from './geometry.js';
+import { extractCoords, toLngLat } from './geometry.js';
 import { exhaustive } from '@protokarya/rustscript';
 
 const layerMap = new Map<EntityId, L.Layer>();
 let map: L.Map | null = null;
-let layerGroups = new Map<EntityId, L.FeatureGroup>();
+const layerGroups = new Map<EntityId, L.FeatureGroup>();
 
 export function initRenderer(leafletMap: L.Map): void {
   map = leafletMap;
 
   store.on((event: StoreEvent) => {
     switch (event.type) {
-      case 'add': onEntityAdded(event.entityId); break;
-      case 'remove': onEntityRemoved(event.entityId); break;
-      case 'update': onEntityUpdated(event.entityId, event.componentKey); break;
-      default: exhaustive(event.type);
+      case 'add':
+        onEntityAdded(event.entityId);
+        break;
+      case 'remove':
+        onEntityRemoved(event.entityId);
+        break;
+      case 'update':
+        onEntityUpdated(event.entityId, event.componentKey);
+        break;
+      default:
+        exhaustive(event.type);
     }
   });
 }
@@ -32,10 +40,6 @@ export function getEntityIdForLayer(layer: L.Layer): EntityId | undefined {
     if (l === layer) return id;
   }
   return undefined;
-}
-
-export function getLayerGroup(layerEntityId: EntityId): L.FeatureGroup | undefined {
-  return layerGroups.get(layerEntityId);
 }
 
 function onEntityAdded(id: EntityId): void {
@@ -73,7 +77,8 @@ function onEntityAdded(id: EntityId): void {
     }
     case 'constraint':
       break;
-    default: exhaustive(entity);
+    default:
+      exhaustive(entity);
   }
 }
 
@@ -82,7 +87,9 @@ function onEntityRemoved(id: EntityId): void {
   if (leafletLayer && map) {
     map.removeLayer(leafletLayer);
     if (leafletLayer instanceof L.FeatureGroup) {
-      leafletLayer.eachLayer((sub: L.Layer) => { map?.removeLayer(sub); });
+      leafletLayer.eachLayer((sub: L.Layer) => {
+        map?.removeLayer(sub);
+      });
     }
   }
   layerMap.delete(id);
@@ -128,7 +135,8 @@ function onEntityUpdated(id: EntityId, componentKey?: string): void {
     case 'annotation':
     case 'constraint':
       break;
-    default: exhaustive(entity);
+    default:
+      exhaustive(entity);
   }
 }
 
@@ -142,23 +150,30 @@ function buildLeafletLayer(entity: DeepReadonly<ShapeEntity>): L.Layer | null {
   const fillOpacity = style.fillOpacity;
 
   if (geo.shapeType === 'circle' && geo.radius != null && geo.geojson.type === 'Point') {
-    const [lng, lat] = geo.geojson.coordinates as [number, number];
+    const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.circle([lat, lng], { radius: geo.radius, color, weight, opacity, fillOpacity });
   }
 
   if (geo.shapeType === 'marker' && geo.geojson.type === 'Point') {
-    const [lng, lat] = geo.geojson.coordinates as [number, number];
+    const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.marker([lat, lng]);
   }
 
   if (geo.shapeType === 'circlemarker' && geo.geojson.type === 'Point') {
-    const [lng, lat] = geo.geojson.coordinates as [number, number];
+    const [lng, lat] = toLngLat(geo.geojson.coordinates);
     return L.circleMarker([lat, lng], {
-      radius: 6, color, fillColor: color, fillOpacity: 0.6,
+      radius: 6,
+      color,
+      fillColor: color,
+      fillOpacity: 0.6,
     });
   }
 
-  const feature: GeoJSON.Feature = { type: 'Feature', geometry: structuredClone(geo.geojson) as GeoJSON.Geometry, properties: {} };
+  const feature: GeoJSON.Feature = {
+    type: 'Feature',
+    geometry: structuredClone(geo.geojson) as GeoJSON.Geometry,
+    properties: {},
+  };
   let result: L.Layer | null = null;
   L.geoJSON(feature, {
     style: () => ({ color, weight, opacity, fillOpacity }),
@@ -185,9 +200,7 @@ function buildDimensionLayer(entity: DeepReadonly<DimensionEntity>): L.Layer | n
   const midLng = (from[0] + to[0]) / 2;
 
   const unitLabel = dim.unit === 'ft' ? 'ft' : 'm';
-  const valStr = dim.value >= 100
-    ? `${Math.round(dim.value)} ${unitLabel}`
-    : `${dim.value.toFixed(1)} ${unitLabel}`;
+  const valStr = dim.value >= 100 ? `${Math.round(dim.value)} ${unitLabel}` : `${dim.value.toFixed(1)} ${unitLabel}`;
 
   // Check if this dimension has a constraint (parametric)
   const hasConstraint = isConstrained(entity.id);
@@ -220,12 +233,9 @@ function isConstrained(dimensionEntityId: EntityId): boolean {
     if (!cRes.ok || cRes.value.kind !== 'constraint') continue;
     const comp = cRes.value.components.constraint;
 
-    if (
-      comp.type === 'fixed-distance' &&
-      comp.entityIds.includes(dimComp.targetEntityId)
-    ) {
+    if (comp.type === 'fixed-distance' && comp.entityIds.includes(dimComp.targetEntityId)) {
       const vi = comp.params.vertexIndices;
-      if (vi && vi[0] === dimComp.fromVertex && vi[1] === dimComp.toVertex) {
+      if (vi?.[0] === dimComp.fromVertex && vi?.[1] === dimComp.toVertex) {
         return true;
       }
     }
@@ -260,9 +270,9 @@ function applyStyle(id: EntityId, entity: DeepReadonly<ShapeEntity>): void {
   if (!leafletLayer) return;
   const style = entity.components.style;
 
-  if ('setStyle' in leafletLayer) {
-    (leafletLayer as L.Path).setStyle({
-      color: style.color as string,
+  if (leafletLayer instanceof L.Path) {
+    leafletLayer.setStyle({
+      color: String(style.color),
       weight: style.weight,
       opacity: style.opacity,
       fillOpacity: style.fillOpacity,
@@ -289,6 +299,3 @@ function rebuildShapeLayer(id: EntityId, entity: DeepReadonly<ShapeEntity>): voi
     addToParentGroup(entity, newLayer);
   }
 }
-
-// Re-export for backward compatibility
-export { extractCoords } from './geometry.js';

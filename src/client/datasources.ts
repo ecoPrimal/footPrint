@@ -1,5 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
-import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback, VectorSourceDef, TileSourceDef } from '../types/source.js';
+import type { DataSourceDef, DataSourceState, SourceRegistry, SourceUpdateCallback } from '../types/source.js';
+import { isTileSource, isVectorSource, isWmsSource } from '../types/source.js';
+import { escHtml } from './html.js';
 
 let map: L.Map | null = null;
 const sources: SourceRegistry = {};
@@ -15,53 +18,66 @@ export function registerSource(def: DataSourceDef): DataSourceState {
 
   let layer: L.TileLayer | L.GeoJSON;
 
-  if (sourceType === 'tiles') {
-    const tileDef = def as TileSourceDef;
-    layer = L.tileLayer(tileDef.tileUrl, {
+  if (isWmsSource(def)) {
+    layer = L.tileLayer.wms(def.wmsUrl, {
+      layers: def.wmsLayers,
+      format: def.wmsFormat ?? 'image/png',
+      transparent: true,
+      version: def.wmsVersion ?? '1.1.1',
       maxZoom: 20,
-      opacity: tileDef.opacity ?? 0.6,
-      attribution: tileDef.attribution ?? '',
+      opacity: def.opacity ?? 0.5,
+      attribution: def.attribution ?? '',
     });
-  } else {
-    const vecDef = def as VectorSourceDef;
+  } else if (isTileSource(def)) {
+    layer = L.tileLayer(def.tileUrl, {
+      maxZoom: 20,
+      opacity: def.opacity ?? 0.6,
+      attribution: def.attribution ?? '',
+    });
+  } else if (isVectorSource(def)) {
+    const vecDef = def;
     layer = L.geoJSON(undefined, {
-      style: vecDef.style ?? (() => ({
-        color: vecDef.color,
-        weight: 2,
-        opacity: 0.8,
-        fillOpacity: 0.15,
-      })),
-      pointToLayer: vecDef.pointToLayer ?? ((_feat: GeoJSON.Feature, latlng: L.LatLng) =>
-        L.circleMarker(latlng, {
-          radius: 5,
+      style:
+        vecDef.style ??
+        (() => ({
           color: vecDef.color,
-          fillColor: vecDef.color,
-          fillOpacity: 0.5,
-          weight: 1,
-        })
-      ),
+          weight: 2,
+          opacity: 0.8,
+          fillOpacity: 0.15,
+        })),
+      pointToLayer:
+        vecDef.pointToLayer ??
+        ((_feat: GeoJSON.Feature, latlng: L.LatLng) =>
+          L.circleMarker(latlng, {
+            radius: 5,
+            color: vecDef.color,
+            fillColor: vecDef.color,
+            fillOpacity: 0.5,
+            weight: 1,
+          })),
       onEachFeature: (feature: GeoJSON.Feature, featureLayer: L.Layer) => {
+        if (!(featureLayer instanceof L.Path)) return;
+        const path = featureLayer;
         if (vecDef.popupContent) {
-          (featureLayer as L.Path).bindPopup(vecDef.popupContent(feature), {
-            maxWidth: 300,
-            className: 'data-popup',
-          });
+          path.bindPopup(vecDef.popupContent(feature), { maxWidth: 300, className: 'data-popup' });
         } else {
           const props = feature.properties ?? {};
-          const rows = Object.entries(props as Record<string, unknown>)
+          const rows = Object.entries(props)
             .filter(([k]) => !k.startsWith('_'))
             .slice(0, 12)
-            .map(([k, v]) => `<tr><td>${k}</td><td>${String(v ?? '')}</td></tr>`)
+            .map(([k, v]) => `<tr><td>${escHtml(k)}</td><td>${escHtml(String(v ?? ''))}</td></tr>`)
             .join('');
           if (rows) {
-            (featureLayer as L.Path).bindPopup(
-              `<div class="data-popup-content"><table>${rows}</table></div>`,
-              { maxWidth: 300, className: 'data-popup' },
-            );
+            path.bindPopup(`<div class="data-popup-content"><table>${rows}</table></div>`, {
+              maxWidth: 300,
+              className: 'data-popup',
+            });
           }
         }
       },
     });
+  } else {
+    throw new Error(`Unknown source type: ${(def as { type: string }).type}`);
   }
 
   const state: DataSourceState = {
@@ -81,18 +97,14 @@ export function registerSource(def: DataSourceDef): DataSourceState {
     style: 'style' in def ? def.style : undefined,
     pointToLayer: 'pointToLayer' in def ? def.pointToLayer : undefined,
     popupContent: 'popupContent' in def ? def.popupContent : undefined,
-    tileUrl: 'tileUrl' in def ? (def as TileSourceDef).tileUrl : undefined,
-    opacity: 'opacity' in def ? (def as TileSourceDef).opacity : undefined,
-    attribution: 'attribution' in def ? (def as TileSourceDef).attribution : undefined,
+    tileUrl: isTileSource(def) ? def.tileUrl : isWmsSource(def) ? def.wmsUrl : undefined,
+    opacity: 'opacity' in def ? def.opacity : undefined,
+    attribution: 'attribution' in def ? def.attribution : undefined,
   };
 
   sources[state.id] = state;
   notify();
   return state;
-}
-
-export function getSource(id: string): DataSourceState | undefined {
-  return sources[id];
 }
 
 export function getAllSources(): SourceRegistry {
@@ -123,7 +135,7 @@ export async function enableSource(id: string): Promise<void> {
   notify();
 }
 
-export function disableSource(id: string): void {
+function disableSource(id: string): void {
   const src = sources[id];
   if (!src || !src.enabled || !map) return;
 

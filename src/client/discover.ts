@@ -1,171 +1,142 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
-import * as turf from '@turf/turf';
 import '@geoman-io/leaflet-geoman-free';
+import { area } from '@turf/area';
+import { distance } from '@turf/distance';
+import { centroid } from '@turf/centroid';
 import type { ScoredSource, DiscoveryReport } from '../types/spatial.js';
-import { DEFAULT_CATEGORY_BOOSTS } from '../types/spatial.js';
+import { deriveCategoryBoosts } from '../types/spatial.js';
 import { getAllSources, fetchSource, enableSource, fetchAllEnabled } from './datasources.js';
 import { buildTerrainGrid, renderContours, renderSlopeArrows } from './terrain.js';
-import { boundedChannel, Owned, take, isOk } from '@protokarya/rustscript';
-import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT } from '../constants.js';
+import { boundedChannel } from '@protokarya/rustscript';
+import { Owned, take } from '@protokarya/rustscript';
+import { isOk } from '@protokarya/rustscript';
+import {
+  SQ_FEET_PER_SQ_METER,
+  FEET_PER_METER,
+  METERS_PER_DEGREE_LAT,
+  DISCOVERY_DEBOUNCE_MS,
+  DISCOVERY_BUFFER_RADIUS_M,
+  DISCOVERY_MAX_FEATURE_SAMPLE,
+  DISCOVERY_PROXIMITY_RADIUS_M,
+  DISCOVERY_COUNT_WEIGHT,
+  DISCOVERY_PROXIMITY_WEIGHT,
+  DISCOVERY_CATEGORY_WEIGHT,
+  DISCOVERY_DEFAULT_BOOST,
+  DISCOVERY_COUNT_DIVISOR,
+  DISCOVERY_NO_DATA_DISTANCE,
+} from '../constants.js';
+import { getSourceIdsByCapability, listSourceManifests, type SourceCapability } from '../core/manifest.js';
+import { store } from '../core/store.js';
+import { entityIdFrom } from '../core/entity.js';
+import { extractCoords } from '../core/geometry.js';
+import { escHtml } from './html.js';
+import { layerToFeature } from './geojson.js';
 
 let map: L.Map | null = null;
 let onDiscovery: ((report: DiscoveryReport) => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-const BUFFER_RADIUS_M = 100;
-const DEBOUNCE_MS = 800;
+function isPropertyLayerEntity(entityId: string): boolean {
+  const res = store.get(entityIdFrom(entityId));
+  if (!res.ok) return false;
+  const entity = res.value;
+  if (entity.kind !== 'layer') return false;
+  return entity.components.layer.layerName === 'Property Boundary';
+}
 
-const AUTO_ENABLE_IDS: readonly string[] = [
-  'osm-buildings', 'osm-power', 'parcels', 'osm-fences',
-  'osm-poles', 'osm-manholes', 'osm-hydrants',
-];
-
-export function initDiscover(
-  leafletMap: L.Map,
-  discoveryCallback?: (report: DiscoveryReport) => void,
-): void {
+export function initDiscover(leafletMap: L.Map, discoveryCallback?: (report: DiscoveryReport) => void): void {
   map = leafletMap;
   onDiscovery = discoveryCallback ?? null;
 
-  map.on('pm:create', (e: { layer: L.Layer }) => {
-    const shape = e.layer;
-    setTimeout(() => {
-      if (!shape._fpMeta || !map) return;
+  store.on((event) => {
+    if (event.type !== 'add') return;
+    if (!map) return;
 
-      let isPropertyLayer = false;
-      map.eachLayer((layer: L.Layer) => {
-        if (layer instanceof L.FeatureGroup && layer.hasLayer(shape)) {
-          if (shape._fpMeta?.color === '#e74c3c') {
-            isPropertyLayer = true;
-          }
-        }
-      });
+    const res = store.get(event.entityId);
+    if (!res.ok) return;
+    const entity = res.value;
 
-      if (!isPropertyLayer) return;
+    if (entity.kind !== 'shape') return;
+    if (!entity.parentId || !isPropertyLayerEntity(entity.parentId)) return;
 
-      let shapeBounds: L.LatLngBounds | null = null;
-      if ('getBounds' in shape) {
-        shapeBounds = (shape as L.Polyline).getBounds();
-      } else if ('getLatLng' in shape) {
-        const ll = (shape as L.Marker).getLatLng();
-        shapeBounds = L.latLngBounds(ll, ll);
-      }
+    const geo = entity.components.geometry;
+    if (!geo) return;
 
-      if (!shapeBounds) return;
-      void runDiscovery(shape, shapeBounds);
-    }, 200);
+    const coords = extractCoords(geo);
+    if (coords.length < 2) return;
+
+    const bounds = L.latLngBounds(coords.map((c) => L.latLng(c[1], c[0])));
+
+    void runDiscovery(bounds, {
+      type: 'Feature',
+      properties: {},
+      geometry: structuredClone(geo.geojson) as GeoJSON.Geometry, // structuredClone yields mutable copy; TS preserves readonly in return type
+    });
   });
 
   map.on('moveend', () => {
     if (debounceTimer !== null) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       void fetchAllEnabled();
-    }, DEBOUNCE_MS);
+    }, DISCOVERY_DEBOUNCE_MS);
   });
 }
 
-async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promise<void> {
+async function runDiscovery(shapeBounds: L.LatLngBounds, propertyGeom: GeoJSON.Feature | null): Promise<void> {
   if (!map) return;
 
-  // Auto-enable priority sources on property draw (from former autofetch.ts)
-  const allSrc = getAllSources();
-  for (const id of AUTO_ENABLE_IDS) {
-    const src = allSrc[id];
-    if (src && !src.enabled) {
-      await enableSource(id);
-    }
-  }
+  await enableSourcesWithCapability('discovery:auto-enable');
 
   let propertyArea = 0;
-  let propertyGeom: GeoJSON.Feature | null = null;
-  if ('toGeoJSON' in shape) {
-    const geo = (shape as L.Polyline).toGeoJSON() as GeoJSON.Feature;
-    propertyGeom = geo;
-    if (geo.geometry.type === 'Polygon' || geo.geometry.type === 'MultiPolygon') {
-      propertyArea = turf.area(geo);
+  if (propertyGeom) {
+    const geomType = propertyGeom.geometry.type;
+    if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+      propertyArea = area(propertyGeom);
     }
   }
 
-  const buffered = shapeBounds.pad(BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001));
+  const padRatio =
+    DISCOVERY_BUFFER_RADIUS_M / METERS_PER_DEGREE_LAT / (shapeBounds.getNorth() - shapeBounds.getSouth() || 0.001);
+  const buffered = shapeBounds.pad(padRatio);
   const sources = getAllSources();
+  const categoryBoosts = deriveCategoryBoosts(sources, listSourceManifests());
 
   const sourceEntries = Object.entries(sources).filter(([, src]) => src.type === 'vector' && src.fetch);
   const [tx, rx] = boundedChannel<ScoredSource>(sourceEntries.length || 1);
 
-  const fetchTasks: Array<Promise<void>> = [];
+  const fetchTasks: Promise<void>[] = [];
 
   for (const [id, src] of sourceEntries) {
-    fetchTasks.push((async () => {
-      try {
-        if (!src.enabled) {
-          await enableSource(id);
-        }
-        await fetchSource(id, buffered);
-
-        const geoLayer = src.layer as L.GeoJSON;
-        const features: GeoJSON.Feature[] = [];
-        geoLayer.eachLayer((sub: L.Layer) => {
-          if ('toGeoJSON' in sub) {
-            features.push((sub as L.Path & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON());
+    fetchTasks.push(
+      (async () => {
+        try {
+          if (!src.enabled) {
+            await enableSource(id);
           }
-        });
+          await fetchSource(id, buffered);
 
-        if (features.length === 0) return;
+          const geoLayer = src.layer as L.GeoJSON;
+          const features: GeoJSON.Feature[] = [];
+          geoLayer.eachLayer((sub: L.Layer) => {
+            const feat = layerToFeature(sub);
+            if (feat) features.push(feat);
+          });
 
-        let totalDist = 0;
-        let nearestDist = Infinity;
+          if (features.length === 0) return;
 
-        if (propertyGeom && propertyGeom.geometry.type !== 'Point') {
-          for (const f of features.slice(0, 50)) {
-            try {
-              let dist: number;
-              if (f.geometry.type === 'Point') {
-                const pt = f.geometry.coordinates as [number, number];
-                dist = turf.distance(
-                  turf.point(pt),
-                  turf.centroid(propertyGeom),
-                  { units: 'meters' },
-                );
-              } else {
-                dist = turf.distance(
-                  turf.centroid(f),
-                  turf.centroid(propertyGeom),
-                  { units: 'meters' },
-                );
-              }
-              totalDist += dist;
-              if (dist < nearestDist) nearestDist = dist;
-            } catch {
-              // skip malformed features
-            }
+          const result = scoreDiscoverySource(id, src, features, propertyGeom, categoryBoosts);
+          if (!result) return;
+
+          const sendResult = tx.send(Owned.of(result));
+          if (!isOk(sendResult)) {
+            console.warn(`[Discover] channel full for ${id}`);
           }
+        } catch (err) {
+          console.warn(`[Discover] source ${id} failed:`, err);
         }
-
-        const avgDist = features.length > 0 ? totalDist / Math.min(features.length, 50) : 999;
-        const categoryBoost = DEFAULT_CATEGORY_BOOSTS[src.category] ?? 0.5;
-        const countScore = Math.min(features.length / 20, 1.0);
-        const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / 500) : 0;
-        const relevance = 0.3 * countScore + 0.4 * proximityScore + 0.3 * categoryBoost;
-
-        const result: ScoredSource = {
-          sourceId: id,
-          sourceName: src.name,
-          category: src.category,
-          featureCount: features.length,
-          relevanceScore: Math.round(relevance * 100) / 100,
-          nearestDistance: Math.round(nearestDist * 10) / 10,
-          avgDistance: Math.round(avgDist * 10) / 10,
-          samples: features.slice(0, 5),
-        };
-
-        const sendResult = tx.send(Owned.of(result));
-        if (!isOk(sendResult)) {
-          console.warn(`[Discover] channel full for ${id}`);
-        }
-      } catch (err) {
-        console.warn(`[Discover] source ${id} failed:`, err);
-      }
-    })());
+      })(),
+    );
   }
 
   await Promise.allSettled(fetchTasks);
@@ -190,7 +161,7 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
 
   const report: DiscoveryReport = {
     propertyArea: Math.round(propertyArea * SQ_FEET_PER_SQ_METER),
-    bufferRadius: BUFFER_RADIUS_M,
+    bufferRadius: DISCOVERY_BUFFER_RADIUS_M,
     sources: scored,
     terrain: terrainGrid,
     timestamp: new Date().toISOString(),
@@ -198,6 +169,78 @@ async function runDiscovery(shape: L.Layer, shapeBounds: L.LatLngBounds): Promis
 
   if (onDiscovery) onDiscovery(report);
   renderDiscoveryPanel(report);
+}
+
+/** Enable registered sources that declare the given capability. */
+export async function enableSourcesWithCapability(capability: SourceCapability): Promise<readonly string[]> {
+  const allSrc = getAllSources();
+  const enabled: string[] = [];
+  for (const id of getSourceIdsByCapability(capability)) {
+    const src = allSrc[id];
+    if (src && !src.enabled) {
+      await enableSource(id);
+      enabled.push(id);
+    }
+  }
+  return enabled;
+}
+
+interface SourceScoreInput {
+  readonly name: string;
+  readonly category: string;
+}
+
+/**
+ * Score a vector source by feature count, proximity to property, and category boost.
+ * Returns null when there are no features to score.
+ */
+export function scoreDiscoverySource(
+  sourceId: string,
+  src: SourceScoreInput,
+  features: readonly GeoJSON.Feature[],
+  propertyGeom: GeoJSON.Feature | null,
+  categoryBoosts?: Record<string, number>,
+): ScoredSource | null {
+  if (features.length === 0) return null;
+
+  let totalDist = 0;
+  let nearestDist = Infinity;
+
+  if (propertyGeom && propertyGeom.geometry.type !== 'Point') {
+    for (const f of features.slice(0, DISCOVERY_MAX_FEATURE_SAMPLE)) {
+      try {
+        const dist = distance(centroid(f), centroid(propertyGeom), { units: 'meters' });
+        totalDist += dist;
+        if (dist < nearestDist) nearestDist = dist;
+      } catch {
+        // skip malformed features
+      }
+    }
+  }
+
+  const avgDist =
+    features.length > 0
+      ? totalDist / Math.min(features.length, DISCOVERY_MAX_FEATURE_SAMPLE)
+      : DISCOVERY_NO_DATA_DISTANCE;
+  const boosts = categoryBoosts ?? deriveCategoryBoosts(getAllSources() ?? {}, listSourceManifests());
+  const categoryBoost = boosts[src.category] ?? DISCOVERY_DEFAULT_BOOST;
+  const countScore = Math.min(features.length / DISCOVERY_COUNT_DIVISOR, 1.0);
+  const proximityScore = nearestDist < Infinity ? Math.max(0, 1 - nearestDist / DISCOVERY_PROXIMITY_RADIUS_M) : 0;
+  const relevance =
+    DISCOVERY_COUNT_WEIGHT * countScore +
+    DISCOVERY_PROXIMITY_WEIGHT * proximityScore +
+    DISCOVERY_CATEGORY_WEIGHT * categoryBoost;
+
+  return {
+    sourceId,
+    sourceName: src.name,
+    category: src.category,
+    featureCount: features.length,
+    relevanceScore: Math.round(relevance * 100) / 100,
+    nearestDistance: Math.round(nearestDist * 10) / 10,
+    avgDistance: Math.round(avgDist * 10) / 10,
+    samples: features.slice(0, 5),
+  };
 }
 
 function renderDiscoveryPanel(report: DiscoveryReport): void {
@@ -222,14 +265,13 @@ function renderDiscoveryPanel(report: DiscoveryReport): void {
   for (const src of report.sources) {
     if (src.featureCount === 0) continue;
     const li = document.createElement('li');
-    const distStr = src.nearestDistance < Infinity
-      ? `${String(Math.round(src.nearestDistance * FEET_PER_METER))}ft`
-      : '--';
+    const distStr =
+      src.nearestDistance < Infinity ? `${String(Math.round(src.nearestDistance * FEET_PER_METER))}ft` : '--';
     const scoreBar = Math.round(src.relevanceScore * 100);
 
     li.innerHTML = `
-      <span class="ds-color" style="background:${getSourceColor(src.sourceId)}"></span>
-      <span class="ds-name">${src.sourceName}</span>
+      <span class="ds-color" style="background:${escHtml(getSourceColor(src.sourceId))}"></span>
+      <span class="ds-name">${escHtml(src.sourceName)}</span>
       <span class="discovery-count">${String(src.featureCount)}</span>
       <span class="discovery-dist">${distStr}</span>
       <span class="discovery-score" title="Relevance: ${String(scoreBar)}%">
@@ -240,9 +282,13 @@ function renderDiscoveryPanel(report: DiscoveryReport): void {
   }
 
   const dismissBtn = document.getElementById('btn-dismiss-discover');
-  dismissBtn?.addEventListener('click', () => {
-    panel.classList.add('hidden');
-  }, { once: true });
+  dismissBtn?.addEventListener(
+    'click',
+    () => {
+      panel.classList.add('hidden');
+    },
+    { once: true },
+  );
 }
 
 function getSourceColor(sourceId: string): string {

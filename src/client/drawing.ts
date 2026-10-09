@@ -1,11 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
 import type { EntityId, GeometryComponent } from '../core/entity.js';
-import { store } from '../core/store.js';
 import { execute } from '../core/history.js';
-import { createShapeEntity, RemoveEntityCommand, UpdateComponentCommand } from '../core/commands.js';
+import { createShapeEntity, RemoveEntityCommand } from '../core/commands.js';
 import { getLeafletLayer, getEntityIdForLayer } from '../core/renderer.js';
 import type { HexColor } from '../types/brands.js';
+import { layerToFeature } from './geojson.js';
 
 let map: L.Map | null = null;
 let onShapeSelect: ((entityId: EntityId | null) => void) | null = null;
@@ -13,10 +14,7 @@ let selectedEntityId: EntityId | null = null;
 let activeLayerEntityId: EntityId | null = null;
 let activeColor: HexColor | null = null;
 
-export function initDrawing(
-  leafletMap: L.Map,
-  shapeSelectCallback: (entityId: EntityId | null) => void,
-): void {
+export function initDrawing(leafletMap: L.Map, shapeSelectCallback: (entityId: EntityId | null) => void): void {
   map = leafletMap;
   onShapeSelect = shapeSelectCallback;
 
@@ -65,13 +63,7 @@ function handleCreate(layer: L.Layer, shapeType: string): void {
   const mappedType = mapShapeType(shapeType);
   const radius = layer instanceof L.Circle ? layer.getRadius() : undefined;
 
-  const { entity, command } = createShapeEntity(
-    geo,
-    mappedType,
-    activeLayerEntityId,
-    activeColor,
-    radius,
-  );
+  const { entity, command } = createShapeEntity(geo, mappedType, activeLayerEntityId, activeColor, radius);
 
   execute(command);
 
@@ -86,24 +78,30 @@ function handleCreate(layer: L.Layer, shapeType: string): void {
 }
 
 function extractGeometry(layer: L.Layer): GeoJSON.Geometry | null {
-  if (!('toGeoJSON' in layer)) return null;
-  const geo = (layer as L.Layer & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
-  return geo.geometry;
+  const feat = layerToFeature(layer);
+  return feat?.geometry ?? null;
 }
 
 function mapShapeType(pmShape: string): GeometryComponent['shapeType'] {
   switch (pmShape.toLowerCase()) {
-    case 'polygon': return 'polygon';
-    case 'rectangle': return 'rectangle';
-    case 'line': return 'polyline';
-    case 'circle': return 'circle';
-    case 'marker': return 'marker';
-    case 'circlemarker': return 'circlemarker';
-    default: return 'polygon';
+    case 'polygon':
+      return 'polygon';
+    case 'rectangle':
+      return 'rectangle';
+    case 'line':
+      return 'polyline';
+    case 'circle':
+      return 'circle';
+    case 'marker':
+      return 'marker';
+    case 'circlemarker':
+      return 'circlemarker';
+    default:
+      return 'polygon';
   }
 }
 
-export function bindShapeClick(leafletLayer: L.Layer, entityId: EntityId): void {
+function bindShapeClick(leafletLayer: L.Layer, entityId: EntityId): void {
   leafletLayer.on('click', (e: L.LeafletMouseEvent) => {
     L.DomEvent.stopPropagation(e);
     selectShape(entityId);
@@ -113,16 +111,20 @@ export function bindShapeClick(leafletLayer: L.Layer, entityId: EntityId): void 
 export function selectShape(entityId: EntityId): void {
   if (selectedEntityId && selectedEntityId !== entityId) {
     const prevLayer = getLeafletLayer(selectedEntityId);
-    if (prevLayer && 'setStyle' in prevLayer) {
-      try { (prevLayer as L.Path).setStyle({ weight: 3 }); } catch { /* removed */ }
+    if (prevLayer instanceof L.Path) {
+      try {
+        prevLayer.setStyle({ weight: 3 });
+      } catch {
+        /* layer may already be gone */
+      }
     }
   }
 
   selectedEntityId = entityId;
 
   const layer = getLeafletLayer(entityId);
-  if (layer && 'setStyle' in layer) {
-    (layer as L.Path).setStyle({ weight: 5 });
+  if (layer instanceof L.Path) {
+    layer.setStyle({ weight: 5 });
   }
 
   if (onShapeSelect) onShapeSelect(entityId);
@@ -131,8 +133,12 @@ export function selectShape(entityId: EntityId): void {
 export function deselectShape(): void {
   if (selectedEntityId) {
     const layer = getLeafletLayer(selectedEntityId);
-    if (layer && 'setStyle' in layer) {
-      try { (layer as L.Path).setStyle({ weight: 3 }); } catch { /* removed */ }
+    if (layer instanceof L.Path) {
+      try {
+        layer.setStyle({ weight: 3 });
+      } catch {
+        /* layer may already be gone */
+      }
     }
   }
   selectedEntityId = null;
@@ -144,19 +150,4 @@ export function deleteSelectedShape(): void {
   const id = selectedEntityId;
   deselectShape();
   execute(new RemoveEntityCommand(id));
-}
-
-export function getSelectedEntityId(): EntityId | null {
-  return selectedEntityId;
-}
-
-export function applyLayerStyle(entityId: EntityId, color: HexColor): void {
-  const res = store.get(entityId);
-  if (!res.ok) return;
-  execute(new UpdateComponentCommand(entityId, 'style', {
-    color,
-    weight: 3,
-    opacity: 0.9,
-    fillOpacity: 0.25,
-  }));
 }

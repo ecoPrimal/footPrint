@@ -1,6 +1,11 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
-import * as turf from '@turf/turf';
+import { distance as turfDistance } from '@turf/distance';
+import { midpoint } from '@turf/midpoint';
+import { bearing as turfBearing } from '@turf/bearing';
+import { point } from '@turf/helpers';
+import { FEET_PER_MILE } from '../constants.js';
 import type { EntityId } from '../core/entity.js';
 import { createEntity } from '../core/entity.js';
 import { store } from '../core/store.js';
@@ -13,7 +18,7 @@ import { extractCoords } from '../core/geometry.js';
 import { Some, None } from '@protokarya/rustscript';
 
 let map: L.Map | null = null;
-let dimensionLayer: L.LayerGroup = L.layerGroup();
+const dimensionLayer: L.LayerGroup = L.layerGroup();
 let liveLabel: L.Marker | null = null;
 let vertices: L.LatLng[] = [];
 let isDrawing = false;
@@ -30,8 +35,8 @@ export function initDimensions(leafletMap: L.Map): void {
 
     const wl = e.workingLayer;
     wl.on('pm:vertexadded' as string, (ve: L.LeafletEvent) => {
-      const latlng = (ve as unknown as { latlng: L.LatLng }).latlng;
-      onVertexAdded(latlng);
+      if (!('latlng' in ve) || !((ve as { latlng: unknown }).latlng instanceof L.LatLng)) return;
+      onVertexAdded((ve as { latlng: L.LatLng }).latlng);
     });
 
     mouseMoveHandler = (me: L.LeafletMouseEvent) => {
@@ -73,9 +78,7 @@ function createDimensionEntities(shapeEntityId: EntityId): void {
     const to = coords[i + 1];
     if (!from || !to) continue;
 
-    const dist = turf.distance(
-      turf.point(from), turf.point(to), { units: 'feet' },
-    );
+    const dist = turfDistance(point(from), point(to), { units: 'feet' });
 
     const dimEntity = createEntity('dimension', shapeEntityId);
     dimEntity.components.dimension = {
@@ -95,11 +98,14 @@ const dimensionReactiveComputation: DerivedComputation<Command[]> = {
   watchComponents: ['geometry'],
 
   dependencies(): EntityId[] {
-    return store.withComponent('dimension').filterMap((dimId) => {
-      const res = store.get(dimId);
-      if (!res.ok || res.value.kind !== 'dimension') return None();
-      return Some(res.value.components.dimension.targetEntityId);
-    }).collect();
+    return store
+      .withComponent('dimension')
+      .filterMap((dimId) => {
+        const res = store.get(dimId);
+        if (!res.ok || res.value.kind !== 'dimension') return None();
+        return Some(res.value.components.dimension.targetEntityId);
+      })
+      .collect();
   },
 
   compute(): Command[] {
@@ -118,15 +124,15 @@ const dimensionReactiveComputation: DerivedComputation<Command[]> = {
       const to = coords[dim.toVertex];
       if (!from || !to) continue;
 
-      const dist = turf.distance(
-        turf.point(from), turf.point(to), { units: 'feet' },
-      );
+      const dist = turfDistance(point(from), point(to), { units: 'feet' });
 
       if (Math.abs(dist - dim.value) > 0.01) {
-        cmds.push(new UpdateComponentCommand(dimId, 'dimension', {
-          ...dim,
-          value: Math.round(dist * 10) / 10,
-        }));
+        cmds.push(
+          new UpdateComponentCommand(dimId, 'dimension', {
+            ...dim,
+            value: Math.round(dist * 10) / 10,
+          }),
+        );
       }
     }
     return cmds;
@@ -159,35 +165,26 @@ function onVertexAdded(latlng: L.LatLng): void {
 }
 
 function addSegmentLabel(from: L.LatLng, to: L.LatLng): void {
-  const p1 = turf.point([from.lng, from.lat]);
-  const p2 = turf.point([to.lng, to.lat]);
-  const mid = turf.midpoint(p1, p2);
-  const dist = turf.distance(p1, p2, { units: 'feet' });
+  const p1 = point([from.lng, from.lat]);
+  const p2 = point([to.lng, to.lat]);
+  const mid = midpoint(p1, p2);
+  const dist = turfDistance(p1, p2, { units: 'feet' });
 
-  const label = L.marker(
-    [mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple,
-    {
-      icon: L.divIcon({
-        className: 'dimension-label',
-        html: formatDist(dist),
-        iconSize: [60, 16],
-        iconAnchor: [30, 8],
-      }),
-      interactive: false,
-    },
-  );
+  const label = L.marker([mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple, {
+    icon: L.divIcon({
+      className: 'dimension-label',
+      html: formatDist(dist),
+      iconSize: [60, 16],
+      iconAnchor: [30, 8],
+    }),
+    interactive: false,
+  });
   dimensionLayer.addLayer(label);
 }
 
 function addAngleLabel(a: L.LatLng, vertex: L.LatLng, b: L.LatLng): void {
-  const bearing1 = turf.bearing(
-    turf.point([vertex.lng, vertex.lat]),
-    turf.point([a.lng, a.lat]),
-  );
-  const bearing2 = turf.bearing(
-    turf.point([vertex.lng, vertex.lat]),
-    turf.point([b.lng, b.lat]),
-  );
+  const bearing1 = turfBearing(point([vertex.lng, vertex.lat]), point([a.lng, a.lat]));
+  const bearing2 = turfBearing(point([vertex.lng, vertex.lat]), point([b.lng, b.lat]));
   let angle = Math.abs(bearing2 - bearing1);
   if (angle > 180) angle = 360 - angle;
 
@@ -207,20 +204,16 @@ function updateLiveLabel(cursor: L.LatLng): void {
   const last = vertices[vertices.length - 1];
   if (!last) return;
 
-  const p1 = turf.point([last.lng, last.lat]);
-  const p2 = turf.point([cursor.lng, cursor.lat]);
-  const dist = turf.distance(p1, p2, { units: 'feet' });
+  const p1 = point([last.lng, last.lat]);
+  const p2 = point([cursor.lng, cursor.lat]);
+  const dist = turfDistance(p1, p2, { units: 'feet' });
 
   let totalDist = 0;
   for (let i = 1; i < vertices.length; i++) {
     const va = vertices[i - 1];
     const vb = vertices[i];
     if (va && vb) {
-      totalDist += turf.distance(
-        turf.point([va.lng, va.lat]),
-        turf.point([vb.lng, vb.lat]),
-        { units: 'feet' },
-      );
+      totalDist += turfDistance(point([va.lng, va.lat]), point([vb.lng, vb.lat]), { units: 'feet' });
     }
   }
   totalDist += dist;
@@ -257,7 +250,7 @@ function cleanupLive(): void {
 }
 
 function formatDist(feet: number): string {
-  if (feet >= 5280) return `${(feet / 5280).toFixed(2)} mi`;
+  if (feet >= FEET_PER_MILE) return `${(feet / FEET_PER_MILE).toFixed(2)} mi`;
   if (feet >= 100) return `${Math.round(feet)} ft`;
   return `${feet.toFixed(1)} ft`;
 }

@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Command } from './commands.js';
 import { store } from './store.js';
-import { Owned, take, RustVec, isSome } from '@protokarya/rustscript';
+import { Owned, take } from '@protokarya/rustscript';
+import { RustVec } from '@protokarya/rustscript';
+import { isSome } from '@protokarya/rustscript';
+import { UNDO_HISTORY_LIMIT } from '../constants.js';
 
 const undoStack = RustVec.empty<Owned<Command>>();
 const redoStack = RustVec.empty<Owned<Command>>();
-const MAX_HISTORY = 200;
 
 let onHistoryChange: (() => void) | null = null;
 
@@ -15,7 +18,7 @@ export function initHistory(changeCallback?: () => void): void {
 export function execute(cmd: Command): void {
   cmd.execute(store);
   undoStack.push(Owned.of(cmd));
-  if (undoStack.len() > MAX_HISTORY) {
+  if (undoStack.len() > UNDO_HISTORY_LIMIT) {
     const discarded = undoStack.removeAt(0);
     if (isSome(discarded)) {
       using _drop = discarded.value;

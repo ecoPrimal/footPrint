@@ -1,15 +1,21 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
-import * as turf from '@turf/turf';
-import {
-  FEET_PER_METER,
-  SQ_FEET_PER_SQ_METER,
-  FEET_PER_MILE,
-  SQ_FEET_PER_ACRE,
-} from '../constants.js';
+import { area } from '@turf/area';
+import { centroid } from '@turf/centroid';
+import { length as turfLength } from '@turf/length';
+import { midpoint } from '@turf/midpoint';
+import { polygonToLine } from '@turf/polygon-to-line';
+import { lineString, point, polygon } from '@turf/helpers';
+import { FEET_PER_METER, SQ_FEET_PER_SQ_METER, FEET_PER_MILE, SQ_FEET_PER_ACRE } from '../constants.js';
+import { layerToFeature } from './geojson.js';
+
+function toLatLng(pos: readonly number[]): L.LatLngTuple {
+  return [pos[1] ?? 0, pos[0] ?? 0];
+}
 
 let map: L.Map | null = null;
 let measureMode = false;
-let measurePoints: Array<[number, number]> = [];
+let measurePoints: [number, number][] = [];
 const measureLayers: L.FeatureGroup = L.featureGroup();
 let tempLine: L.Polyline | null = null;
 
@@ -18,7 +24,10 @@ export function initMeasurement(leafletMap: L.Map): void {
   measureLayers.addTo(map);
 
   const btn = document.getElementById('btn-measure');
-  if (btn) btn.addEventListener('click', () => { toggleMeasureMode(); });
+  if (btn)
+    btn.addEventListener('click', () => {
+      toggleMeasureMode();
+    });
 }
 
 function toggleMeasureMode(): void {
@@ -64,73 +73,67 @@ function onMeasureMove(e: L.LeafletMouseEvent): void {
   const tooltip = document.getElementById('measure-tooltip');
   if (!tooltip) return;
 
-  const currentPts: Array<[number, number]> = [...measurePoints, [e.latlng.lng, e.latlng.lat]];
-  const line = turf.lineString(currentPts);
-  const length = turf.length(line, { units: 'feet' });
+  const currentPts: [number, number][] = [...measurePoints, [e.latlng.lng, e.latlng.lat]];
+  const line = lineString(currentPts);
+  const length = turfLength(line, { units: 'feet' });
 
   tooltip.classList.remove('hidden');
-  tooltip.style.left = e.originalEvent.clientX + 14 + 'px';
-  tooltip.style.top = e.originalEvent.clientY - 14 + 'px';
+  tooltip.style.left = `${String(e.originalEvent.clientX + 14)}px`;
+  tooltip.style.top = `${String(e.originalEvent.clientY - 14)}px`;
   tooltip.textContent = formatLength(length);
 
   if (tempLine) measureLayers.removeLayer(tempLine);
-  tempLine = L.polyline(
-    currentPts.map((p) => [p[1], p[0]] as L.LatLngTuple),
-    { color: '#ff6b81', weight: 2, dashArray: '6 4' },
-  );
+  tempLine = L.polyline(currentPts.map(toLatLng), { color: '#ff6b81', weight: 2, dashArray: '6 4' });
   measureLayers.addLayer(tempLine);
 }
 
 function updateMeasureLine(): void {
   if (tempLine) measureLayers.removeLayer(tempLine);
 
-  const latlngs: L.LatLngTuple[] = measurePoints.map((p) => [p[1], p[0]] as L.LatLngTuple);
+  const latlngs: L.LatLngTuple[] = measurePoints.map(toLatLng);
   const line = L.polyline(latlngs, { color: '#ff6b81', weight: 2 });
   measureLayers.addLayer(line);
 
-  const lastTwo = measurePoints.slice(-2) as [[number, number], [number, number]];
-  const seg = turf.lineString(lastTwo);
-  const segLen = turf.length(seg, { units: 'feet' });
-  const mid = turf.midpoint(turf.point(lastTwo[0]), turf.point(lastTwo[1]));
+  const a = measurePoints[measurePoints.length - 2];
+  const b = measurePoints[measurePoints.length - 1];
+  if (!a || !b) return;
+  const seg = lineString([a, b]);
+  const segLen = turfLength(seg, { units: 'feet' });
+  const mid = midpoint(point(a), point(b));
 
-  const label = L.marker(
-    [mid.geometry.coordinates[1], mid.geometry.coordinates[0]] as L.LatLngTuple,
-    {
-      icon: L.divIcon({ className: 'measure-label', html: formatLength(segLen) }),
-      interactive: false,
-    },
-  );
+  const label = L.marker(toLatLng(mid.geometry.coordinates), {
+    icon: L.divIcon({ className: 'measure-label', html: formatLength(segLen) }),
+    interactive: false,
+  });
   measureLayers.addLayer(label);
 }
 
-function finishMeasure(e: L.LeafletEvent): void {
-  L.DomEvent.preventDefault(e as unknown as Event);
+function finishMeasure(e: L.LeafletMouseEvent): void {
+  L.DomEvent.preventDefault(e.originalEvent);
   const tooltip = document.getElementById('measure-tooltip');
   tooltip?.classList.add('hidden');
 
-  if (measurePoints.length >= 3) {
-    const closed: Array<[number, number]> = [...measurePoints, measurePoints[0]!];
-    const poly = turf.polygon([closed]);
-    const area = turf.area(poly);
-    const areaSqFt = area * SQ_FEET_PER_SQ_METER;
-    const centroid = turf.centroid(poly);
+  const firstPoint = measurePoints[0];
+  if (measurePoints.length >= 3 && firstPoint) {
+    const closed: [number, number][] = [...measurePoints, firstPoint];
+    const poly = polygon([closed]);
+    const polyArea = area(poly);
+    const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+    const center = centroid(poly);
 
-    const areaLabel = L.marker(
-      [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]] as L.LatLngTuple,
-      {
-        icon: L.divIcon({ className: 'measure-label', html: `Area: ${formatArea(areaSqFt)}` }),
-        interactive: false,
-      },
-    );
+    const areaLabel = L.marker(toLatLng(center.geometry.coordinates), {
+      icon: L.divIcon({ className: 'measure-label', html: `Area: ${formatArea(areaSqFt)}` }),
+      interactive: false,
+    });
     measureLayers.addLayer(areaLabel);
   }
 
   if (measurePoints.length >= 2) {
-    const line = turf.lineString(measurePoints);
-    const totalLen = turf.length(line, { units: 'feet' });
+    const line = lineString(measurePoints);
+    const totalLen = turfLength(line, { units: 'feet' });
     const last = measurePoints[measurePoints.length - 1];
     if (last) {
-      const totalLabel = L.marker([last[1], last[0]] as L.LatLngTuple, {
+      const totalLabel = L.marker(toLatLng(last), {
         icon: L.divIcon({ className: 'measure-label', html: `Total: ${formatLength(totalLen)}` }),
         interactive: false,
       });
@@ -159,30 +162,35 @@ export function computeMeasurement(shape: L.Layer): string | null {
       return `Radius: <span>${formatLength(rFt)}</span> · Area: <span>${formatArea(areaSqFt)}</span> · Circumference: <span>${formatLength(circumFt)}</span>`;
     }
 
-    if (!('toGeoJSON' in shape)) return null;
-    const geo = (shape as L.Layer & { toGeoJSON(): GeoJSON.Feature }).toGeoJSON() as GeoJSON.Feature;
-    const gtype = geo.geometry.type;
+    const geo = layerToFeature(shape);
+    if (!geo) return null;
+    const g = geo.geometry;
 
-    if (gtype === 'LineString' || gtype === 'MultiLineString') {
-      const len = turf.length(geo as GeoJSON.Feature<GeoJSON.LineString | GeoJSON.MultiLineString>, { units: 'feet' });
-      return `Length: <span>${formatLength(len)}</span>`;
-    }
-
-    if (gtype === 'Polygon' || gtype === 'MultiPolygon') {
-      const polyFeature = geo as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
-      const area = turf.area(polyFeature);
-      const areaSqFt = area * SQ_FEET_PER_SQ_METER;
-      const lineFeature = turf.polygonToLine(polyFeature as GeoJSON.Feature<GeoJSON.Polygon>);
-      const perimeter = turf.length(lineFeature, { units: 'feet' });
-      return `Area: <span>${formatArea(areaSqFt)}</span> · Perimeter: <span>${formatLength(perimeter)}</span>`;
-    }
-
-    if (gtype === 'Point') {
-      const coords = (geo.geometry as GeoJSON.Point).coordinates;
-      const lng = coords[0];
-      const lat = coords[1];
-      if (lng != null && lat != null) {
-        return `Position: <span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
+    switch (g.type) {
+      case 'LineString':
+      case 'MultiLineString': {
+        const len = turfLength({ type: 'Feature', properties: {}, geometry: g }, { units: 'feet' });
+        return `Length: <span>${formatLength(len)}</span>`;
+      }
+      case 'Polygon': {
+        const polyArea = area({ type: 'Feature', properties: {}, geometry: g });
+        const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+        const lineFeature = polygonToLine({ type: 'Feature', properties: {}, geometry: g });
+        const perimeter = turfLength(lineFeature, { units: 'feet' });
+        return `Area: <span>${formatArea(areaSqFt)}</span> · Perimeter: <span>${formatLength(perimeter)}</span>`;
+      }
+      case 'MultiPolygon': {
+        const polyArea = area({ type: 'Feature', properties: {}, geometry: g });
+        const areaSqFt = polyArea * SQ_FEET_PER_SQ_METER;
+        return `Area: <span>${formatArea(areaSqFt)}</span>`;
+      }
+      case 'Point': {
+        const lng = g.coordinates[0];
+        const lat = g.coordinates[1];
+        if (lng != null && lat != null) {
+          return `Position: <span>${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
+        }
+        break;
       }
     }
   } catch {

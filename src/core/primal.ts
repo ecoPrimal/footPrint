@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Primal -- capability-based module system inspired by ecoPrimals gen3.
+ * Primal -- capability-based module system for footPrint.
  *
  * A Primal is a self-contained module that:
  * - Owns one domain
@@ -38,9 +39,7 @@ export interface PrimalManifest {
 
 // ── Discovery event bus ──────────────────────────────
 
-type RegistryEvent =
-  | { type: 'registered'; manifest: PrimalManifest }
-  | { type: 'unregistered'; id: string };
+type RegistryEvent = { type: 'registered'; manifest: PrimalManifest } | { type: 'unregistered'; id: string };
 
 type RegistryListener = (event: RegistryEvent) => void;
 
@@ -59,7 +58,7 @@ export class Primal {
   }
 
   expose<TIn, TOut>(capability: Capability<TIn, TOut>): void {
-    this.capabilities.set(capability.name, capability as Capability);
+    this.capabilities.set(capability.name, capability);
   }
 
   invoke(capabilityName: string, input: unknown): Result<unknown, PrimalError> {
@@ -118,7 +117,10 @@ export function unregisterPrimal(id: string): void {
 export function onRegistryChange(listener: RegistryListener): () => void {
   listeners.push(listener);
   return () => {
-    const found = listeners.iter().enumerate().find(([, l]) => l === listener);
+    const found = listeners
+      .iter()
+      .enumerate()
+      .find(([, l]) => l === listener);
     if (found.some) listeners.removeAt(found.value[0]);
   };
 }
@@ -146,10 +148,7 @@ export function listPrimals(): Iter<PrimalManifest> {
  * Invoke a capability on any primal that provides it.
  * Pure runtime discovery — the caller does not know which primal will handle it.
  */
-export function invokeCapability(
-  capabilityName: string,
-  input: unknown,
-): Result<unknown, PrimalError> {
+export function invokeCapability(capabilityName: string, input: unknown): Result<unknown, PrimalError> {
   let lastError: PrimalError = {
     kind: 'NotFound',
     message: `No primal provides capability "${capabilityName}"`,

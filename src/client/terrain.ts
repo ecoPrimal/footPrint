@@ -1,35 +1,19 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
-import type {
-  ElevationSample, TerrainGrid, ContourLine, SlopeAspect, ElevationProfile,
-} from '../types/terrain.js';
+import type { ElevationSample, TerrainGrid, ContourLine, SlopeAspect } from '../types/terrain.js';
 import { batchElevation } from './sources/usgs.js';
-import { METERS_PER_DEGREE_LAT } from '../constants.js';
+import { METERS_PER_DEGREE_LAT, FEET_PER_METER, DEFAULT_CONTOUR_INTERVAL_FT } from '../constants.js';
 
 let map: L.Map | null = null;
-let contourLayer: L.LayerGroup = L.layerGroup();
-let slopeLayer: L.LayerGroup = L.layerGroup();
-let contourInterval = 5;
+const contourLayer: L.LayerGroup = L.layerGroup();
+const slopeLayer: L.LayerGroup = L.layerGroup();
+const contourInterval = DEFAULT_CONTOUR_INTERVAL_FT;
 let cachedGrid: TerrainGrid | null = null;
 
 export function initTerrain(leafletMap: L.Map): void {
   map = leafletMap;
   contourLayer.addTo(map);
   slopeLayer.addTo(map);
-}
-
-export function setContourInterval(interval: number): void {
-  contourInterval = interval;
-  if (cachedGrid) {
-    renderContours(cachedGrid);
-  }
-}
-
-export function getContourInterval(): number {
-  return contourInterval;
-}
-
-export function getCachedGrid(): TerrainGrid | null {
-  return cachedGrid;
 }
 
 export function getElevationAt(lat: number, lng: number): number | null {
@@ -60,19 +44,16 @@ export function getElevationAt(lat: number, lng: number): number | null {
   if (z00 == null || z01 == null || z10 == null || z11 == null) return null;
   if (isNaN(z00) || isNaN(z01) || isNaN(z10) || isNaN(z11)) return null;
 
-  return z00 * (1 - dr) * (1 - dc)
-       + z01 * (1 - dr) * dc
-       + z10 * dr * (1 - dc)
-       + z11 * dr * dc;
+  return z00 * (1 - dr) * (1 - dc) + z01 * (1 - dr) * dc + z10 * dr * (1 - dc) + z11 * dr * dc;
 }
 
-export async function buildTerrainGrid(bounds: L.LatLngBounds, density: number = 8): Promise<TerrainGrid> {
+export async function buildTerrainGrid(bounds: L.LatLngBounds, density = 8): Promise<TerrainGrid> {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
   const latStep = (ne.lat - sw.lat) / (density - 1);
   const lngStep = (ne.lng - sw.lng) / (density - 1);
 
-  const points: Array<{ lat: number; lng: number }> = [];
+  const points: { lat: number; lng: number }[] = [];
   for (let r = 0; r < density; r++) {
     for (let c = 0; c < density; c++) {
       points.push({
@@ -99,10 +80,22 @@ export async function buildTerrainGrid(bounds: L.LatLngBounds, density: number =
       const sample = samples[idx];
       if (sample && !isNaN(sample.elevation)) continue;
       const neighbors: number[] = [];
-      if (r > 0) { const n = samples[(r - 1) * density + c]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
-      if (r < density - 1) { const n = samples[(r + 1) * density + c]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
-      if (c > 0) { const n = samples[r * density + (c - 1)]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
-      if (c < density - 1) { const n = samples[r * density + (c + 1)]; if (n && !isNaN(n.elevation)) neighbors.push(n.elevation); }
+      if (r > 0) {
+        const n = samples[(r - 1) * density + c];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
+      if (r < density - 1) {
+        const n = samples[(r + 1) * density + c];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
+      if (c > 0) {
+        const n = samples[r * density + (c - 1)];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
+      if (c < density - 1) {
+        const n = samples[r * density + (c + 1)];
+        if (n && !isNaN(n.elevation)) neighbors.push(n.elevation);
+      }
       if (neighbors.length > 0 && sample) {
         (samples[idx] as { elevation: number }).elevation = neighbors.reduce((a, b) => a + b, 0) / neighbors.length;
       }
@@ -165,7 +158,7 @@ interface Segment {
 }
 
 function marchingSquares(
-  samples: ReadonlyArray<ElevationSample>,
+  samples: readonly ElevationSample[],
   rows: number,
   cols: number,
   gridBounds: { sw: readonly [number, number]; ne: readonly [number, number] },
@@ -205,15 +198,40 @@ function marchingSquares(
       const left = (): [number, number] => interp(r, c, r + 1, c);
 
       switch (idx) {
-        case 1: case 14: segments.push({ a: left(), b: bottom() }); break;
-        case 2: case 13: segments.push({ a: bottom(), b: right() }); break;
-        case 3: case 12: segments.push({ a: left(), b: right() }); break;
-        case 4: case 11: segments.push({ a: top(), b: right() }); break;
-        case 5: segments.push({ a: left(), b: top() }); segments.push({ a: bottom(), b: right() }); break;
-        case 6: case 9: segments.push({ a: bottom(), b: top() }); break;
-        case 7: case 8: segments.push({ a: left(), b: top() }); break;
-        case 10: segments.push({ a: top(), b: right() }); segments.push({ a: left(), b: bottom() }); break;
-        default: break;
+        case 1:
+        case 14:
+          segments.push({ a: left(), b: bottom() });
+          break;
+        case 2:
+        case 13:
+          segments.push({ a: bottom(), b: right() });
+          break;
+        case 3:
+        case 12:
+          segments.push({ a: left(), b: right() });
+          break;
+        case 4:
+        case 11:
+          segments.push({ a: top(), b: right() });
+          break;
+        case 5:
+          segments.push({ a: left(), b: top() });
+          segments.push({ a: bottom(), b: right() });
+          break;
+        case 6:
+        case 9:
+          segments.push({ a: bottom(), b: top() });
+          break;
+        case 7:
+        case 8:
+          segments.push({ a: left(), b: top() });
+          break;
+        case 10:
+          segments.push({ a: top(), b: right() });
+          segments.push({ a: left(), b: bottom() });
+          break;
+        default:
+          break;
       }
     }
   }
@@ -230,7 +248,7 @@ function ptsClose(a: [number, number], b: [number, number]): boolean {
   return Math.abs(a[0] - b[0]) < CHAIN_EPS && Math.abs(a[1] - b[1]) < CHAIN_EPS;
 }
 
-function chainSegments(segments: Segment[]): Array<Array<[number, number]>> {
+function chainSegments(segments: Segment[]): [number, number][][] {
   if (segments.length === 0) return [];
 
   // Build adjacency: endpoint -> list of segment indices that touch it
@@ -241,15 +259,21 @@ function chainSegments(segments: Segment[]): Array<Array<[number, number]>> {
     const ka = ptKey(seg.a);
     const kb = ptKey(seg.b);
     let listA = endpointMap.get(ka);
-    if (!listA) { listA = []; endpointMap.set(ka, listA); }
+    if (!listA) {
+      listA = [];
+      endpointMap.set(ka, listA);
+    }
     listA.push(i);
     let listB = endpointMap.get(kb);
-    if (!listB) { listB = []; endpointMap.set(kb, listB); }
+    if (!listB) {
+      listB = [];
+      endpointMap.set(kb, listB);
+    }
     listB.push(i);
   }
 
   const used = new Set<number>();
-  const lines: Array<Array<[number, number]>> = [];
+  const lines: [number, number][][] = [];
 
   for (let i = 0; i < segments.length; i++) {
     if (used.has(i)) continue;
@@ -257,7 +281,7 @@ function chainSegments(segments: Segment[]): Array<Array<[number, number]>> {
     if (!startSeg) continue;
 
     used.add(i);
-    const chain: Array<[number, number]> = [startSeg.a, startSeg.b];
+    const chain: [number, number][] = [startSeg.a, startSeg.b];
 
     // Extend forward from chain tail
     let extended = true;
@@ -325,13 +349,13 @@ export function computeSlopeAspect(grid: TerrainGrid): SlopeAspect[] {
 
   const results: SlopeAspect[] = [];
   // Convert cell size to feet so rise/run are both in feet
-  const cellSizeFt = resolution * 3.28084;
+  const cellSizeFt = resolution * FEET_PER_METER;
 
   for (let r = 1; r < rows - 1; r++) {
     for (let c = 1; c < cols - 1; c++) {
       const z = (ri: number, ci: number): number => {
         const sample = samples[ri * cols + ci];
-        return (sample && !isNaN(sample.elevation)) ? sample.elevation : 0;
+        return sample && !isNaN(sample.elevation) ? sample.elevation : 0;
       };
 
       // Horn's method: 3x3 neighborhood gradient, units: ft/ft (dimensionless)
@@ -403,65 +427,11 @@ export function renderSlopeArrows(grid: TerrainGrid): void {
     const endLng = pt.lng + Math.cos(rad) * len;
 
     L.polyline(
-      [[pt.lat, pt.lng], [endLat, endLng]],
+      [
+        [pt.lat, pt.lng],
+        [endLat, endLng],
+      ],
       { color: '#4FC3F7', weight: 1.5, opacity: 0.6 },
     ).addTo(slopeLayer);
   }
-}
-
-export async function computeElevationProfile(
-  coords: ReadonlyArray<[number, number]>,
-  numSamples: number = 20,
-): Promise<ElevationProfile> {
-  const points: Array<{ lat: number; lng: number }> = [];
-  const totalDist = coords.length - 1;
-  if (totalDist < 1) {
-    return { points: [], minElevation: 0, maxElevation: 0, totalClimb: 0, totalDescent: 0 };
-  }
-
-  for (let i = 0; i <= numSamples; i++) {
-    const t = i / numSamples;
-    const segIdx = Math.min(Math.floor(t * totalDist), totalDist - 1);
-    const segT = (t * totalDist) - segIdx;
-    const from = coords[segIdx];
-    const to = coords[segIdx + 1] ?? from;
-    if (from && to) {
-      points.push({
-        lng: from[0] + segT * (to[0] - from[0]),
-        lat: from[1] + segT * (to[1] - from[1]),
-      });
-    }
-  }
-
-  const rawSamples = await batchElevation(points);
-  const samples: ElevationSample[] = rawSamples
-    .filter((s): s is { lat: number; lng: number; elevation: number } => s.elevation !== null)
-    .map((s) => ({ lat: s.lat, lng: s.lng, elevation: s.elevation }));
-
-  let totalClimb = 0;
-  let totalDescent = 0;
-  for (let i = 1; i < samples.length; i++) {
-    const prev = samples[i - 1];
-    const curr = samples[i];
-    if (prev && curr) {
-      const diff = curr.elevation - prev.elevation;
-      if (diff > 0) totalClimb += diff;
-      else totalDescent += Math.abs(diff);
-    }
-  }
-
-  const elevations = samples.map((s) => s.elevation);
-  return {
-    points: samples,
-    minElevation: elevations.length > 0 ? Math.min(...elevations) : 0,
-    maxElevation: elevations.length > 0 ? Math.max(...elevations) : 0,
-    totalClimb: Math.round(totalClimb * 10) / 10,
-    totalDescent: Math.round(totalDescent * 10) / 10,
-  };
-}
-
-export function clearTerrain(): void {
-  contourLayer.clearLayers();
-  slopeLayer.clearLayers();
-  cachedGrid = null;
 }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export interface ElevationSample {
   readonly lat: number;
   readonly lng: number;
@@ -17,7 +18,7 @@ export interface TerrainGridStats {
 }
 
 export interface TerrainGrid {
-  readonly samples: ReadonlyArray<ElevationSample>;
+  readonly samples: readonly ElevationSample[];
   readonly rows: number;
   readonly cols: number;
   readonly bounds: TerrainGridBounds;
@@ -37,14 +38,6 @@ export interface SlopeAspect {
   readonly slope: number;
   readonly aspect: number;
   readonly drainageDirection: number;
-}
-
-export interface ElevationProfile {
-  readonly points: ReadonlyArray<ElevationSample>;
-  readonly minElevation: number;
-  readonly maxElevation: number;
-  readonly totalClimb: number;
-  readonly totalDescent: number;
 }
 
 export interface USGSElevationResponse {

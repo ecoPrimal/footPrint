@@ -1,5 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type {
-  Entity, MutableEntity, EntityId, EntityKind, ComponentKey, ComponentMap, SerializedEntity,
+  Entity,
+  MutableEntity,
+  EntityId,
+  EntityKind,
+  ComponentKey,
+  ComponentMap,
+  SerializedEntity,
   ReadonlyEntity,
 } from './entity.js';
 import { entityIdFrom } from './entity.js';
@@ -13,7 +20,7 @@ export interface EntityNotFound {
 
 export type BorrowResult<T> = Result<T, EntityNotFound | BorrowError>;
 
-export type StoreEventType = 'add' | 'remove' | 'update';
+type StoreEventType = 'add' | 'remove' | 'update';
 
 export interface StoreEvent {
   type: StoreEventType;
@@ -24,7 +31,7 @@ export interface StoreEvent {
 type StoreListener = (event: StoreEvent) => void;
 
 export class EntityStore {
-  private readonly entities = new Map<EntityId, Entity>();
+  private readonly entities = new Map<EntityId, MutableEntity>();
   private readonly kindIndex = new Map<EntityKind, Set<EntityId>>();
   private readonly listeners: StoreListener[] = [];
   private batchDepth = 0;
@@ -114,8 +121,7 @@ export class EntityStore {
   get(id: EntityId): Result<ReadonlyEntity, EntityNotFound> {
     const entity = this.entities.get(id);
     if (!entity) return Err({ kind: 'EntityNotFound' as const, id });
-    // Entity → TypedEntity cast is safe: all construction paths create valid typed entities
-    return Ok(entity as unknown as ReadonlyEntity);
+    return Ok(entity as ReadonlyEntity);
   }
 
   /**
@@ -146,11 +152,13 @@ export class EntityStore {
     const count = this.borrowCounts.get(id) ?? 0;
     this.borrowCounts.set(id, count + 1);
 
-    return Ok(new Ref(entity, () => {
-      const current = this.borrowCounts.get(id) ?? 1;
-      if (current <= 1) this.borrowCounts.delete(id);
-      else this.borrowCounts.set(id, current - 1);
-    }));
+    return Ok(
+      new Ref(entity, () => {
+        const current = this.borrowCounts.get(id) ?? 1;
+        if (current <= 1) this.borrowCounts.delete(id);
+        else this.borrowCounts.set(id, current - 1);
+      }),
+    );
   }
 
   /**
@@ -170,9 +178,11 @@ export class EntityStore {
     }
 
     this.mutBorrowed.add(id);
-    return Ok(new RefMut(entity, () => {
-      this.mutBorrowed.delete(id);
-    }));
+    return Ok(
+      new RefMut(entity, () => {
+        this.mutBorrowed.delete(id);
+      }),
+    );
   }
 
   setComponent<K extends ComponentKey>(id: EntityId, key: K, value: ComponentMap[K]): void {
@@ -180,17 +190,17 @@ export class EntityStore {
     if (!entity) return;
     const newComponents = { ...entity.components, [key]: value };
     Object.freeze(newComponents);
-    (entity as { components: ComponentMap }).components = newComponents;
+    entity.components = newComponents;
     this.emit({ type: 'update', entityId: id, componentKey: key });
   }
 
   removeComponent(id: EntityId, key: ComponentKey): void {
     const entity = this.entities.get(id);
     if (!entity) return;
-    const newComponents = { ...entity.components };
-    delete newComponents[key];
+    const { [key]: _removed, ...rest } = entity.components;
+    const newComponents = rest as ComponentMap;
     Object.freeze(newComponents);
-    (entity as { components: ComponentMap }).components = newComponents;
+    entity.components = newComponents;
     this.emit({ type: 'update', entityId: id, componentKey: key });
   }
 
@@ -237,13 +247,15 @@ export class EntityStore {
   }
 
   serialize(): SerializedEntity[] {
-    return this.all().map((entity) => ({
-      id: entity.id,
-      kind: entity.kind,
-      parentId: entity.parentId,
-      children: [...entity.children],
-      components: structuredClone(entity.components),
-    })).collect();
+    return this.all()
+      .map((entity) => ({
+        id: entity.id,
+        kind: entity.kind,
+        parentId: entity.parentId,
+        children: [...entity.children],
+        components: structuredClone(entity.components),
+      }))
+      .collect();
   }
 
   deserialize(data: readonly SerializedEntity[]): void {

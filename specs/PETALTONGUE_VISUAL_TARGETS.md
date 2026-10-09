@@ -36,7 +36,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 |-----------|-------------------|
 | Leaflet-Geoman 2.19 (draw/edit) | Same library, served from NUCLEUS |
 | Shape types: polygon, polyline, rectangle, circle, marker, circlemarker | Same |
-| Shape metadata (_fpMeta → ECS components) | Entities stored in nestGate CAS |
+| Shape metadata (ECS MetaComponent + StyleComponent) | Entities stored in persistence CAS |
 | Color per-shape, per-layer | Same |
 
 ### VT-3: Layer System
@@ -51,9 +51,9 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 ### VT-4: Data Source Overlays
 
-| footPrint (8 sources) | petalTongue Target |
-|-----------------------|-------------------|
-| OSM/Overpass (buildings, power, pipes, fences, water) | Same via proxy → songBird drawbridge |
+| footPrint (8 source modules, 15 sources) | petalTongue Target |
+|------------------------------------------|-------------------|
+| OSM/Overpass (buildings, power, pipes, fences, water) | Same via proxy drawbridge |
 | Regrid parcel tiles | Same |
 | FEMA flood zones | Same |
 | Lansing zoning | Same |
@@ -79,7 +79,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 | footPrint | petalTongue Target |
 |-----------|-------------------|
 | Gauss-Newton iterative solver | Same algorithm, Rust port (nalgebra) |
-| Constraint types: fixed-distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line (7 active) | Same + tangent, symmetric, setback |
+| Constraint types (10 active): fixed-distance, parallel, perpendicular, horizontal, vertical, coincident, point-on-line, tangent, symmetric, setback | Same |
 | Damped step (λ=1e-4) | Same |
 | Batch command updates | Same (via nestGate transactions) |
 
@@ -97,7 +97,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 | footPrint | petalTongue Target |
 |-----------|-------------------|
-| JSON files in `projects/` | nestGate CAS (content-addressed, provenance-traced) |
+| JSON files in `projects/` + dual-write to nestGate CAS | nestGate CAS (content-addressed, provenance-traced) |
 | Save/Load/New/Delete via REST | nestGate JSON-RPC + HTTP API |
 | GeoJSON round-trip serialization | Same format, CAS-backed |
 | ECS entity serialization | Serialized entities → nestGate families |
@@ -137,7 +137,7 @@ This document maps each footPrint visual capability to its petalTongue equivalen
 
 | footPrint | petalTongue Target |
 |-----------|-------------------|
-| WebSocket to Express server | WebSocket to petalTongue Axum server |
+| JSON-RPC 2.0 domain.verb over `/ws/bridge` | WebSocket to petalTongue Axum server |
 | Shadow state (ECS snapshot over WS) | nestGate CAS live subscription |
 | REST command API (POST action) | nestGate JSON-RPC `coord.command` |
 | Agent panel UI | Overwatch coordination panel |
@@ -171,7 +171,7 @@ not the frontend. Data persistence moves from JSON files to nestGate CAS.
 ### RustScript: Evidence, Not Evolution Target
 
 RustScript is NOT a stepping stone toward Rust. It is evidence FOR pure Rust.
-The 12-module library proves that Rust's constraints improve TypeScript code, but
+The 11-module library proves that Rust's constraints improve TypeScript code, but
 also reveals the limits: 3 constraints can't be expressed at all (lifetimes,
 Send/Sync, zero-cost abstractions), and 9 require runtime wrappers (degraded
 enforcement). This validates the architectural decision that primals are pure Rust.

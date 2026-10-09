@@ -1,22 +1,21 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
-import type { ArcGISFeatureResponse } from '../../types/arcgis.js';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import type { ArcGISFeatureResponse, MichiganRoadProperties } from '../../types/arcgis.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { MI_FRAMEWORK_BASE, PROXY_PATH } from '../../constants.js';
-const ROADS_LAYER = 14;
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
+import { MI_ROADS_LAYER } from '../../constants.js';
+import { proxyGet } from '../api.js';
 
 export function registerMichiganSources(): void {
   registerSource({
     id: dataSourceId('mi-roads'),
     name: 'Road Centerlines',
     category: 'Michigan',
-    color: hexColor('#78909C'),
+    color: hexColorUnchecked('#78909C'),
     minZoom: 15,
-    fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
-      const bbox = [
-        bounds.getWest(), bounds.getSouth(),
-        bounds.getEast(), bounds.getNorth(),
-      ].join(',');
+    fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
+      const bbox = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()].join(',');
 
       const params = new URLSearchParams({
         geometry: bbox,
@@ -28,10 +27,8 @@ export function registerMichiganSources(): void {
         returnGeometry: 'true',
       });
 
-      const url = `${MI_FRAMEWORK_BASE}/${String(ROADS_LAYER)}/query?${params.toString()}`;
-      const resp = await fetch(`${PROXY_PATH}?url=${encodeURIComponent(url)}`);
-      if (!resp.ok) throw new Error(`MI Roads: ${String(resp.status)}`);
-      const data = (await resp.json()) as ArcGISFeatureResponse;
+      const url = `${getEndpoint(endpointKey('mi-framework'))}/${String(MI_ROADS_LAYER)}/query?${params.toString()}`;
+      const data = await proxyGet<ArcGISFeatureResponse>(url);
       return data.features ?? [];
     },
     style: () => ({
@@ -41,8 +38,8 @@ export function registerMichiganSources(): void {
       dashArray: '4 3',
     }),
     popupContent: (f) => {
-      const p = (f.properties ?? {}) as Record<string, string | undefined>;
-      const name = p['NME'] ?? p['LABEL'] ?? 'Road';
+      const p = (f.properties ?? {}) as MichiganRoadProperties;
+      const name = p.NME ?? p.LABEL ?? 'Road';
       return `<b>${name}</b><br><i>MI Geographic Framework</i>`;
     },
   });

@@ -1,10 +1,21 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import type { USGSElevationResponse } from '../../types/terrain.js';
-import { dataSourceId, hexColor } from '../../types/brands.js';
+import { dataSourceId, hexColorUnchecked } from '../../types/brands.js';
 import { registerSource } from '../datasources.js';
-import { EPQS_BASE_URL, PROXY_PATH } from '../../constants.js';
-const MAX_CONCURRENT = 6;
-const THROTTLE_MS = 50;
+import { endpointKey, getEndpoint } from '../../core/manifest.js';
+import { MAX_ELEVATION_CONCURRENT, ELEVATION_THROTTLE_MS } from '../../constants.js';
+import { proxyUrl } from '../api.js';
+
+interface ElevationProps {
+  readonly elevation: number;
+  readonly unit: string;
+  readonly _source: string;
+}
+
+function elevProps(f: GeoJSON.Feature): ElevationProps {
+  return (f.properties ?? {}) as ElevationProps;
+}
 
 function gridDensityForZoom(zoom: number): number {
   if (zoom >= 19) return 8;
@@ -26,18 +37,18 @@ async function throttledFetch(url: string): Promise<number | null> {
 }
 
 async function batchElevation(
-  points: ReadonlyArray<{ lat: number; lng: number }>,
-): Promise<Array<{ lat: number; lng: number; elevation: number | null }>> {
-  const results: Array<{ lat: number; lng: number; elevation: number | null }> = [];
+  points: readonly { lat: number; lng: number }[],
+): Promise<{ lat: number; lng: number; elevation: number | null }[]> {
+  const results: { lat: number; lng: number; elevation: number | null }[] = [];
   const queue = [...points];
 
   while (queue.length > 0) {
-    const batch = queue.splice(0, MAX_CONCURRENT);
+    const batch = queue.splice(0, MAX_ELEVATION_CONCURRENT);
     const batchResults = await Promise.allSettled(
       batch.map(async (pt) => {
-        const url = `${PROXY_PATH}?url=${encodeURIComponent(
-          `${EPQS_BASE_URL}?x=${pt.lng}&y=${pt.lat}&wkid=4326&units=Feet&includeDate=false`
-        )}`;
+        const url = proxyUrl(
+          `${getEndpoint(endpointKey('epqs'))}?x=${pt.lng}&y=${pt.lat}&wkid=4326&units=Feet&includeDate=false`,
+        );
         const elev = await throttledFetch(url);
         return { lat: pt.lat, lng: pt.lng, elevation: elev };
       }),
@@ -46,7 +57,9 @@ async function batchElevation(
       results.push(r.status === 'fulfilled' ? r.value : { lat: 0, lng: 0, elevation: null });
     }
     if (queue.length > 0) {
-      await new Promise((resolve) => { setTimeout(resolve, THROTTLE_MS); });
+      await new Promise((resolve) => {
+        setTimeout(resolve, ELEVATION_THROTTLE_MS);
+      });
     }
   }
   return results;
@@ -57,9 +70,9 @@ export function registerUSGSSource(): void {
     id: dataSourceId('usgs-elevation'),
     name: 'Elevation Points',
     category: 'USGS',
-    color: hexColor('#795548'),
+    color: hexColorUnchecked('#795548'),
     minZoom: 16,
-    fetch: async (bounds: L.LatLngBounds): Promise<ReadonlyArray<GeoJSON.Feature>> => {
+    fetch: async (bounds: L.LatLngBounds): Promise<readonly GeoJSON.Feature[]> => {
       const zoom = 18;
       const density = gridDensityForZoom(zoom);
       const sw = bounds.getSouthWest();
@@ -67,7 +80,7 @@ export function registerUSGSSource(): void {
       const latStep = (ne.lat - sw.lat) / density;
       const lngStep = (ne.lng - sw.lng) / density;
 
-      const points: Array<{ lat: number; lng: number }> = [];
+      const points: { lat: number; lng: number }[] = [];
       for (let r = 0; r <= density; r++) {
         for (let c = 0; c <= density; c++) {
           points.push({
@@ -95,7 +108,7 @@ export function registerUSGSSource(): void {
       return features;
     },
     pointToLayer: (feat: GeoJSON.Feature, latlng: L.LatLng) => {
-      const elev = (feat.properties as Record<string, unknown>)['elevation'];
+      const elev = elevProps(feat).elevation;
       return L.marker(latlng, {
         icon: L.divIcon({
           className: 'elevation-label',
@@ -107,8 +120,8 @@ export function registerUSGSSource(): void {
       });
     },
     popupContent: (f) => {
-      const p = f.properties as Record<string, unknown>;
-      return `<b>Elevation: ${String(p['elevation'])} ft</b><br>Source: USGS 3DEP`;
+      const p = elevProps(f);
+      return `<b>Elevation: ${String(p.elevation)} ft</b><br>Source: USGS 3DEP`;
     },
   });
 }

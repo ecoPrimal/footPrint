@@ -1,12 +1,15 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { EntityId, StyleComponent } from '../core/entity.js';
 import { store } from '../core/store.js';
 import { execute } from '../core/history.js';
 import { UpdateComponentCommand } from '../core/commands.js';
 import { deleteSelectedShape, deselectShape } from './drawing.js';
+import { modalConfirm } from './modal.js';
 import { computeMeasurement } from './measurement.js';
 import { getLeafletLayer } from '../core/renderer.js';
 import type { ShapeStatus } from '../types/shape.js';
 import { parseHexColor, hexColorUnchecked } from '../types/brands.js';
+import { escHtml } from './html.js';
 import { unwrapOr } from '@protokarya/rustscript';
 
 const panel = document.getElementById('props-panel');
@@ -73,22 +76,26 @@ export function showShapeProperties(entityId: EntityId | null): void {
   let currentMeta = { ...meta };
 
   content.querySelector('#prop-label')?.addEventListener('input', (e: Event) => {
-    currentMeta = { ...currentMeta, label: (e.target as HTMLInputElement).value };
+    if (!(e.target instanceof HTMLInputElement)) return;
+    currentMeta = { ...currentMeta, label: e.target.value };
     execute(new UpdateComponentCommand(entityId, 'meta', currentMeta));
   });
 
   content.querySelector('#prop-notes')?.addEventListener('input', (e: Event) => {
-    currentMeta = { ...currentMeta, notes: (e.target as HTMLTextAreaElement).value };
+    if (!(e.target instanceof HTMLTextAreaElement)) return;
+    currentMeta = { ...currentMeta, notes: e.target.value };
     execute(new UpdateComponentCommand(entityId, 'meta', currentMeta));
   });
 
   content.querySelector('#prop-status')?.addEventListener('change', (e: Event) => {
-    currentMeta = { ...currentMeta, status: (e.target as HTMLSelectElement).value as ShapeStatus };
+    if (!(e.target instanceof HTMLSelectElement)) return;
+    currentMeta = { ...currentMeta, status: e.target.value as ShapeStatus };
     execute(new UpdateComponentCommand(entityId, 'meta', currentMeta));
   });
 
   content.querySelector('#prop-color')?.addEventListener('input', (e: Event) => {
-    const rawColor = (e.target as HTMLInputElement).value;
+    if (!(e.target instanceof HTMLInputElement)) return;
+    const rawColor = e.target.value;
     const newColor = unwrapOr(parseHexColor(rawColor), hexColorUnchecked('#e94560'));
     const newStyle: StyleComponent = {
       color: newColor,
@@ -100,10 +107,12 @@ export function showShapeProperties(entityId: EntityId | null): void {
   });
 
   content.querySelector('#btn-delete-shape')?.addEventListener('click', () => {
-    if (confirm('Delete this shape?')) {
-      deleteSelectedShape();
-      hidePanel();
-    }
+    void modalConfirm('Delete Shape', 'Delete this shape?').then((yes) => {
+      if (yes) {
+        deleteSelectedShape();
+        hidePanel();
+      }
+    });
   });
 }
 
@@ -112,10 +121,4 @@ function hidePanel(): void {
   if (content) {
     content.innerHTML = '<p class="hint">Select a shape to view properties.</p>';
   }
-}
-
-function escHtml(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }

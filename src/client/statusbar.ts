@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as L from 'leaflet';
 import { getElevationAt } from './terrain.js';
 
@@ -41,9 +42,8 @@ function updateZoom(): void {
 
   const scaleEl = document.getElementById('status-scale');
   if (scaleEl) {
-    const metersPerPixel = 40075016.686 * Math.cos(map.getCenter().lat * Math.PI / 180)
-      / Math.pow(2, zoom + 8);
-    const scale = Math.round(metersPerPixel * 96 / 0.0254);
+    const metersPerPixel = (40075016.686 * Math.cos((map.getCenter().lat * Math.PI) / 180)) / Math.pow(2, zoom + 8);
+    const scale = Math.round((metersPerPixel * 96) / 0.0254);
     scaleEl.textContent = `1:${scale.toLocaleString()}`;
   }
 }
@@ -66,5 +66,12 @@ export function updateGridStatus(enabled: boolean, spacingFt: number): void {
   const el = document.getElementById('status-grid');
   if (el) {
     el.textContent = enabled ? `Grid: ${String(spacingFt)}ft` : 'Grid: OFF';
+  }
+}
+
+export function updateCasStatus(available: boolean): void {
+  const el = document.getElementById('status-cas');
+  if (el) {
+    el.textContent = available ? 'CAS: ON' : 'CAS: OFF';
   }
 }
