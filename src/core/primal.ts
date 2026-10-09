@@ -11,12 +11,8 @@
  *  them, and how to respond to requests."
  */
 
-import type { Result } from '../rustscript/result.js';
-import { Ok, Err } from '../rustscript/result.js';
-import type { Option } from '../rustscript/option.js';
-import { Some, None } from '../rustscript/option.js';
-import { Iter } from '../rustscript/iter.js';
-import { RustVec } from '../rustscript/vec.js';
+import type { Result, Option } from '@protokarya/rustscript';
+import { Ok, Err, Some, None, Iter, RustVec } from '@protokarya/rustscript';
 
 // ── Capability types ─────────────────────────────────
 

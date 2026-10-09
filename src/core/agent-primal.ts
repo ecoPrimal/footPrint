@@ -7,8 +7,8 @@
 
 import { Primal, registerPrimal } from './primal.js';
 import type { Capability, PrimalError } from './primal.js';
-import { Ok, Err } from '../rustscript/result.js';
-import type { Result } from '../rustscript/result.js';
+import type { Result } from '@protokarya/rustscript';
+import { Ok, Err } from '@protokarya/rustscript';
 import { store } from './store.js';
 import type { EntityKind, ComponentKey, ComponentMap } from './entity.js';
 import { createEntity, entityIdFrom, ENTITY_KINDS } from './entity.js';

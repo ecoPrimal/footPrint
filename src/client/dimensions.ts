@@ -10,7 +10,7 @@ import type { Command } from '../core/commands.js';
 import { registerComputation } from '../core/reactive.js';
 import type { DerivedComputation } from '../core/reactive.js';
 import { extractCoords } from '../core/geometry.js';
-import { Some, None } from '../rustscript/option.js';
+import { Some, None } from '@protokarya/rustscript';
 
 let map: L.Map | null = null;
 let dimensionLayer: L.LayerGroup = L.layerGroup();

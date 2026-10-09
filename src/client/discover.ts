@@ -5,9 +5,7 @@ import type { ScoredSource, DiscoveryReport } from '../types/spatial.js';
 import { DEFAULT_CATEGORY_BOOSTS } from '../types/spatial.js';
 import { getAllSources, fetchSource, enableSource, fetchAllEnabled } from './datasources.js';
 import { buildTerrainGrid, renderContours, renderSlopeArrows } from './terrain.js';
-import { boundedChannel } from '../rustscript/channel.js';
-import { Owned, take } from '../rustscript/owned.js';
-import { isOk } from '../rustscript/result.js';
+import { boundedChannel, Owned, take, isOk } from '@protokarya/rustscript';
 import { SQ_FEET_PER_SQ_METER, FEET_PER_METER, METERS_PER_DEGREE_LAT } from '../constants.js';
 
 let map: L.Map | null = null;

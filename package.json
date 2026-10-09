@@ -30,6 +30,7 @@
   ],
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@protokarya/rustscript": "file:../rustscript",
     "@geoman-io/leaflet-geoman-free": "^2.19.2",
     "@turf/turf": "^7.3.4",
     "express": "^5.2.1",

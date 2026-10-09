@@ -6,8 +6,8 @@ import { deleteSelectedShape, deselectShape } from './drawing.js';
 import { computeMeasurement } from './measurement.js';
 import { getLeafletLayer } from '../core/renderer.js';
 import type { ShapeStatus } from '../types/shape.js';
-import { parseHexColor, hexColorUnchecked } from '../rustscript/newtype.js';
-import { unwrapOr } from '../rustscript/result.js';
+import { parseHexColor, hexColorUnchecked } from '../types/brands.js';
+import { unwrapOr } from '@protokarya/rustscript';
 
 const panel = document.getElementById('props-panel');
 const content = document.getElementById('props-content');

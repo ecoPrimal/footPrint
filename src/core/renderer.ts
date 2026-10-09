@@ -1,10 +1,10 @@
 import * as L from 'leaflet';
 import type { EntityId, ReadonlyEntity, ShapeEntity, DimensionEntity, AnnotationEntity } from './entity.js';
-import type { DeepReadonly } from '../rustscript/types.js';
+import type { DeepReadonly } from '@protokarya/rustscript';
 import type { StoreEvent } from './store.js';
 import { store } from './store.js';
 import { extractCoords } from './geometry.js';
-import { exhaustive } from '../rustscript/exhaustive.js';
+import { exhaustive } from '@protokarya/rustscript';
 
 const layerMap = new Map<EntityId, L.Layer>();
 let map: L.Map | null = null;

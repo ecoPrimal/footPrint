@@ -11,10 +11,8 @@
  */
 
 import type { EntityId } from './entity.js';
-import type { Option } from '../rustscript/option.js';
-import { Some, None, isSome } from '../rustscript/option.js';
-import { Iter } from '../rustscript/iter.js';
-import { RustVec } from '../rustscript/vec.js';
+import type { Option } from '@protokarya/rustscript';
+import { Some, None, isSome, Iter, RustVec } from '@protokarya/rustscript';
 
 export interface BBox {
   readonly minLng: number;

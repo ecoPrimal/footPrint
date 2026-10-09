@@ -3,12 +3,8 @@ import type {
   ReadonlyEntity,
 } from './entity.js';
 import { entityIdFrom } from './entity.js';
-import type { Result } from '../rustscript/result.js';
-import { Ok, Err } from '../rustscript/result.js';
-import type { Option } from '../rustscript/option.js';
-import { Some, None } from '../rustscript/option.js';
-import { Ref, RefMut, BorrowError } from '../rustscript/refcell.js';
-import { Iter } from '../rustscript/iter.js';
+import type { Result, Option } from '@protokarya/rustscript';
+import { Ok, Err, Some, None, Ref, RefMut, BorrowError, Iter } from '@protokarya/rustscript';
 
 export interface EntityNotFound {
   readonly kind: 'EntityNotFound';

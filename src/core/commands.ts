@@ -1,11 +1,8 @@
 import type { Entity, MutableEntity, EntityId, ComponentKey, ComponentMap } from './entity.js';
 import { createEntity } from './entity.js';
-import { hexColorUnchecked } from '../rustscript/newtype.js';
-import { exhaustive } from '../rustscript/exhaustive.js';
-import { isSome } from '../rustscript/option.js';
-import type { Option } from '../rustscript/option.js';
-import { None } from '../rustscript/option.js';
-import { Cow } from '../rustscript/cow.js';
+import { hexColorUnchecked } from '../types/brands.js';
+import { exhaustive, isSome, None, Cow } from '@protokarya/rustscript';
+import type { Option } from '@protokarya/rustscript';
 import type { EntityStore } from './store.js';
 
 export interface Command {

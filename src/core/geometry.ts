@@ -1,6 +1,6 @@
 import type { GeometryComponent } from './entity.js';
-import type { DeepReadonly } from '../rustscript/types.js';
-import { exhaustive } from '../rustscript/exhaustive.js';
+import type { DeepReadonly } from '@protokarya/rustscript';
+import { exhaustive } from '@protokarya/rustscript';
 
 /**
  * Accept DeepReadonly<GeometryComponent> so both mutable and readonly callers work.

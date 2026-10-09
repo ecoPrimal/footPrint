@@ -1,8 +1,6 @@
 import type { Command } from './commands.js';
 import { store } from './store.js';
-import { Owned, take } from '../rustscript/owned.js';
-import { RustVec } from '../rustscript/vec.js';
-import { isSome } from '../rustscript/option.js';
+import { Owned, take, RustVec, isSome } from '@protokarya/rustscript';
 
 const undoStack = RustVec.empty<Owned<Command>>();
 const redoStack = RustVec.empty<Owned<Command>>();

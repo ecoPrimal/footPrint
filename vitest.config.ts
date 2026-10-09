@@ -5,7 +5,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/core/**', 'src/rustscript/**', 'src/constants.ts'],
+      include: ['src/core/**', 'src/constants.ts'],
       thresholds: {
         statements: 80,
         branches: 70,

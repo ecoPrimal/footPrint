@@ -1,12 +1,12 @@
 import type { HexColor } from '../types/brands.js';
 import type { ShapeStatus } from '../types/shape.js';
-import type { DeepReadonly } from '../rustscript/types.js';
-import type { EntityId } from '../rustscript/newtype.js';
-import { entityId } from '../rustscript/newtype.js';
+import type { DeepReadonly } from '@protokarya/rustscript';
+import type { EntityId } from '../types/brands.js';
+import { entityId } from '../types/brands.js';
 
 // Re-export for consumers
-export type { EntityId } from '../rustscript/newtype.js';
-export { entityId, entityIdUnchecked as entityIdFrom } from '../rustscript/newtype.js';
+export type { EntityId } from '../types/brands.js';
+export { entityId, entityIdUnchecked as entityIdFrom } from '../types/brands.js';
 
 /**
  * Compile-time immutable view of an Entity. Rust's `&Entity`.

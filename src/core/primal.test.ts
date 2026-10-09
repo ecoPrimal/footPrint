@@ -11,8 +11,7 @@ import {
   onRegistryChange,
   clearPrimals,
 } from './primal.js';
-import { Ok, isOk, isErr } from '../rustscript/result.js';
-import { isSome } from '../rustscript/option.js';
+import { Ok, isOk, isErr, isSome } from '@protokarya/rustscript';
 
 function makeTestCapability(name: string) {
   return {

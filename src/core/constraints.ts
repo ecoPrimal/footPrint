@@ -5,8 +5,7 @@ import { AddEntityCommand, UpdateComponentCommand, BatchCommand } from './comman
 import type { Command } from './commands.js';
 import { execute } from './history.js';
 import { extractCoords, rebuildGeometry } from './geometry.js';
-import { exhaustive } from '../rustscript/exhaustive.js';
-import { isSome } from '../rustscript/option.js';
+import { exhaustive, isSome } from '@protokarya/rustscript';
 import {
   SOLVER_MAX_ITERATIONS,
   SOLVER_TOLERANCE,

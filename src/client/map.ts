@@ -1,6 +1,8 @@
 import * as L from 'leaflet';
 import type { NominatimResult } from '../types/nominatim.js';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, NOMINATIM_SEARCH_URL, USER_AGENT } from '../constants.js';
+import { SayWhereLayer } from './saywhere.js';
+import { decode as sayWhereDecode } from '../core/saywhere.js';
 
 let map: L.Map;
 
@@ -34,6 +36,8 @@ export function initMap(): L.Map {
   const overlays: Record<string, L.TileLayer> = {
     'Road Labels': tileLayers.labels,
   };
+  const sayWhereLayer = new SayWhereLayer();
+  overlays['SayWhere Grid'] = sayWhereLayer as unknown as L.TileLayer;
   L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(map);
 
   initGeocoder();
@@ -49,6 +53,22 @@ function initGeocoder(): void {
     if (!input) return;
     const q = input.value.trim();
     if (!q) return;
+
+    // SayWhere phrase detection: word.word.word pattern
+    const sayWherePattern = /^[a-z]+\.[a-z]+(\.[a-z]+)*$/;
+    if (sayWherePattern.test(q)) {
+      try {
+        const loc = sayWhereDecode(q);
+        map.setView([loc.lat, loc.lng], 16);
+        L.marker([loc.lat, loc.lng])
+          .addTo(map)
+          .bindPopup(`<b>${q}</b><br>Lat: ${loc.lat.toFixed(6)}<br>Lng: ${loc.lng.toFixed(6)}`)
+          .openPopup();
+        return;
+      } catch {
+        // Not a valid SayWhere phrase, fall through to Nominatim
+      }
+    }
 
     try {
       const resp = await fetch(
