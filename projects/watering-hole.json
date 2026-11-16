@@ -1,0 +1,153 @@
+{
+  "name": "The Watering Hole — Lake Superior",
+  "savedAt": "2026-11-15T21:35:00Z",
+  "description": "Where all primals meet. Pictured Rocks National Lakeshore, Lake Superior — the shared knowledge layer of ecoPrimals anchored to the largest freshwater lake on Earth. 20,900 sq mi of fresh water. 10% of the world's surface freshwater. 1,332 ft deep. The meeting place.",
+  "layers": {
+    "lakeshore": {
+      "name": "Pictured Rocks National Lakeshore",
+      "color": "#00c853",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Grand Portal Point",
+            "type": "landmark",
+            "notes": "Grand Portal — the main entry to Pictured Rocks by water. Where the watering hole concept meets the physical world."
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [-86.3097, 46.5434]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Chapel Rock",
+            "type": "landmark",
+            "notes": "Sea stack with a tree growing on top — life persists on bare rock. Like a primal."
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [-86.29, 46.51]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Miners Castle",
+            "type": "landmark",
+            "notes": "Sandstone turrets carved by Lake Superior — the castle line of sight."
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [-86.562, 46.482]
+          }
+        }
+      ]
+    },
+    "basecamps": {
+      "name": "Gaia Basecamps",
+      "color": "#76ff03",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Polaris Basecamp — House 1 (Brain Side)",
+            "address": "4422 Southgate Ave, Lansing, MI",
+            "role": "CNS — eastGate brain + northGate heart + Flint 1 left ear",
+            "gates": "eastGate(.244), northGate(.147), sporeGate(.3), ironGate(.237), graftGate(.107)",
+            "spine": "10G fiber origin — MikroTik(.2)"
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [-84.5537, 42.7085]
+          }
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "South Pole — House 2 (Extension Side)",
+            "address": "641 Samantha Ave, Lansing, MI",
+            "role": "PNS — frameGate face + swiftGate night shift + Flint 2 right ear",
+            "gates": "frameGate(.181), swiftGate(.100)",
+            "spine": "10G fiber terminus — JetStream(.111), ~80m from House 1"
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [-84.5528, 42.7081]
+          }
+        }
+      ]
+    },
+    "scuffle": {
+      "name": "John Bean Building",
+      "color": "#e94560",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "John Bean Building — lansingScuffle",
+            "address": "1305 S Cedar St, Lansing, MI 48910",
+            "area_sf": 464281,
+            "acres": 12.10,
+            "notes": "464K SF 1941 wartime factory. 8 MW transformers. $4.25M. Solarpunk sovereign campus target."
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [-84.544, 42.7184]
+          }
+        }
+      ]
+    },
+    "lake-superior": {
+      "name": "Lake Superior Outline (simplified)",
+      "color": "#448aff",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Lake Superior",
+            "area_sq_mi": 20900,
+            "max_depth_ft": 1332,
+            "surface_freshwater_pct": 10,
+            "notes": "Largest freshwater lake by surface area on Earth. 10% of world's surface freshwater."
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [-84.6, 46.5],
+                [-85.0, 46.8],
+                [-85.5, 47.0],
+                [-86.0, 47.1],
+                [-86.5, 47.0],
+                [-87.0, 47.2],
+                [-87.5, 47.3],
+                [-88.0, 47.0],
+                [-88.5, 46.8],
+                [-89.0, 47.0],
+                [-89.5, 47.0],
+                [-89.5, 46.8],
+                [-89.0, 46.5],
+                [-88.5, 46.5],
+                [-88.0, 46.7],
+                [-87.5, 46.5],
+                [-87.0, 46.5],
+                [-86.5, 46.4],
+                [-86.0, 46.4],
+                [-85.5, 46.3],
+                [-85.0, 46.4],
+                [-84.6, 46.5]
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "wave": "239e",
+    "organism": "Gaia",
+    "concept": "The Watering Hole is the shared knowledge layer of ecoPrimals. Every primal comes here to drink — to understand the ecosystem it belongs to. Anchored at Lake Superior, the largest freshwater body on Earth, because freshwater IS the meeting place. All rivers flow to the lake. All primals flow to the watering hole."
+  }
+}

@@ -197,6 +197,41 @@ export function registerDefaultManifests(): void {
     description: '1305 S Cedar St — 464K SF industrial, solarpunk sovereign campus target',
     expectedSources: ['osm-buildings', 'parcels', 'mi-roads'],
   });
+
+  // ── The Watering Hole — Lake Superior, Upper Peninsula ──
+  registerKnownLocation({
+    id: 'watering-hole',
+    name: 'The Watering Hole — Pictured Rocks',
+    center: [46.5434, -86.3097],
+    zoom: 14,
+    description:
+      'Pictured Rocks, Lake Superior — where all primals meet. ' +
+      'Freshwater meeting point, ecoPrimals shared knowledge layer. ' +
+      'Grand Portal Point on the largest freshwater lake on Earth.',
+    expectedSources: ['osm-water', 'usgs-elevation', 'osm-buildings'],
+  });
+
+  // ── Gaia Basecamps — Two Houses, One Organism ──
+  registerKnownLocation({
+    id: 'polaris-basecamp',
+    name: 'Polaris Basecamp — House 1 (Brain Side)',
+    center: [42.7085, -84.5537],
+    zoom: 19,
+    description:
+      '4422 Southgate Ave — eastGate brain, northGate heart, Flint 1 left ear. ' +
+      'CNS: 3 gates, 10G fiber spine origin, dromedary serves 3 domains.',
+    expectedSources: ['osm-buildings', 'parcels', 'osm-power'],
+  });
+  registerKnownLocation({
+    id: 'south-pole',
+    name: 'South Pole — House 2 (Extension Side)',
+    center: [42.7081, -84.5528],
+    zoom: 19,
+    description:
+      '641 Samantha Ave — frameGate face, swiftGate night shift, Flint 2 right ear. ' +
+      'PNS: 10G fiber spine terminus, ~80m from House 1.',
+    expectedSources: ['osm-buildings', 'parcels', 'osm-power'],
+  });
 }
 
 setManifestDefaultsInitializer(registerDefaultManifests);

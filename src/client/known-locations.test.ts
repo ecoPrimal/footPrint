@@ -12,13 +12,13 @@ describe('KNOWN_LOCATIONS', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('every location has a valid center (lat/lng in Michigan range)', () => {
+  it('every location has a valid center (lat/lng in Michigan range — LP + UP)', () => {
     for (const loc of KNOWN_LOCATIONS) {
       const [lat, lng] = loc.center;
-      expect(lat).toBeGreaterThan(42.0);
-      expect(lat).toBeLessThan(43.5);
-      expect(lng).toBeGreaterThan(-85.5);
-      expect(lng).toBeLessThan(-83.5);
+      expect(lat).toBeGreaterThan(41.5);
+      expect(lat).toBeLessThan(48.5);
+      expect(lng).toBeGreaterThan(-90.5);
+      expect(lng).toBeLessThan(-82.0);
     }
   });
 
